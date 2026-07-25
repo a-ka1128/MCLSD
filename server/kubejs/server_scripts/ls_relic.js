@@ -42,7 +42,7 @@ function rlGrant(server, player, force) {
     // 정수 확인 후 회수 — 인벤토리를 직접 읽는다 (ls_util.js).
     // /clear 반환값으로 세는 건 애초에 불가능했고(runCommandSilent 는 void),
     // 그래서 정수가 0개일 때 검사를 공짜로 통과해 유물이 그냥 나갔다.
-    const have = lsCountItem(player, RL_ESS)
+    var have = lsCountItem(player, RL_ESS)
     if (have < RL_COST) {
       player.tell(Text.of(`§c균열 정수가 부족합니다: §e${have}/${RL_COST}`))
       player.tell(Text.of('§7   첫 공세를 막아내면 정수가 주어집니다 — 그것을 제단에 바치세요.'))
@@ -113,7 +113,7 @@ ServerEvents.commandRegistry(event => {
       if (got) {
         ctx.source.sendSystemMessage(Text.of('§a✔ 획득 완료'))
       } else {
-        const have = lsCountItem(p, RL_ESS)
+        var have = lsCountItem(p, RL_ESS)
         ctx.source.sendSystemMessage(Text.of(`§7미획득 — §d균열 정수 ${RL_COST}개§7를 제단에 바쳐야 깨어난다. §8(보유 ${have})`))
         ctx.source.sendSystemMessage(Text.of('§8   첫 공세를 막아내면 정수가 주어진다.'))
       }

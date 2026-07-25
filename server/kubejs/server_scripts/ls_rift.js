@@ -204,7 +204,7 @@ function completeTier(server) {
     rsay(server, '§8   (성역에 집결하라. 가장 긴 밤이 다가온다.)')
     rplay(server, 'minecraft:entity.wither.spawn', 0.8, 0.4)
   } else {
-    const nt = TIERS[done]
+    var nt = TIERS[done]
     rsay(server, `§7다음 봉인: §e${nt.name} §7(정수 ${nt.cost}개) — 준비되면 성역에서 §e/expedition open`)
   }
   console.log(`[LS-RIFT] tier ${idx} cleared, progress=${done}`)
@@ -255,10 +255,10 @@ ServerEvents.commandRegistry(event => {
       const s = ctx.source.server
       ctx.source.sendSystemMessage(Text.of(`§6═══ ✧ 균열 원정 §7${statusLine(s)} §7(${progress(s)}/${MAX_TIER}) §6═══`))
       if (isActive(s)) {
-        const t = TIERS[activeTierIdx(s)]
-        const ax = rfGetI(s, 'rf_ax'), az = rfGetI(s, 'rf_az')
+        var t = TIERS[activeTierIdx(s)]
+        var ax = rfGetI(s, 'rf_ax'), az = rfGetI(s, 'rf_az')
         if (rfGetB(s, 'rf_pending')) {
-          const dir = bearing8(ax - rfSancPos(s).x, az - rfSancPos(s).z)
+          var dir = bearing8(ax - rfSancPos(s).x, az - rfSancPos(s).z)
           ctx.source.sendSystemMessage(Text.of(`§5▶ ${t.name} 제단 원정 중 §7— §e${ax}, ~, ${az} §7(${distTo(s, ax, az)}m ${dir}쪽) · §8미출현(접근 필요)`))
         } else if (!rfGetB(s, 'rf_engaged')) {
           ctx.source.sendSystemMessage(Text.of(`§5▶ ${t.name} 제단 출현 §7— §e${ax}, ${rfGetI(s, 'rf_ay') + 1}, ${az} §7· 제물대 우클릭으로 §d${t.bossName}§7 소환`))
@@ -269,7 +269,7 @@ ServerEvents.commandRegistry(event => {
       } else if (progress(s) >= MAX_TIER) {
         ctx.source.sendSystemMessage(Text.of('§6모든 봉인 해방 — §c어둠의 심장§6을 향하라. §7(남은 균열 노드 파괴 → /finale)'))
       } else {
-        const nt = TIERS[nextIdx(s)]
+        var nt = TIERS[nextIdx(s)]
         ctx.source.sendSystemMessage(Text.of(`§7다음 봉인: §e${nt.name} §7→ §d${nt.bossName} §7(${nt.minR}~${nt.maxR}m)`))
         ctx.source.sendSystemMessage(Text.of(`§8   개봉 비용 §5균열 정수 ${nt.cost}개§8 · 성역에서 §e/expedition open`))
       }

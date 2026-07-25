@@ -222,7 +222,7 @@ ServerEvents.commandRegistry(event => {
         f.story.forEach(line => ctx.source.sendSystemMessage(Text.of(`§8   ${line}`)))
       })
       if (p) {
-        const cur = ftGet(s, p)
+        var cur = ftGet(s, p)
         ctx.source.sendSystemMessage(Text.of(cur ? `§7현재 가호: §e${FATES[cur].name}` : '§7선택: §e/fate §7(선택 화면)'))
       }
       return 1

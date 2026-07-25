@@ -73,7 +73,7 @@ function csDuelAccept(server, player) {
     csGive(server, d.from, d.bet); csGive(server, name, d.bet)
     csSay(server, '§7무승부 — 판돈 반환')
   } else {
-    const winner = r1 > r2 ? d.from : name
+    var winner = r1 > r2 ? d.from : name
     csGive(server, winner, d.bet * 2)
     csSay(server, `§a★ ${winner} 승리! §6+${d.bet * 2} 에메랄드`)
     csPlay(server, 'minecraft:entity.player.levelup', 0.7, 1.3)
@@ -134,7 +134,7 @@ function csRaceFinish(server, winner) {
   names.forEach(n => {
     const b = String(st.getString('cs_bet_' + n) || '').split('|')
     if (b.length === 2) {
-      const h = parseInt(b[0]), amt = parseInt(b[1])
+      var h = parseInt(b[0]), amt = parseInt(b[1])
       if (h === winner) { csGive(server, n, amt * CS_PAYOUT); csSay(server, `§a  ★ ${n} 적중! +${amt * CS_PAYOUT} 에메랄드`) }
     }
     st.putString('cs_bet_' + n, '')
@@ -151,11 +151,11 @@ ServerEvents.tick(event => {
   const phase = st.getInt('cs_phase')
   if (phase === 0) return
   if (phase === 1) {
-    const t = st.getInt('cs_timer') - 1
+    var t = st.getInt('cs_timer') - 1
     st.putInt('cs_timer', t)
     if (t === 10) csSay(server, '§7⚘ 베팅 마감 10초 전!')
     if (t <= 0) {
-      const csv = String(st.getString('cs_betters') || '')
+      var csv = String(st.getString('cs_betters') || '')
       if (!csv) { csSay(server, '§7베팅자가 없어 경마가 취소됐습니다.'); st.putInt('cs_phase', 0); return }
       st.putInt('cs_phase', 2)
       csSay(server, '§6⚘ 출발!')
@@ -165,8 +165,8 @@ ServerEvents.tick(event => {
   }
   if (phase === 2) {
     // 매초 각 말 전진, 2초마다 중계
-    let winner = 0
-    for (let i = 1; i <= 5; i++) {
+    var winner = 0
+    for (var i = 1; i <= 5; i++) {
       var pos = st.getInt('cs_pos_' + i) + csRoll(3)
       st.putInt('cs_pos_' + i, pos)
       if (pos >= CS_GOAL && !winner) winner = i

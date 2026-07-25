@@ -87,18 +87,31 @@ public final class ReviveManager {
     //
     // 대신 그 사이 남이 주워가면 그건 못 돌려준다 — **"남의 시체는 줍지 않는다"는 규칙으로
     // 다룬다.** 시스템으로 막으면(주인만 줍기) 파티가 서로 챙겨주는 것도 같이 막힌다.
-    private static final Map<UUID, List<net.minecraft.world.entity.item.ItemEntity>> DROPS = new HashMap<>();
+    // 기록한 시각을 함께 들고 있어야 창이 지났을 때 버릴 수 있다.
+    // (시각 없이 목록만 담았다가, 아무도 소생시키지 않으면 영영 안 지워지는 상태였다 —
+    //  ItemEntity 참조까지 붙잡고 있어서 죽을수록 늘기만 했다)
+    private static final class Dropped {
+        final List<net.minecraft.world.entity.item.ItemEntity> items;
+        final long at;
+        Dropped(List<net.minecraft.world.entity.item.ItemEntity> items, long at) {
+            this.items = items; this.at = at;
+        }
+    }
+
+    private static final Map<UUID, Dropped> DROPS = new HashMap<>();
 
     @SubscribeEvent
     public static void onDrops(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer dead)) return;
-        DROPS.put(dead.getUUID(), new ArrayList<>(event.getDrops()));
+        if (!(dead.level() instanceof ServerLevel level)) return;
+        DROPS.put(dead.getUUID(), new Dropped(new ArrayList<>(event.getDrops()), level.getGameTime()));
     }
 
     // 되살아난 사람에게 아직 바닥에 있는 자기 드롭을 돌려준다.
     public static int reclaimDrops(ServerPlayer p) {
-        List<net.minecraft.world.entity.item.ItemEntity> list = DROPS.remove(p.getUUID());
-        if (list == null) return 0;
+        Dropped rec = DROPS.remove(p.getUUID());
+        if (rec == null) return 0;
+        List<net.minecraft.world.entity.item.ItemEntity> list = rec.items;
         int n = 0;
         for (net.minecraft.world.entity.item.ItemEntity ie : list) {
             if (ie == null || ie.isRemoved()) continue;   // 이미 남이 주웠거나 사라짐
@@ -111,8 +124,13 @@ public final class ReviveManager {
         return n;
     }
 
-    // 창이 지나면 기억을 버린다 — 안 그러면 죽을 때마다 목록이 쌓인다.
-    public static void forgetDrops(UUID id) { DROPS.remove(id); }
+    // 예약도 시각을 들고 있어야 한다. **사망 화면에서 그냥 나가버리면** 예약이 영영 남아,
+    // 몇 시간 뒤 리스폰했을 때 옛 죽은 자리로 끌려간다.
+    private static final class Reserved {
+        final Vec3 pos;
+        final long at;
+        Reserved(Vec3 pos, long at) { this.pos = pos; this.at = at; }
+    }
 
     // ── 예약 소생 ──
     //
@@ -123,16 +141,17 @@ public final class ReviveManager {
     //
     // 그래서 여기에 "예약"만 걸어두고, 본인이 리스폰을 누르면 그 순간(PlayerRespawnEvent)
     // 쓰러진 자리로 끌어온다. 바닐라 흐름을 그대로 타므로 깨질 여지가 없다.
-    private static final Map<UUID, Vec3> PENDING = new HashMap<>();
+    private static final Map<UUID, Reserved> PENDING = new HashMap<>();
 
-    public static void reserve(UUID id, Vec3 where) { PENDING.put(id, where); }
+    public static void reserve(UUID id, Vec3 where, long at) { PENDING.put(id, new Reserved(where, at)); }
     public static boolean hasPending(UUID id) { return PENDING.containsKey(id); }
 
     @SubscribeEvent
     public static void onRespawn(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerRespawnEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
-        Vec3 where = PENDING.remove(p.getUUID());
-        if (where == null) return;
+        Reserved rec = PENDING.remove(p.getUUID());
+        if (rec == null) return;
+        Vec3 where = rec.pos;
         if (!(p.level() instanceof ServerLevel level)) return;
         // 리스폰 직후엔 KubeJS 가 5~10틱 뒤 속성을 다시 붙이므로 한 박자 뒤에 마무리한다.
         later(15, () -> com.laststardust.relics.item.RelicSkills.finishRevive(level, p, where));
@@ -160,6 +179,10 @@ public final class ReviveManager {
         if (event.getServer().getTickCount() % 200 == 0) {
             long now = event.getServer().overworld().getGameTime();
             FALLEN.entrySet().removeIf(e -> now - e.getValue().at > WINDOW_TICKS);
+            // 아래 둘도 같은 창으로 버린다. 안 그러면 죽을 때마다 늘기만 하고,
+            // 예약은 몇 시간 뒤 리스폰한 사람을 옛 자리로 끌고 간다.
+            DROPS.entrySet().removeIf(e -> now - e.getValue().at > WINDOW_TICKS);
+            PENDING.entrySet().removeIf(e -> now - e.getValue().at > WINDOW_TICKS);
         }
         if (TASKS.isEmpty()) return;
         for (Iterator<Task> it = TASKS.iterator(); it.hasNext(); ) {

@@ -108,7 +108,7 @@ public final class FissureManager {
                 // 그 초의 장판 피해가 통째로 사라지던 것만 고쳐지고, 그 이상 늘지는 않는다.
                 com.laststardust.relics.LsDamage.hitLimited(e,
                     com.laststardust.relics.item.RelicSkills.relicSource(lv, f.caster), f.tickDamage,
-                    lv.getGameTime(), DAMAGE_INTERVAL);
+                    "fissure", lv.getGameTime(), DAMAGE_INTERVAL);
                 e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1, false, true));
                 lv.sendParticles(ParticleTypes.SCULK_SOUL, e.getX(), e.getY() + 0.2, e.getZ(), 6, 0.2, 0.1, 0.2, 0.02);
                 hit = true;

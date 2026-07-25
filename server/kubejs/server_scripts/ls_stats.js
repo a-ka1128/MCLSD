@@ -119,7 +119,7 @@ ServerEvents.tick(event => {
   const p = stStore(server)
   // 피날레 승리 → 15초 후 자동 폐막식 (1회)
   if (p.getInt('ls_finale') === 100 && !p.getBoolean('cer_auto_done')) {
-    const cd = p.getInt('cer_auto_cd')
+    var cd = p.getInt('cer_auto_cd')
     if (cd === 0) p.putInt('cer_auto_cd', 15)
     else if (cd === 1) { p.putBoolean('cer_auto_done', true); p.putInt('cer_auto_cd', 0); cerStart(server) }
     else p.putInt('cer_auto_cd', cd - 1)
@@ -127,9 +127,9 @@ ServerEvents.tick(event => {
   // 폐막식 진행
   const step = p.getInt('cer_step')
   if (step > 0) {
-    const wait = p.getInt('cer_wait')
+    var wait = p.getInt('cer_wait')
     if (wait > 0) { p.putInt('cer_wait', wait - 1); return }
-    const more = cerLine(server, step)
+    var more = cerLine(server, step)
     cerFirework(server, step === 1 || step === 8)
     if (more) { p.putInt('cer_step', step + 1); p.putInt('cer_wait', 3) }
     else { p.putInt('cer_step', 0); console.log('[LS-CEREMONY] done') }

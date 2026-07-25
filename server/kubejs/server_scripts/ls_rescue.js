@@ -185,7 +185,7 @@ EntityEvents.death(event => {
   if (!server) return
   if (tagStr.includes('ls_captor')) {
     if (!rsGetB(server, 'rs_active') || !rsGetB(server, 'rs_built')) return
-    let g = rsGetI(server, 'rs_guards') - 1
+    var g = rsGetI(server, 'rs_guards') - 1
     if (g < 0) g = 0
     rsSetI(server, 'rs_guards', g)
     if (g > 0) rsSay(server, `§7간수 처치 — 남은 간수 §c${g}기`)
@@ -208,7 +208,7 @@ ServerEvents.tick(event => {
   const day = Math.floor(Number(server.overworld().getDayTime()) / 24000)
   if (day !== rsGetI(server, 'rs_day')) {
     rsSetI(server, 'rs_day', day)
-    const pop = rsPop(server)
+    var pop = rsPop(server)
     if (pop > 0) {
       LS.addTreasury(server, pop * RS_POP_INCOME)
       rsSay(server, `§b⌂ 주민 ${pop}명이 성역을 일군다 — 공동 금고 +${pop * RS_POP_INCOME}`)

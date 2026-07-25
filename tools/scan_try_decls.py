@@ -42,8 +42,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent / "server" / "kubejs" / "server_scripts"
 
 DECL = re.compile(r"\b(const|let)\s+(?=[A-Za-z_$])")
+# try·루프뿐 아니라 **모든 중첩 블록**이 대상이다. 2026-07-26 에 `if` 블록 안의 선언이
+# 공성 틱 핸들러를 통째로 죽이고 있는 것을 발견해 범위를 넓혔다 (ls_siege.js 664/735 —
+# 성벽 판정과 방벽 효과가 둘 다 안 돌고 있었다).
+#
+# 함수 본문 바로 아래 선언은 문제가 없다. 그보다 **한 겹 더 들어간 블록**이 위험하다.
 TRY_OPEN = re.compile(r"\btry\s*\{")
-LOOP_OPEN = re.compile(r"\b(for|while)\s*\(")
+LOOP_OPEN = re.compile(r"\b(for|while|if|else)\s*[({]")
 # 함수만 새 선언 스코프를 연다. `) {` 까지 함수로 보면 모든 `if (...) {` 이 함수로 오인되어
 # 본문의 나머지를 건너뛴다 — 숨은 고장을 찾는 스캐너에게 누락이 가장 나쁜 실패다.
 FN_OPEN = re.compile(r"(\bfunction\b|=>)")

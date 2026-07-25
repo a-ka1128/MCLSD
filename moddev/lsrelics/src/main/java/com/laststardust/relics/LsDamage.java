@@ -32,14 +32,19 @@ public final class LsDamage {
     }
 
     // 다단히트용 — 표적별로 최소 간격을 둔다.
-    // gameTime 을 직접 받는 이유: 매니저들이 이미 틱 루프 안이라 레벨을 또 뒤질 필요가 없고,
-    // 테스트에서 시간을 넣어보기도 쉽다.
+    //
+    // ※ `key` 는 **스킬마다 달라야 한다.** 처음엔 키 하나를 공유했는데, 그러면 같은 몹 위에서
+    //   백창(8틱)과 장판(20틱)이 서로의 도장을 덮어써 **상대의 피해를 지웠다.** 파티가 함께
+    //   싸울수록 화력이 줄어드는, 눈에 안 보이는 간섭이었다.
+    //
+    // gameTime 을 직접 받는 이유: 매니저들이 이미 틱 루프 안이라 레벨을 또 뒤질 필요가 없다.
     public static boolean hitLimited(LivingEntity target, DamageSource source, float amount,
-                                     long gameTime, int minInterval) {
+                                     String key, long gameTime, int minInterval) {
         if (target == null || !target.isAlive() || amount <= 0) return false;
-        long last = target.getPersistentData().getLong("lsLastRelicHit");
+        String tag = "lsHit_" + key;
+        long last = target.getPersistentData().getLong(tag);
         if (last != 0 && gameTime - last < minInterval) return false;
-        target.getPersistentData().putLong("lsLastRelicHit", gameTime);
+        target.getPersistentData().putLong(tag, gameTime);
         target.invulnerableTime = 0;
         return target.hurt(source, amount);
     }

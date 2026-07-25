@@ -70,13 +70,13 @@ EntityEvents.spawned(event => {
   const dmgMul = cfg.dmg[tier] || 1.0
 
   if (hpMul !== 1.0) {
-    const a = e.getAttribute('minecraft:generic.max_health')
-    if (a) { const nb = a.getBaseValue() * hpMul; a.setBaseValue(nb); e.setHealth(nb) }
+    var a = e.getAttribute('minecraft:generic.max_health')
+    if (a) { var nb = a.getBaseValue() * hpMul; a.setBaseValue(nb); e.setHealth(nb) }
   }
   if (dmgMul !== 1.0) {
-    const d = e.getAttribute('minecraft:generic.attack_damage')
+    var d = e.getAttribute('minecraft:generic.attack_damage')
     if (d) {
-      const base = d.getBaseValue()
+      var base = d.getBaseValue()
       // 원래 센 몹이 배율만으로 즉사기를 갖지 않게 절대 상한을 씌운다
       d.setBaseValue(Math.min(base * dmgMul, base + cfg.dmgCapAdd))
     }

@@ -507,7 +507,7 @@ public final class RelicSkills {
                 // 예약만 걸고, 본인이 리스폰을 누르면 그때 쓰러진 자리로 끌어온다.
                 // (강제 리스폰은 클라를 사망 상태에 남겨 "되살아났는데 아무에게도 안 보이는"
                 //  동기화 파손을 만들었다 — ReviveManager.reserve 주석 참고)
-                com.laststardust.relics.ReviveManager.reserve(dead.getUUID(), where);
+                com.laststardust.relics.ReviveManager.reserve(dead.getUUID(), where, level.getGameTime());
                 dead.sendSystemMessage(Component.literal(
                     "§d✦ §f" + player.getName().getString() + "§7이(가) 당신을 되살리려 한다."));
                 dead.sendSystemMessage(Component.literal(

@@ -75,8 +75,8 @@ EntityEvents.spawned(event => {
   //   스크립트에서 접두사를 붙여 부르면 'Cannot find function' 으로 핸들러 전체가 죽는다.
   let hpMsg = 'hp=' + hp + '%'
   if (hp !== 100) {
-    const oldMax = e.getMaxHealth()
-    const newMax = oldMax * hp / 100.0
+    var oldMax = e.getMaxHealth()
+    var newMax = oldMax * hp / 100.0
     e.setMaxHealth(newMax)
     e.setHealth(e.getMaxHealth())   // 새 최대치로 채운다
     hpMsg += ` (${oldMax}→${e.getMaxHealth()})`
@@ -86,9 +86,9 @@ EntityEvents.spawned(event => {
   // (1) 속성 자체가 없거나(고정 데미지 보스) (2) 문자열 변환 실패인지 로그로 구분한다.
   let dmgMsg = 'dmg=' + dmg + '%'
   if (dmg !== 100) {
-    const d = e.getAttribute('minecraft:generic.attack_damage')
+    var d = e.getAttribute('minecraft:generic.attack_damage')
     if (d) {
-      const oldD = d.getBaseValue()
+      var oldD = d.getBaseValue()
       d.setBaseValue(oldD * dmg / 100.0)
       dmgMsg += ` (${oldD}→${d.getBaseValue()})`
     } else {

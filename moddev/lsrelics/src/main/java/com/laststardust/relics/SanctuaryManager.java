@@ -73,7 +73,7 @@ public final class SanctuaryManager {
             if (e.distanceToSqr(z.center) > z.radius * z.radius) continue;
             // 다단히트라 상한을 둔다 — 설계 주기(1초)를 그대로 쓴다 (LsDamage 주석 참고)
             com.laststardust.relics.LsDamage.hitLimited(e, src, z.burnPerSecond,
-                z.level.getGameTime(), HEAL_INTERVAL);
+                "sanctuary", z.level.getGameTime(), HEAL_INTERVAL);
             z.level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
                 e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(), 6, 0.25, 0.35, 0.25, 0.01);
         }

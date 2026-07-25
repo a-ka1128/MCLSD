@@ -314,7 +314,7 @@ function spawnWave(server, waveNo) {
       say(server, `§c⚔ 공성 시작! §7위협도 ${threat} · 웨이브 ${sfGetI(server, 'ls_siege_waves') + 1}개 · 첫 물결 ${n}기`)
     }
     // 몹 진화 단계 뉴스 (새 단계 첫 공성 때 1회)
-    const tier = threatTier(threat)
+    var tier = threatTier(threat)
     if (tier > sfGetI(server, 'ls_ann_tier')) {
       sfSetI(server, 'ls_ann_tier', tier)
       if (TIER_NEWS[tier]) say(server, TIER_NEWS[tier])
@@ -402,7 +402,7 @@ function finishSiege(server, outcome) {
     if (fin >= 1 && fin < FINALE_NIGHTS) sfSetB(server, 'ls_fn_ok', true) // 최종장: 이 밤 방어 성공
   }
   if (outcome === 'win') {
-    let reward = accrued + 10 + threat * 2
+    var reward = accrued + 10 + threat * 2
     if (grand) reward *= 2
     if (townLvl(server, 'workshop') >= 2) reward = Math.round(reward * 1.2) // 공방 Lv2: 방어 보상 +20%
     reward = Math.round(reward * REWARD_MULT)
@@ -417,9 +417,9 @@ function finishSiege(server, outcome) {
     // 공성 격퇴 = 반복 가능한 정수 공급처 (무기 각성과 마을 재건을 동시에 굴려야 하므로).
     // 대공세는 항상, 일반 공성은 고위협(HIGH_THREAT_ESS 이상)에서 완전 격퇴했을 때만 —
     // "위협도를 낮게 깔면 안전하지만 정수가 안 나온다"는 선택지를 만든다.
-    const ess = grand ? GRAND_ESS : (threat >= HIGH_THREAT_ESS ? HIGH_THREAT_ESS_AMT : 0)
+    var ess = grand ? GRAND_ESS : (threat >= HIGH_THREAT_ESS ? HIGH_THREAT_ESS_AMT : 0)
     if (ess > 0) {
-      const gc = sancPos(server)
+      var gc = sancPos(server)
       server.runCommandSilent(`summon item ${gc.x + 0.5} ${gc.y + 1} ${gc.z + 0.5} {Item:{id:"kubejs:rift_essence",count:${ess}}}`)
       say(server, `§5✦ 균열 정수 +${ess} §7— ${grand ? '대공세를' : `위협도 ${threat}의 공세를`} 격퇴한 대가 (성역에 떨어졌다)`)
       playAll(server, 'minecraft:block.amethyst_block.chime', 0.9, 0.7)
@@ -428,7 +428,7 @@ function finishSiege(server, outcome) {
   } else if (outcome === 'dawn') {
     // accrued 는 const 라 재할당하지 않는다 — 'win' 분기가 reward 를 따로 두는 것과 같은 구조.
     // (예전엔 여기서 accrued 를 직접 덮어써 Rhino 에서 런타임 오류가 났다. dawn 은 흔한 경로라 매번 터졌다.)
-    const dawnReward = Math.round(accrued * REWARD_MULT)
+    var dawnReward = Math.round(accrued * REWARD_MULT)
     addTreasury(server, dawnReward)
     server.runCommandSilent('title @a title {"text":"동이 텄습니다","color":"yellow"}')
     server.runCommandSilent('title @a subtitle {"text":"어둠이 물러갑니다 — 성역은 버텨냈습니다","color":"gold"}')
@@ -482,7 +482,7 @@ EntityEvents.death(event => {
   const srv = e.server
   // 보스 처치 → 균열 정수 드롭 (마을 재건 재화)
   if (srv) {
-    const ec = ESSENCE_DROP[String(e.type)]
+    var ec = ESSENCE_DROP[String(e.type)]
     if (ec) {
       srv.runCommandSilent(`summon item ${e.x} ${e.y + 0.5} ${e.z} {Item:{id:"kubejs:rift_essence",count:${ec}}}`)
       say(srv, `§5✦ 균열 정수 +${ec} §7— ${e.type} 격파 (마을 재건 재화)`)
@@ -528,13 +528,13 @@ function onNewDay(server, day) {
   }
   // 몹 진화 카운트다운 — 에스컬레이션을 데드라인으로 (노드가 살아있어 위협이 오르는 중일 때만)
   if (nodes > 0) {
-    const th = getThreat(server)
-    const NEXT_TIER_AT = { 1: 4, 2: 7, 3: 10 } // 현재 단계 → 다음 진화 위협도
-    const nextAt = NEXT_TIER_AT[threatTier(th)]
+    var th = getThreat(server)
+    var NEXT_TIER_AT = { 1: 4, 2: 7, 3: 10 } // 현재 단계 → 다음 진화 위협도
+    var nextAt = NEXT_TIER_AT[threatTier(th)]
     if (nextAt && th < nextAt) {
-      const dleft = nextAt - th // 노드 활성 시 위협 +1/일
+      var dleft = nextAt - th // 노드 활성 시 위협 +1/일
       if (dleft <= 2) {
-        const preview = { 4: '메마른 자들이 섞여들 것이다', 7: '불붙은 망령이 깨어날 것이다', 10: '어둠의 정예가 출정할 것이다' }[nextAt]
+        var preview = { 4: '메마른 자들이 섞여들 것이다', 7: '불붙은 망령이 깨어날 것이다', 10: '어둠의 정예가 출정할 것이다' }[nextAt]
         say(server, `§5⌛ 어둠의 진화 §cD-${dleft} §7— ${preview}... (위협도 ${th}/${nextAt})`)
       }
     }
@@ -543,7 +543,7 @@ function onNewDay(server, day) {
   if (townLvl(server, 'workshop') >= 3) { addTreasury(server, 50); say(server, '§e⚙ 자동 생산 라인 가동 — 공동 금고 +50') }
   // 대공세 예고 (위협이 존재할 때만)
   if (getThreat(server) > 0 || nodes > 0) {
-    const rem = day % GRAND_EVERY
+    var rem = day % GRAND_EVERY
     if (day >= GRAND_EVERY - 3 && rem === GRAND_EVERY - 3) {
       say(server, '§4☠ 사흘 뒤, 어둠이 총공세를 준비하고 있다... §7(대공세 D-3 — 방어를 강화하라)')  // GRAND_EVERY의 배수일에 발생
       playAll(server, 'minecraft:entity.wither.ambient', 0.5, 0.8)
@@ -572,8 +572,8 @@ function dayBossbar(server) {
   } else if (fin > 0) {
     label = `☽ ${day}일차 · 최종장 — 가장 긴 밤`; color = 'purple'; val = 1; max = 1
   } else {
-    const left = daysToSiege(day)
-    const grand = isSiegeDay(day) && day % GRAND_EVERY === 0
+    var left = daysToSiege(day)
+    var grand = isSiegeDay(day) && day % GRAND_EVERY === 0
     max = SIEGE_EVERY; val = SIEGE_EVERY - left
     if (sfGetB(server, 'ls_siege_active')) {
       label = `⚔ ${day}일차 · ${sfGetB(server, 'ls_siege_grand') ? '대공세' : '공성'} 진행 중 · 위협도 ${th}`; color = 'red'
@@ -634,7 +634,7 @@ ServerEvents.tick(event => {
     if (sfGetB(server, 'ls_siege_active')) finishSiege(server, 'dawn')
     if (fin >= 1 && fin < FINALE_NIGHTS) {
       if (sfGetB(server, 'ls_fn_ok')) {
-        const next = fin + 1
+        var next = fin + 1
         setFinale(server, next)
         sfSetB(server, 'ls_fn_ok', false)
         if (next === FINALE_NIGHTS) {
@@ -661,9 +661,9 @@ ServerEvents.tick(event => {
   if (sfGetB(server, 'ls_siege_active') && LS_TICK % 40 === 0) wallBossbar(server, true)
   // 공성 중: 성벽 방어선 판정 (2초마다) — 성벽이 서 있는 동안 몹은 못 들어오고, 대신 성벽을 두드린다
   if (sfGetB(server, 'ls_siege_active') && sancIsSet(server) && LS_TICK % 40 === 0 && !wallBroken(server)) {
-    const wc = sancPos(server)
-    const R = wallR(server)
-    let banging = 0
+    var wc = sancPos(server)
+    var R = wallR(server)
+    var banging = 0
     try {
       server.getEntities().forEach(e => {
         if (!e || !e.tags || !(`${e.tags}`).includes('ls_siege') || !e.isAlive()) return
@@ -672,9 +672,9 @@ ServerEvents.tick(event => {
         if (d2 < R * R) {
           // 성벽 안으로 침입 시도 → 밖으로 밀려남 (성벽을 두드리는 연출)
           banging++
-          const d = Math.max(1, Math.sqrt(d2))
-          const ox = wc.x + (dx / d) * (R + 2), oz = wc.z + (dz / d) * (R + 2)
-          const oy = surfaceY(server, ox, oz, Math.floor(e.y))
+          var d = Math.max(1, Math.sqrt(d2))
+          var ox = wc.x + (dx / d) * (R + 2), oz = wc.z + (dz / d) * (R + 2)
+          var oy = surfaceY(server, ox, oz, Math.floor(e.y))
           try { server.runCommandSilent(`tp ${e.getUuid()} ${ox.toFixed(1)} ${oy} ${oz.toFixed(1)}`) } catch (e2) { lsWarn('ls_siege:680', e2) }
           server.runCommandSilent(`particle minecraft:block minecraft:stone ${ox.toFixed(1)} ${oy + 1} ${oz.toFixed(1)} 0.4 0.6 0.4 0.1 12`)
         }
@@ -683,7 +683,7 @@ ServerEvents.tick(event => {
     // ── 불굴 유지 판정 ──
     // 버티는 동안엔 아무리 두들겨도 HP 가 1 밑으로 내려가지 않는다.
     // 시간이 끝나면 그 순간 무너진다 — 버틴 15초 안에 손을 못 썼다는 뜻이니까.
-    const standing = sfGetB(server, 'wall_last_stand') && LS_TICK < sfGetI(server, 'wall_stand_until')
+    var standing = sfGetB(server, 'wall_last_stand') && LS_TICK < sfGetI(server, 'wall_stand_until')
     if (sfGetB(server, 'wall_last_stand') && !standing && wallHp(server) <= 1) {
       wallSetHp(server, 0)
       sfSetB(server, 'wall_last_stand', false)
@@ -702,8 +702,8 @@ ServerEvents.tick(event => {
       } else
       wallSetHp(server, wallHp(server) - Math.min(banging, 6))
       playAll(server, 'minecraft:entity.zombie.attack_iron_door', 0.8, 0.7)
-      const hp = wallHp(server), mx = wallMax(server)
-      const stage = hp <= mx * 0.25 ? 1 : hp <= mx * 0.5 ? 2 : hp <= mx * 0.75 ? 3 : 4
+      var hp = wallHp(server), mx = wallMax(server)
+      var stage = hp <= mx * 0.25 ? 1 : hp <= mx * 0.5 ? 2 : hp <= mx * 0.75 ? 3 : 4
       if (stage < sfGetI(server, 'wall_warn')) {
         sfSetI(server, 'wall_warn', stage)
         if (stage === 3) say(server, `§6▨ 성벽이 공격받고 있다! ${wallBar(server)}`)
@@ -732,7 +732,7 @@ ServerEvents.tick(event => {
   }
   // 공성 중 마을 발전 효과 (성역 반경 내)
   if (sfGetB(server, 'ls_siege_active') && sancIsSet(server)) {
-    const c = sancPos(server)
+    var c = sancPos(server)
     // 방벽 Lv1: 결계 — 재생+저항 (3초마다)
     if (townLvl(server, 'ramparts') >= 1 && LS_TICK % 60 === 0) {
       server.runCommandSilent(`execute positioned ${c.x} ${c.y} ${c.z} run effect give @a[distance=..${SANCTUARY_RADIUS}] minecraft:regeneration 4 0 true`)
@@ -742,9 +742,9 @@ ServerEvents.tick(event => {
     // 방벽 Lv3「방벽 강화」는 이 포화를 키운다: 피해 6→14, 동시 표적 2→4.
     // 새 시스템을 얹지 않고 이미 있는 것을 강하게 만드는 쪽이라, 2단계를 지은 보람이 이어진다.
     if (townLvl(server, 'ramparts') >= 2 && LS_TICK % 40 === 0) {
-      const up = townLvl(server, 'ramparts') >= 3
-      const tdmg = up ? 14 : 6
-      const tcount = up ? 4 : 2
+      var up = townLvl(server, 'ramparts') >= 3
+      var tdmg = up ? 14 : 6
+      var tcount = up ? 4 : 2
       server.runCommandSilent(`execute positioned ${c.x} ${c.y} ${c.z} as @e[tag=ls_siege,sort=nearest,limit=${tcount}] run damage @s ${tdmg} minecraft:magic`)
       server.runCommandSilent(`execute positioned ${c.x} ${c.y} ${c.z} at @e[tag=ls_siege,sort=nearest,limit=1] run playsound minecraft:entity.arrow.shoot master @a ~ ~ ~ ${up ? 0.8 : 0.5} ${up ? 1.1 : 1.4}`)
     }
@@ -766,13 +766,13 @@ ServerEvents.tick(event => {
   }
   // 보스 전투: 체력 ↔ 밤 진행 (하늘이 보스 체력바)
   if (fin === 90) {
-    let boss = FINAL_BOSS_REF
+    var boss = FINAL_BOSS_REF
     if (!boss || !boss.isAlive()) { boss = findFinalBoss(server); FINAL_BOSS_REF = boss }
     if (boss) {
       BOSS_LOST_SEC = 0
-      const frac = Math.max(0, Math.min(1, boss.getHealth() / boss.getMaxHealth()))
-      const target = NIGHT_T0 + Math.floor((1 - frac) * (NIGHT_T1 - NIGHT_T0))
-      const cur = dayTime(server)
+      var frac = Math.max(0, Math.min(1, boss.getHealth() / boss.getMaxHealth()))
+      var target = NIGHT_T0 + Math.floor((1 - frac) * (NIGHT_T1 - NIGHT_T0))
+      var cur = dayTime(server)
       if (cur < target) server.runCommandSilent(`time add ${Math.min(target - cur, 240)}`)
       if (LS_TICK % 300 === 0) playAll(server, 'minecraft:entity.warden.heartbeat', 0.8, 0.8)
     } else {
@@ -782,7 +782,7 @@ ServerEvents.tick(event => {
   }
   // 승리 후 여명 가속
   if (sfGetB(server, 'ls_dawnbreak')) {
-    const curDawn = dayTime(server)
+    var curDawn = dayTime(server)
     if (curDawn >= 23600 || curDawn < 12000) {
       sfSetB(server, 'ls_dawnbreak', false)
       sfStore(server).putBoolean('ls_time_locked', false)
