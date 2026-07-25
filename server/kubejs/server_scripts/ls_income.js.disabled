@@ -1,0 +1,46 @@
+// ⚠ 2026-07-25: 이 시스템은 lsrelics 모드로 이관되었다 — 이 파일은 더 이상 로드되지 않는다.
+//   이유: 스크립트로는 실제 아이템 슬롯(보관함)을 만들 수 없고, KubeJS 함정
+//   (runCommandSilent 가 void · try 안 const · 전역 스코프 공유 · NaN 통과)에 반복해서 걸렸다.
+//   새 위치: moddev/lsrelics/.../data/TownCatalog.java (밸런스 수치)
+//            moddev/lsrelics/.../data/TownData.java    (저장·보관함)
+//            moddev/lsrelics/.../town/TownService.java (판정)
+//   남겨두는 이유: 이관 직후 비교·복구용. 문제 없으면 나중에 지운다.
+
+// Last Stardust — 공동 금고 (Communal Treasury)  [차별화 핵심]
+// 팀 공유 계좌. 개인 지갑이 아니라 "마을 전체"가 강해지는 곳.
+// 적립: 밤 공성 방어 성공(ls_siege.js) + (리셋 후) 개인 수입의 일부 + 퀘스트/관문 보상.
+// 지출: 마을 자동화·방어·발전 (진짜 파워 스케일링 = 경쟁 아닌 협동).
+// 저장: 오버월드 persistentData 'ls_treasury' (int). ls_siege.js와 같은 키 공유.
+//
+// [리셋 후 예정] 개인 지갑(SDM Economy Ducat)↔금고 연동:
+//   /treasury deposit <n> = 내 지갑에서 금고로 (SDM Economy 명령 세팅 후 추가)
+//   금고 지출 메뉴 = 마을 업그레이드 게이팅 (Easy NPC/상점 연동)
+
+function tStore(server) { return server.overworld().persistentData }
+function tGet(server) { return tStore(server).getInt('ls_treasury') }
+function tSet(server, v) { tStore(server).putInt('ls_treasury', v < 0 ? 0 : v) }
+
+ServerEvents.commandRegistry(event => {
+  const { commands: Commands, arguments: Arguments } = event
+  event.register(Commands.literal('treasury')
+    .executes(ctx => { ctx.source.sendSystemMessage(Text.of(`§6❖ 공동 금고: §e${tGet(ctx.source.server)} Ducat`)); return 1 })
+    .then(Commands.literal('balance').executes(ctx => {
+      ctx.source.sendSystemMessage(Text.of(`§6❖ 공동 금고: §e${tGet(ctx.source.server)} Ducat`)); return 1
+    }))
+    .then(Commands.literal('add').requires(s => s.hasPermission(2)).then(Commands.argument('amount', Arguments.INTEGER.create(event)).executes(ctx => {
+      const amt = Arguments.INTEGER.getResult(ctx, 'amount'); const s = ctx.source.server
+      tSet(s, tGet(s) + amt)
+      ctx.source.sendSystemMessage(Text.of(`§a공동 금고 +${amt} §7(총 ${tGet(s)})`)); return 1
+    })))
+    .then(Commands.literal('spend').requires(s => s.hasPermission(2)).then(Commands.argument('amount', Arguments.INTEGER.create(event)).executes(ctx => {
+      const amt = Arguments.INTEGER.getResult(ctx, 'amount'); const cur = tGet(ctx.source.server)
+      if (amt <= 0 || cur < amt) { ctx.source.sendSystemMessage(Text.of('§c금고 잔액 부족')); return 0 }
+      tSet(ctx.source.server, cur - amt)
+      ctx.source.sendSystemMessage(Text.of(`§e공동 금고에서 ${amt} 사용 §7(남은: ${cur - amt})`)); return 1
+    })))
+  )
+})
+
+ServerEvents.loaded(event => {
+  console.log(`[Last Stardust] 공동 금고 잔액: ${tGet(event.server)} Ducat`)
+})

@@ -1,0 +1,63 @@
+{
+	"size": "medium",
+	"color": "#9B59B6",
+	"waves": [
+		{
+			"entities": [
+				{ "entity": "minecraft:zombie", "count": 8 },
+				{ "entity": "minecraft:skeleton", "count": 4 },
+				{ "entity": "minecraft:spider", "count": 3 }
+			],
+			"modifiers": [],
+			"rewards": [
+				{ "type": "gateways:stack", "stack": { "id": "minecraft:emerald", "count": 4 } }
+			],
+			"max_wave_time": 1400,
+			"setup_time": 100
+		},
+		{
+			"entities": [
+				{ "entity": "minecraft:husk", "count": 6 },
+				{ "entity": "minecraft:stray", "count": 4 },
+				{ "entity": "minecraft:witch", "count": 1 }
+			],
+			"modifiers": [
+				{ "attribute": "generic.max_health", "operation": "add_multiplied_total", "value": 0.2 }
+			],
+			"rewards": [
+				{ "type": "gateways:stack", "stack": { "id": "minecraft:iron_ingot", "count": 8 } }
+			],
+			"max_wave_time": 1500,
+			"setup_time": 120
+		},
+		{
+			"entities": [
+				{ "entity": "minecraft:vindicator", "count": 4 },
+				{ "entity": "minecraft:wither_skeleton", "count": 3 },
+				{ "entity": "minecraft:evoker", "count": 1 }
+			],
+			"modifiers": [
+				{ "attribute": "generic.max_health", "operation": "add_multiplied_total", "value": 0.3 },
+				{ "attribute": "generic.movement_speed", "operation": "add_multiplied_total", "value": 0.1 }
+			],
+			"rewards": [
+				{ "type": "gateways:entity_loot", "entity": "minecraft:evoker", "rolls": 2 },
+				{ "type": "gateways:stack", "stack": { "id": "minecraft:diamond", "count": 2 } }
+			],
+			"max_wave_time": 1700,
+			"setup_time": 140
+		}
+	],
+	"rewards": [
+		{ "type": "gateways:loot_table", "loot_table": "minecraft:chests/simple_dungeon", "rolls": 8, "desc": "rewards.gateways.loot_table.simple_dungeon" },
+		{ "type": "gateways:stack", "stack": { "id": "minecraft:emerald", "count": 16 } },
+		{ "type": "gateways:stack", "stack": { "id": "minecraft:experience_bottle", "count": 12 } }
+	],
+	"failures": [
+		{ "type": "gateways:mob_effect", "effect": "minecraft:blindness", "duration": 300 },
+		{ "type": "gateways:summon", "entity": { "entity": "minecraft:vindicator", "count": 2 } }
+	],
+	"rules": {
+		"allow_discarding": true
+	}
+}

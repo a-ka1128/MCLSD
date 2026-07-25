@@ -1,0 +1,212 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: "circle"
+	filename: "frontier"
+	group: ""
+	icon: {
+		id: "minecraft:iron_sword"
+	}
+	id: "6B8D2F1C0E3A5B10"
+	order_index: 1
+	quest_links: [ ]
+	quests: [
+		{
+			dependencies: ["5A9C1E0B7F2D4A30"]
+			icon: {
+				id: "minecraft:iron_sword"
+			}
+			id: "6B8D2F1C0E3A5B11"
+			rewards: [
+				{
+					count: 4
+					id: "6B8D2F1C0E3A5B13"
+					item: {
+						count: 1
+						id: "minecraft:iron_ingot"
+					}
+					type: "item"
+				}
+				{
+					id: "6B8D2F1C0E3A5B14"
+					type: "xp"
+					xp: 30
+				}
+			]
+			shape: "hexagon"
+			size: 1.25d
+			tasks: [{
+				entity: "minecraft:zombie"
+				id: "6B8D2F1C0E3A5B12"
+				type: "kill"
+				value: 10L
+			}]
+			x: 0.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["6B8D2F1C0E3A5B11"]
+			icon: {
+				id: "minecraft:string"
+			}
+			id: "6B8D2F1C0E3A5B15"
+			rewards: [
+				{
+					count: 4
+					id: "6B8D2F1C0E3A5B17"
+					item: {
+						count: 1
+						id: "minecraft:cooked_beef"
+					}
+					type: "item"
+				}
+				{
+					id: "6B8D2F1C0E3A5B18"
+					type: "xp"
+					xp: 25
+				}
+			]
+			tasks: [{
+				entity: "minecraft:spider"
+				id: "6B8D2F1C0E3A5B16"
+				type: "kill"
+				value: 10L
+			}]
+			x: -2.0d
+			y: 2.0d
+		}
+		{
+			dependencies: ["6B8D2F1C0E3A5B11"]
+			icon: {
+				id: "minecraft:chest"
+			}
+			id: "6B8D2F1C0E3A5B19"
+			rewards: [
+				{
+					count: 2
+					id: "6B8D2F1C0E3A5B1B"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					id: "6B8D2F1C0E3A5B1C"
+					type: "xp"
+					xp: 40
+				}
+			]
+			tasks: [{
+				id: "6B8D2F1C0E3A5B1A"
+				type: "checkmark"
+			}]
+			x: -0.7d
+			y: 2.0d
+		}
+		{
+			dependencies: ["6B8D2F1C0E3A5B11"]
+			icon: {
+				id: "minecraft:iron_ingot"
+			}
+			id: "6B8D2F1C0E3A5B1D"
+			rewards: [
+				{
+					id: "6B8D2F1C0E3A5B1F"
+					item: {
+						count: 1
+						id: "minecraft:iron_block"
+					}
+					type: "item"
+				}
+				{
+					id: "6B8D2F1C0E3A5B20"
+					type: "xp"
+					xp: 30
+				}
+			]
+			tasks: [{
+				consume_items: false
+				count: 16L
+				id: "6B8D2F1C0E3A5B1E"
+				item: { count: 1, id: "minecraft:iron_ingot" }
+				type: "item"
+			}]
+			x: 0.7d
+			y: 2.0d
+		}
+		{
+			dependencies: ["6B8D2F1C0E3A5B11"]
+			icon: {
+				id: "waystones:waystone"
+			}
+			id: "6B8D2F1C0E3A5B21"
+			rewards: [
+				{
+					id: "6B8D2F1C0E3A5B23"
+					item: {
+						count: 1
+						id: "waystones:warp_stone"
+					}
+					type: "item"
+				}
+				{
+					id: "6B8D2F1C0E3A5B24"
+					type: "xp"
+					xp: 40
+				}
+			]
+			tasks: [{
+				consume_items: false
+				count: 2L
+				id: "6B8D2F1C0E3A5B22"
+				item: { count: 1, id: "waystones:waystone" }
+				type: "item"
+			}]
+			x: 2.0d
+			y: 2.0d
+		}
+		{
+			dependencies: [
+				"6B8D2F1C0E3A5B15"
+				"6B8D2F1C0E3A5B19"
+				"6B8D2F1C0E3A5B1D"
+			]
+			icon: {
+				id: "minecraft:netherite_sword"
+			}
+			id: "6B8D2F1C0E3A5B25"
+			rewards: [
+				{
+					count: 4
+					id: "6B8D2F1C0E3A5B27"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					id: "6B8D2F1C0E3A5B28"
+					type: "xp"
+					xp: 100
+				}
+				{
+					command: "/apoth set_world_tier @s frontier"
+					id: "6B8D2F1C0E3A5B29"
+					permission_level: 2
+					type: "command"
+				}
+			]
+			shape: "hexagon"
+			size: 1.5d
+			tasks: [{
+				entity: "cataclysm:the_harbinger"
+				id: "6B8D2F1C0E3A5B26"
+				type: "kill"
+				value: 1L
+			}]
+			x: 0.0d
+			y: 4.0d
+		}
+	]
+}

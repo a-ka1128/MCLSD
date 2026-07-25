@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────
+# Last Stardust — 저장소에 올리는 것은 "사람이 쓴 것"뿐이다.
+# 모드 jar·라이브러리·월드는 1.4GB 가 넘고 재생성 가능하므로 전부 제외한다.
+#
+# ※ git 은 줄 끝 주석을 지원하지 않는다. `foo   # 설명` 은 그 전체가 패턴이 되어
+#   아무것도 안 걸러진다. 설명은 반드시 윗줄에 따로 쓸 것.
+# ─────────────────────────────────────────────────────────────
+
+# ── 비밀정보 ──
+# 디스코드 웹훅은 URL 자체가 인증이다. RCON 비밀번호는 서버 콘솔 전권이다.
+discord/webhooks_local.py
+server/server.properties
+server/server.properties.bak
+*.env
+.env*
+*.key
+*secret*
+*credential*
+
+# ── 플레이어·서버 개인정보 ──
+server/ops.json
+server/whitelist.json
+server/banned-ips.json
+server/banned-players.json
+server/usercache.json
+server/usernamecache.json
+server/eula.txt
+
+# ── 월드 ──
+server/world/
+server/world_backup_*/
+server/*.dat
+server/*.dat_old
+
+# ── 배포물·서드파티 (내려받으면 되는 것) ──
+server/mods/
+server/libraries/
+server/versions/
+server/*.jar
+Mod/
+server/dynamic-data-pack-cache/
+
+# ── 큰 미디어 ──
+# 클래스 일러스트·BGM 은 개당 2.5MB 라 저장소의 대부분을 차지했다(30MB/34MB).
+# 코드와 달리 거의 안 바뀌는 자산이라 저장소 밖에서 관리한다.
+# ※ 이게 없으면 discord/post_*.py 가 이미지를 못 찾는다 — 다른 PC 에서 쓰려면 따로 옮길 것.
+discord/art/
+
+# ── 로그·리포트 ──
+server/logs/
+server/crash-reports/
+server/console_out.txt
+server/console_err.txt
+*.log
+*.log.gz
+
+# ── 빌드 산출물 ──
+moddev/**/build/
+moddev/**/.gradle/
+moddev/**/run/
+**/__pycache__/
+*.pyc
+
+# ── 에디터 ──
+.idea/
+.vscode/
+*.iml
+
+# NeoForge MDK 배포물 — 공식 사이트에서 받으면 된다
+moddev/mdk.zip

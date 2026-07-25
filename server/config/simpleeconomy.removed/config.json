@@ -1,0 +1,11 @@
+{
+  "currencyName": "Ducat",
+  "startingBalance": 150.0,
+  "taxRate": 0.0,
+  "dailyBaseReward": 50,
+  "dailyRewardIncrement": 0,
+  "maxStreak": 1,
+  "weeklyInterestRate": 0.0,
+  "maxInterestAmount": 0.0,
+  "killRewardPercent": 0.0
+}

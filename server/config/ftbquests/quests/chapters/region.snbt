@@ -1,0 +1,211 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: "circle"
+	filename: "region"
+	group: ""
+	icon: {
+		id: "minecraft:nether_star"
+	}
+	id: "7C1E3A5B9D2F0C10"
+	order_index: 2
+	quest_links: [ ]
+	quests: [
+		{
+			dependencies: ["6B8D2F1C0E3A5B25"]
+			icon: {
+				id: "minecraft:filled_map"
+			}
+			id: "7C1E3A5B9D2F0C11"
+			rewards: [
+				{
+					count: 2
+					id: "7C1E3A5B9D2F0C13"
+					item: {
+						count: 1
+						id: "minecraft:golden_apple"
+					}
+					type: "item"
+				}
+				{
+					id: "7C1E3A5B9D2F0C14"
+					type: "xp"
+					xp: 60
+				}
+			]
+			shape: "hexagon"
+			size: 1.25d
+			tasks: [{
+				id: "7C1E3A5B9D2F0C12"
+				type: "checkmark"
+			}]
+			x: 0.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["7C1E3A5B9D2F0C11"]
+			icon: {
+				id: "minecraft:fire_charge"
+			}
+			id: "7C1E3A5B9D2F0C15"
+			rewards: [
+				{
+					count: 4
+					id: "7C1E3A5B9D2F0C17"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					id: "7C1E3A5B9D2F0C18"
+					type: "xp"
+					xp: 120
+				}
+			]
+			tasks: [{
+				entity: "cataclysm:ignis"
+				id: "7C1E3A5B9D2F0C16"
+				type: "kill"
+				value: 1L
+			}]
+			x: -3.0d
+			y: 2.0d
+		}
+		{
+			dependencies: ["7C1E3A5B9D2F0C11"]
+			icon: {
+				id: "minecraft:heart_of_the_sea"
+			}
+			id: "7C1E3A5B9D2F0C19"
+			rewards: [
+				{
+					count: 4
+					id: "7C1E3A5B9D2F0C1B"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					id: "7C1E3A5B9D2F0C1C"
+					type: "xp"
+					xp: 120
+				}
+			]
+			tasks: [{
+				entity: "cataclysm:the_leviathan"
+				id: "7C1E3A5B9D2F0C1A"
+				type: "kill"
+				value: 1L
+			}]
+			x: -1.0d
+			y: 2.0d
+		}
+		{
+			dependencies: ["7C1E3A5B9D2F0C11"]
+			icon: {
+				id: "minecraft:ancient_debris"
+			}
+			id: "7C1E3A5B9D2F0C1D"
+			rewards: [
+				{
+					count: 2
+					id: "7C1E3A5B9D2F0C1F"
+					item: {
+						count: 1
+						id: "minecraft:netherite_scrap"
+					}
+					type: "item"
+				}
+				{
+					id: "7C1E3A5B9D2F0C20"
+					type: "xp"
+					xp: 130
+				}
+			]
+			tasks: [{
+				entity: "cataclysm:netherite_monstrosity"
+				id: "7C1E3A5B9D2F0C1E"
+				type: "kill"
+				value: 1L
+			}]
+			x: 1.0d
+			y: 2.0d
+		}
+		{
+			dependencies: ["7C1E3A5B9D2F0C11"]
+			icon: {
+				id: "minecraft:ender_eye"
+			}
+			id: "7C1E3A5B9D2F0C21"
+			rewards: [
+				{
+					count: 2
+					id: "7C1E3A5B9D2F0C23"
+					item: {
+						count: 1
+						id: "minecraft:netherite_scrap"
+					}
+					type: "item"
+				}
+				{
+					id: "7C1E3A5B9D2F0C24"
+					type: "xp"
+					xp: 150
+				}
+			]
+			tasks: [{
+				entity: "cataclysm:ender_guardian"
+				id: "7C1E3A5B9D2F0C22"
+				type: "kill"
+				value: 1L
+			}]
+			x: 3.0d
+			y: 2.0d
+		}
+		{
+			dependencies: [
+				"7C1E3A5B9D2F0C15"
+				"7C1E3A5B9D2F0C19"
+				"7C1E3A5B9D2F0C1D"
+				"7C1E3A5B9D2F0C21"
+			]
+			icon: {
+				id: "minecraft:beacon"
+			}
+			id: "7C1E3A5B9D2F0C25"
+			rewards: [
+				{
+					command: "/apoth set_world_tier @s ascent"
+					id: "7C1E3A5B9D2F0C27"
+					permission_level: 2
+					type: "command"
+				}
+				{
+					count: 2
+					id: "7C1E3A5B9D2F0C28"
+					item: {
+						count: 1
+						id: "minecraft:netherite_ingot"
+					}
+					type: "item"
+				}
+				{
+					id: "7C1E3A5B9D2F0C29"
+					type: "xp"
+					xp: 200
+				}
+			]
+			shape: "hexagon"
+			size: 1.5d
+			tasks: [{
+				id: "7C1E3A5B9D2F0C26"
+				type: "checkmark"
+			}]
+			x: 0.0d
+			y: 4.0d
+		}
+	]
+}

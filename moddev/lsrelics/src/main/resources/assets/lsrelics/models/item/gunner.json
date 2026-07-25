@@ -1,0 +1,6722 @@
+{
+  "format_version": "1.9.0",
+  "textures": {
+    "0": "lsrelics:item/gunner",
+    "1": "lsrelics:item/gunner_sight",
+    "particle": "lsrelics:item/gunner",
+    "lsglow": "lsrelics:item/gunner_glow"
+  },
+  "elements": [
+    {
+      "name": "s",
+      "from": [
+        6.148,
+        17.8325,
+        19.4775
+      ],
+      "to": [
+        6.662,
+        18.6775,
+        20.5025
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.065,
+          14.7675,
+          45.4225
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            4,
+            2.5,
+            5
+          ],
+          "texture": "#1"
+        },
+        "east": {
+          "uv": [
+            2,
+            2,
+            3,
+            3
+          ],
+          "texture": "#1",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            4,
+            2,
+            4.5,
+            3
+          ],
+          "texture": "#1",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            2,
+            3,
+            3,
+            4
+          ],
+          "texture": "#1"
+        },
+        "up": {
+          "uv": [
+            3.5,
+            5,
+            3,
+            4
+          ],
+          "texture": "#1"
+        },
+        "down": {
+          "uv": [
+            4.5,
+            3,
+            4,
+            4
+          ],
+          "texture": "#1"
+        }
+      }
+    },
+    {
+      "name": "s",
+      "from": [
+        6.148,
+        17.8325,
+        9.8525
+      ],
+      "to": [
+        6.662,
+        18.6775,
+        10.3525
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.065,
+          14.7675,
+          35.2975
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            4,
+            4.5,
+            5
+          ],
+          "texture": "#1"
+        },
+        "east": {
+          "uv": [
+            3,
+            2,
+            4,
+            3
+          ],
+          "texture": "#1",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            2,
+            5,
+            2.5,
+            6
+          ],
+          "texture": "#1"
+        },
+        "west": {
+          "uv": [
+            3,
+            3,
+            4,
+            4
+          ],
+          "texture": "#1"
+        },
+        "up": {
+          "uv": [
+            5.5,
+            3,
+            5,
+            2
+          ],
+          "texture": "#1",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            3.5,
+            5,
+            3,
+            6
+          ],
+          "texture": "#1",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "s",
+      "from": [
+        8.43269,
+        16.67666,
+        8.8275
+      ],
+      "to": [
+        8.99269,
+        17.23666,
+        21.0125
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          5.78,
+          14.5925,
+          29.2925
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            3,
+            5.5,
+            3.5
+          ],
+          "texture": "#1"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            12,
+            0.5
+          ],
+          "texture": "#1"
+        },
+        "south": {
+          "uv": [
+            4,
+            5,
+            4.5,
+            5.5
+          ],
+          "texture": "#1"
+        },
+        "west": {
+          "uv": [
+            0,
+            1,
+            12,
+            1.5
+          ],
+          "texture": "#1"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            14,
+            0,
+            2
+          ],
+          "texture": "#1"
+        },
+        "down": {
+          "uv": [
+            1.5,
+            2,
+            1,
+            14
+          ],
+          "texture": "#1",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "p",
+      "from": [
+        6.97,
+        18.3223,
+        18.81907
+      ],
+      "to": [
+        7.29,
+        18.6923,
+        18.88407
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          7.13,
+          17.53284,
+          18.7793
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            7.5,
+            11,
+            7.75,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            11,
+            7.5,
+            11.25,
+            7.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            8,
+            11,
+            8.25,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            11,
+            8,
+            11.25,
+            8.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            8.75,
+            11.25,
+            8.5,
+            11
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            11.25,
+            8.5,
+            11,
+            8.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "p",
+      "from": [
+        6.97,
+        17.75198,
+        19.11816
+      ],
+      "to": [
+        7.29,
+        18.24698,
+        19.18316
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.13,
+          17.53284,
+          18.7793
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            2.5,
+            12.75,
+            2.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            3,
+            12.5,
+            3.25,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12.5,
+            3,
+            12.75,
+            3.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            3.5,
+            12.5,
+            3.75,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            12.75,
+            3.75,
+            12.5,
+            3.5
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            4.25,
+            12.5,
+            4,
+            12.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "p",
+      "from": [
+        6.97,
+        17.65698,
+        18.51816
+      ],
+      "to": [
+        7.29,
+        17.75198,
+        19.18316
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.13,
+          17.53284,
+          18.7793
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            9,
+            11,
+            9.25,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            11,
+            9,
+            11.25,
+            9.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9.5,
+            11,
+            9.75,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            11,
+            9.5,
+            11.25,
+            9.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            10.25,
+            11.25,
+            10,
+            11
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            11.25,
+            10,
+            11,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "p",
+      "from": [
+        6.97,
+        17.56198,
+        18.59316
+      ],
+      "to": [
+        7.29,
+        17.65698,
+        18.73316
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.13,
+          17.53284,
+          18.7793
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            4,
+            12.75,
+            4.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            4.5,
+            12.5,
+            4.75,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12.5,
+            4.5,
+            12.75,
+            4.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            5,
+            12.5,
+            5.25,
+            12.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            12.75,
+            5.25,
+            12.5,
+            5
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            5.75,
+            12.5,
+            5.5,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        7.035,
+        17.72682,
+        20.14198
+      ],
+      "to": [
+        7.155,
+        18.60182,
+        20.25698
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0.5,
+            10.5,
+            0.75,
+            11
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            10.5,
+            0.5,
+            10.75,
+            1
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10.5,
+            1,
+            10.75,
+            1.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            2,
+            10.5,
+            2.25,
+            11
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            5.75,
+            11.25,
+            5.5,
+            11
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            11.25,
+            5.5,
+            11,
+            5.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        7.035,
+        17.72682,
+        19.87698
+      ],
+      "to": [
+        7.155,
+        18.07682,
+        20.14198
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5.5,
+            13,
+            5.75,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            13,
+            5.5,
+            13.25,
+            5.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            6,
+            13,
+            6.25,
+            13.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            13,
+            6,
+            13.25,
+            6.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            6.75,
+            13.25,
+            6.5,
+            13
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            13.25,
+            6.5,
+            13,
+            6.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        7.035,
+        18.07682,
+        19.87698
+      ],
+      "to": [
+        7.155,
+        18.20182,
+        19.96698
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            7,
+            13,
+            7.25,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            13,
+            7,
+            13.25,
+            7.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7.5,
+            13,
+            7.75,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            13,
+            7.5,
+            13.25,
+            7.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            8.25,
+            13.25,
+            8,
+            13
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            13.25,
+            8,
+            13,
+            8.25
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        7.06,
+        18.15182,
+        20.04198
+      ],
+      "to": [
+        7.13,
+        18.55182,
+        20.10698
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            13,
+            4.25,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            13,
+            4,
+            13.25,
+            4.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            4.5,
+            13,
+            4.75,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            13,
+            4.5,
+            13.25,
+            4.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            5.25,
+            13.25,
+            5,
+            13
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            13.25,
+            5,
+            13,
+            5.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        7.035,
+        18.55182,
+        20.01698
+      ],
+      "to": [
+        7.155,
+        18.70182,
+        20.13198
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            8.5,
+            13,
+            8.75,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            13,
+            8.5,
+            13.25,
+            8.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9,
+            13,
+            9.25,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            13,
+            9,
+            13.25,
+            9.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            9.75,
+            13.25,
+            9.5,
+            13
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            13.25,
+            9.5,
+            13,
+            9.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        6.995,
+        17.04659,
+        19.8084
+      ],
+      "to": [
+        7.14,
+        17.68659,
+        20.4484
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            11,
+            6.25,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            11,
+            6,
+            11.25,
+            6.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            6.5,
+            11,
+            6.75,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            11,
+            6.5,
+            11.25,
+            6.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            7.25,
+            11.25,
+            7,
+            11
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            11.25,
+            7,
+            11,
+            7.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        7.01,
+        17.53534,
+        19.71842
+      ],
+      "to": [
+        7.155,
+        17.75034,
+        20.10842
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            2.5,
+            13,
+            2.75,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            13,
+            2.5,
+            13.25,
+            2.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            3,
+            13,
+            3.25,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            13,
+            3,
+            13.25,
+            3.25
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            3.75,
+            13.25,
+            3.5,
+            13
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            13.25,
+            3.5,
+            13,
+            3.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        7.12,
+        17.29659,
+        20.0584
+      ],
+      "to": [
+        7.165,
+        17.43659,
+        20.1984
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0.5,
+            13,
+            0.75,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            13,
+            0.5,
+            13.25,
+            0.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            13,
+            1,
+            13.25,
+            1.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            13,
+            1.5,
+            13.25,
+            1.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            2.25,
+            13.25,
+            2,
+            13
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            13.25,
+            2,
+            13,
+            2.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        6.945,
+        18.19624,
+        19.74545
+      ],
+      "to": [
+        7.24,
+        18.27874,
+        20.18545
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            5.5,
+            12.75,
+            5.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            6,
+            12.5,
+            6.25,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12.5,
+            6,
+            12.75,
+            6.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            6.5,
+            12.5,
+            6.75,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            12.75,
+            6.75,
+            12.5,
+            6.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            7.25,
+            12.5,
+            7,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        6.97,
+        18.29624,
+        19.62045
+      ],
+      "to": [
+        7.215,
+        18.36374,
+        20.01045
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            8.5,
+            12.75,
+            8.75
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            9,
+            12.5,
+            9.25,
+            12.75
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            9,
+            12.75,
+            9.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            9.5,
+            12.5,
+            9.75,
+            12.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            12.75,
+            9.75,
+            12.5,
+            9.5
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            10.25,
+            12.5,
+            10,
+            12.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        6.97,
+        18.36374,
+        19.72045
+      ],
+      "to": [
+        7.215,
+        18.42874,
+        20.01045
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            11.5,
+            12.75,
+            11.75
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            12,
+            12.5,
+            12.25,
+            12.75
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            12,
+            12.75,
+            12.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            12.5,
+            12.75,
+            12.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            0.25,
+            13.25,
+            0,
+            13
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            13.25,
+            0,
+            13,
+            0.25
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        6.995,
+        18.27124,
+        19.77045
+      ],
+      "to": [
+        7.19,
+        18.45374,
+        20.03545
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            10,
+            12.75,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            10.5,
+            12.5,
+            10.75,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12.5,
+            10.5,
+            12.75,
+            10.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            11,
+            12.5,
+            11.25,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            12.75,
+            11.25,
+            12.5,
+            11
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            11.75,
+            12.5,
+            11.5,
+            12.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "f",
+      "from": [
+        6.945,
+        18.45374,
+        19.74545
+      ],
+      "to": [
+        7.24,
+        18.51124,
+        20.18545
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.18,
+          17.36516,
+          20.12358
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            7,
+            12.75,
+            7.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            7.5,
+            12.5,
+            7.75,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12.5,
+            7.5,
+            12.75,
+            7.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            8,
+            12.5,
+            8.25,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            12.75,
+            8.25,
+            12.5,
+            8
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            8.75,
+            12.5,
+            8.5,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.173,
+        16.7825,
+        -3.2475
+      ],
+      "to": [
+        7.037,
+        17.6775,
+        -1.4475
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.165,
+          13.7175,
+          23.4725
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            9,
+            7,
+            9.5,
+            7.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8,
+            0,
+            9,
+            0.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9,
+            7.5,
+            9.5,
+            8
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            8,
+            0.5,
+            9,
+            1
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            7.5,
+            6.5,
+            7,
+            5.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            8.5,
+            3,
+            8,
+            4
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.173,
+        16.7825,
+        6.0275
+      ],
+      "to": [
+        7.037,
+        17.7025,
+        6.5025
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.165,
+          13.7175,
+          31.4475
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            9.5,
+            5.5,
+            10
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            10.5,
+            6,
+            10.75,
+            6.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9.5,
+            5,
+            10,
+            5.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            6.5,
+            10.5,
+            6.75,
+            11
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            11,
+            6.75,
+            10.5,
+            6.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            7.5,
+            10.5,
+            7,
+            10.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.173,
+        16.6075,
+        13.9275
+      ],
+      "to": [
+        7.037,
+        17.7025,
+        14.4025
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.165,
+          13.7175,
+          39.3475
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5.5,
+            9.5,
+            6,
+            10
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            10.5,
+            7.5,
+            10.75,
+            8
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9.5,
+            5.5,
+            10,
+            6
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            8,
+            10.5,
+            8.25,
+            11
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            11,
+            8.25,
+            10.5,
+            8
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            9,
+            10.5,
+            8.5,
+            10.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.573,
+        17.9175,
+        -3.1575
+      ],
+      "to": [
+        6.629,
+        18.1925,
+        -2.8775
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          5.885,
+          14.5175,
+          23.4025
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            10.5,
+            9,
+            10.75,
+            9.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9.5,
+            10.5,
+            9.75,
+            10.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10.5,
+            9.5,
+            10.75,
+            9.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            10.5,
+            10.25,
+            10.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            10.75,
+            10.25,
+            10.5,
+            10
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10.75,
+            10.5,
+            10.5,
+            10.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.201,
+        16.6325,
+        12.3075
+      ],
+      "to": [
+        7.009,
+        17.6775,
+        20.7375
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.125,
+          13.7975,
+          26.4725
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            9.5,
+            0.5,
+            10
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            0,
+            15.25,
+            4.75,
+            16
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9.5,
+            0,
+            10,
+            0.5
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            4.75,
+            15.25,
+            9.5,
+            16
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            3.5,
+            9.25,
+            3,
+            5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            4,
+            5,
+            3.5,
+            9.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.201,
+        17.6775,
+        19.315
+      ],
+      "to": [
+        7.009,
+        17.8475,
+        20.775
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.125,
+          13.9675,
+          26.4475
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            10.5,
+            7,
+            11,
+            7.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            4.5,
+            10,
+            5.25,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7.5,
+            10.5,
+            8,
+            10.75
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            10,
+            4.5,
+            10.75,
+            4.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            9.5,
+            5.75,
+            9,
+            5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            9.5,
+            6,
+            9,
+            6.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.201,
+        16.6875,
+        9.2825
+      ],
+      "to": [
+        7.009,
+        17.6775,
+        12.3075
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          13.7175,
+          24.7225
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            9.5,
+            0.5,
+            10,
+            1
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            6,
+            6.5,
+            7.5,
+            7
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            2,
+            9.5,
+            2.5,
+            10
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            7,
+            5,
+            8.5,
+            5.5
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            6.5,
+            8.5,
+            6,
+            7
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            7,
+            7,
+            6.5,
+            8.5
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.234,
+        17.6775,
+        19.3174
+      ],
+      "to": [
+        6.667,
+        17.9975,
+        20.7624
+      ],
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          6.605,
+          17.85,
+          19.84
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            11,
+            0.25,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9.5,
+            6,
+            10.25,
+            6.25
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            11,
+            0,
+            11.25,
+            0.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            9.5,
+            6.5,
+            10.25,
+            6.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            6.25,
+            10.25,
+            6,
+            9.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            9.75,
+            7,
+            9.5,
+            7.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.544,
+        17.6775,
+        19.3174
+      ],
+      "to": [
+        6.977,
+        17.9975,
+        20.7624
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "z",
+        "origin": [
+          6.605,
+          17.85,
+          19.84
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            0,
+            12.75,
+            0.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            10,
+            1.5,
+            10.75,
+            1.75
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            12.5,
+            0.75,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            2,
+            10,
+            2.75,
+            10.25
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            3.25,
+            10.75,
+            3,
+            10
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            3.75,
+            10,
+            3.5,
+            10.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.455,
+        16.168,
+        19.47402
+      ],
+      "to": [
+        6.755,
+        16.608,
+        19.58402
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.528,
+          25.96902
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0.5,
+            11,
+            0.75,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            11,
+            0.5,
+            11.25,
+            0.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11,
+            1,
+            11.25,
+            1.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            11,
+            1.5,
+            11.25,
+            1.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            2.25,
+            11.25,
+            2,
+            11
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            2.75,
+            11,
+            2.5,
+            11.25
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.455,
+        16.1925,
+        20.5275
+      ],
+      "to": [
+        6.755,
+        16.6725,
+        20.6375
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.5525,
+          27.0225
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            3,
+            11,
+            3.25,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            11,
+            3,
+            11.25,
+            3.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            3.5,
+            11,
+            3.75,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            11,
+            3.5,
+            11.25,
+            3.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            4.25,
+            11.25,
+            4,
+            11
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            11.25,
+            4,
+            11,
+            4.25
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.405,
+        16.6125,
+        19.2425
+      ],
+      "to": [
+        6.805,
+        16.6525,
+        20.5525
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.5325,
+          26.5925
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            4.5,
+            11,
+            4.75,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9.5,
+            9,
+            10.25,
+            9.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11,
+            4.5,
+            11.25,
+            4.75
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            9.5,
+            9.5,
+            10.25,
+            9.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            0.25,
+            10.75,
+            0,
+            10
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            10.25,
+            0,
+            10,
+            0.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.52,
+        17.9675,
+        19.3025
+      ],
+      "to": [
+        6.69,
+        18.0125,
+        20.4875
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          15.2725,
+          30.7725
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            11,
+            5.25,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8,
+            10,
+            8.5,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11,
+            5,
+            11.25,
+            5.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            9.5,
+            10,
+            10,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            10.25,
+            10.5,
+            10,
+            10
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10.75,
+            0,
+            10.5,
+            0.5
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.525,
+        17.9675,
+        20.3075
+      ],
+      "to": [
+        6.645,
+        18.0475,
+        20.4275
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "y",
+        "origin": [
+          6.63,
+          18.0075,
+          20.3775
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            10.5,
+            11,
+            10.75,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            11,
+            10.5,
+            11.25,
+            10.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11,
+            11,
+            11.25,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            0,
+            11.5,
+            0.25,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            11.75,
+            0.25,
+            11.5,
+            0
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            0.75,
+            11.5,
+            0.5,
+            11.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        16.7955,
+        17.6925
+      ],
+      "to": [
+        7.16,
+        16.8705,
+        18.9015
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          7.12,
+          13.0675,
+          30.0775
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11.5,
+            0.5,
+            11.75,
+            0.75
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            2.5,
+            10.5,
+            3,
+            10.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11.5,
+            1,
+            11.75,
+            1.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10.5,
+            3,
+            11,
+            3.25
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            10.75,
+            4,
+            10.5,
+            3.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            4.25,
+            10.5,
+            4,
+            11
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        16.85841,
+        17.66562
+      ],
+      "to": [
+        7.16,
+        16.93341,
+        17.74962
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "x",
+        "origin": [
+          7.08,
+          16.89591,
+          17.64512
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13.5,
+            3.5,
+            13.75,
+            3.75
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            4,
+            13.5,
+            4.25,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            13.5,
+            4,
+            13.75,
+            4.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            13.5,
+            4.75,
+            13.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            13.75,
+            4.75,
+            13.5,
+            4.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            5.25,
+            13.5,
+            5,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        16.88405,
+        17.67514
+      ],
+      "to": [
+        7.16,
+        16.95905,
+        17.73414
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.08,
+          16.92155,
+          17.62964
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13.5,
+            5,
+            13.75,
+            5.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            5.5,
+            13.5,
+            5.75,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            13.5,
+            5.5,
+            13.75,
+            5.75
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            6,
+            13.5,
+            6.25,
+            13.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            13.75,
+            6.25,
+            13.5,
+            6
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            6.75,
+            13.5,
+            6.5,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        16.8549,
+        17.6331
+      ],
+      "to": [
+        7.16,
+        16.9799,
+        17.7081
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "x",
+        "origin": [
+          7.08,
+          16.9594,
+          17.6706
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13.5,
+            6.5,
+            13.75,
+            6.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            7,
+            13.5,
+            7.25,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            13.5,
+            7,
+            13.75,
+            7.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            7.5,
+            13.5,
+            7.75,
+            13.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            13.75,
+            7.75,
+            13.5,
+            7.5
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            8.25,
+            13.5,
+            8,
+            13.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        17.1955,
+        17.6425
+      ],
+      "to": [
+        7.16,
+        17.2705,
+        18.9265
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          7.08,
+          17.233,
+          18.2845
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13.5,
+            3,
+            13.75,
+            3.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            10,
+            5,
+            10.75,
+            5.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            3.5,
+            13.5,
+            3.75,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            5.5,
+            10.75,
+            5.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            5.75,
+            10.75,
+            5.5,
+            10
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            10.25,
+            7,
+            10,
+            7.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.985,
+        17.5455,
+        18.7675
+      ],
+      "to": [
+        7.315,
+        17.6185,
+        19.2015
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "x",
+        "origin": [
+          7.125,
+          17.582,
+          19.0345
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11.5,
+            1.5,
+            11.75,
+            1.75
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            2,
+            11.5,
+            2.25,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            2.5,
+            11.5,
+            2.75,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            3,
+            11.5,
+            3.25,
+            11.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            11.75,
+            3.25,
+            11.5,
+            3
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            3.75,
+            11.5,
+            3.5,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        7.26,
+        17.6185,
+        18.8585
+      ],
+      "to": [
+        7.315,
+        17.6665,
+        19.1425
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "x",
+        "origin": [
+          7.125,
+          17.605,
+          19.0505
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            10,
+            13,
+            10.25,
+            13.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            13,
+            10,
+            13.25,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10.5,
+            13,
+            10.75,
+            13.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            13,
+            10.5,
+            13.25,
+            10.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            11.25,
+            13.25,
+            11,
+            13
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            13.25,
+            11,
+            13,
+            11.25
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.985,
+        17.6185,
+        19.1425
+      ],
+      "to": [
+        7.315,
+        17.6665,
+        19.2515
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "x",
+        "origin": [
+          7.125,
+          17.605,
+          19.0345
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11.5,
+            13,
+            11.75,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            13,
+            11.5,
+            13.25,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12,
+            13,
+            12.25,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            13,
+            12,
+            13.25,
+            12.25
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            12.75,
+            13.25,
+            12.5,
+            13
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            13.25,
+            12.5,
+            13,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.985,
+        17.6185,
+        18.7995
+      ],
+      "to": [
+        7.315,
+        17.6665,
+        18.8585
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "x",
+        "origin": [
+          7.125,
+          17.605,
+          18.6415
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13,
+            13,
+            13.25,
+            13.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            0,
+            13.5,
+            0.25,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            13.5,
+            0,
+            13.75,
+            0.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            0.5,
+            13.5,
+            0.75,
+            13.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            13.75,
+            0.75,
+            13.5,
+            0.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            13.75,
+            1,
+            13.5,
+            1.25
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.975,
+        17.4625,
+        18.6975
+      ],
+      "to": [
+        7.34,
+        17.6125,
+        18.8475
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.295,
+          17.5375,
+          18.7725
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11.5,
+            3.5,
+            11.75,
+            3.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            4,
+            11.5,
+            4.25,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11.5,
+            4,
+            11.75,
+            4.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            4.5,
+            11.5,
+            4.75,
+            11.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            11.75,
+            4.75,
+            11.5,
+            4.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            5.25,
+            11.5,
+            5,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.975,
+        16.7625,
+        18.5225
+      ],
+      "to": [
+        7.34,
+        16.9125,
+        18.6725
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          7.295,
+          16.8375,
+          18.5975
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13.5,
+            1.5,
+            13.75,
+            1.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            2,
+            13.5,
+            2.25,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            13.5,
+            2,
+            13.75,
+            2.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            2.5,
+            13.5,
+            2.75,
+            13.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            13.75,
+            2.75,
+            13.5,
+            2.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            3.25,
+            13.5,
+            3,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.455,
+        15.97001,
+        19.67201
+      ],
+      "to": [
+        6.755,
+        16.08001,
+        20.05601
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.62217,
+          25.71201
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11.5,
+            5,
+            11.75,
+            5.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            5.5,
+            11.5,
+            5.75,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11.5,
+            5.5,
+            11.75,
+            5.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            6,
+            11.5,
+            6.25,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            11.75,
+            6.25,
+            11.5,
+            6
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            6.75,
+            11.5,
+            6.5,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.455,
+        15.94501,
+        20.05601
+      ],
+      "to": [
+        6.755,
+        16.05501,
+        20.39001
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.60001,
+          26.09601
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11.5,
+            6.5,
+            11.75,
+            6.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            7,
+            11.5,
+            7.25,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11.5,
+            7,
+            11.75,
+            7.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            7.5,
+            11.5,
+            7.75,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            11.75,
+            7.75,
+            11.5,
+            7.5
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            8.25,
+            11.5,
+            8,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.565,
+        15.9837,
+        20.1825
+      ],
+      "to": [
+        6.645,
+        16.4037,
+        20.2875
+      ],
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          6.205,
+          16.5237,
+          20.6475
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11.5,
+            8,
+            11.75,
+            8.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8.5,
+            11.5,
+            8.75,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11.5,
+            8.5,
+            11.75,
+            8.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            9,
+            11.5,
+            9.25,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            11.75,
+            9.25,
+            11.5,
+            9
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            9.75,
+            11.5,
+            9.5,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.565,
+        16.6975,
+        20.1675
+      ],
+      "to": [
+        6.645,
+        16.8175,
+        20.2875
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          6.205,
+          16.5775,
+          20.6475
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11.5,
+            9.5,
+            11.75,
+            9.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            10,
+            11.5,
+            10.25,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11.5,
+            10,
+            11.75,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10.5,
+            11.5,
+            10.75,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            11.75,
+            10.75,
+            11.5,
+            10.5
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            11.25,
+            11.5,
+            11,
+            11.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.455,
+        16.88613,
+        21.51207
+      ],
+      "to": [
+        6.755,
+        16.99613,
+        21.86207
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "x",
+        "origin": [
+          6.525,
+          15.06113,
+          22.08707
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11.5,
+            11,
+            11.75,
+            11.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            11.5,
+            11.5,
+            11.75,
+            11.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            0,
+            12,
+            0.25,
+            12.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            12,
+            0,
+            12.25,
+            0.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            0.75,
+            12.25,
+            0.5,
+            12
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            12.25,
+            0.5,
+            12,
+            0.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.455,
+        16.06967,
+        17.92141
+      ],
+      "to": [
+        6.755,
+        16.17967,
+        18.20141
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "x",
+        "origin": [
+          6.525,
+          14.24467,
+          18.81641
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12,
+            1,
+            12.25,
+            1.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            12,
+            1.5,
+            12.25,
+            1.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            2,
+            12,
+            2.25,
+            12.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            2.5,
+            12,
+            2.75,
+            12.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            3.25,
+            12.25,
+            3,
+            12
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            12.25,
+            3,
+            12,
+            3.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.455,
+        16.47938,
+        17.73206
+      ],
+      "to": [
+        6.755,
+        16.61438,
+        18.00206
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "x",
+        "origin": [
+          6.525,
+          14.67938,
+          18.68206
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            3.5,
+            12,
+            3.75,
+            12.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            12,
+            3.5,
+            12.25,
+            3.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            4,
+            12,
+            4.25,
+            12.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            12,
+            4,
+            12.25,
+            4.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            4.75,
+            12.25,
+            4.5,
+            12
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            12.25,
+            4.5,
+            12,
+            4.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.213,
+        12.2425,
+        31.0075
+      ],
+      "to": [
+        6.997,
+        16.2975,
+        31.5525
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.2825,
+          25.6475
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            6.5,
+            4.5,
+            8.5
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            8,
+            8,
+            8.25,
+            10
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            6.5,
+            5,
+            8.5
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            4,
+            8.5,
+            4.25,
+            10.5
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            11,
+            4.25,
+            10.5,
+            4
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            5,
+            10.5,
+            4.5,
+            10.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.313,
+        16.2925,
+        30.5575
+      ],
+      "to": [
+        6.897,
+        16.3475,
+        31.2275
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.3075,
+          25.3225
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13.5,
+            10,
+            13.75,
+            10.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            10.5,
+            13.5,
+            10.75,
+            13.75
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            13.5,
+            10.5,
+            13.75,
+            10.75
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            11,
+            13.5,
+            11.25,
+            13.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            13.75,
+            11.25,
+            13.5,
+            11
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            11.75,
+            13.5,
+            11.5,
+            13.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.188,
+        12.2175,
+        31.2325
+      ],
+      "to": [
+        7.022,
+        16.3475,
+        31.6025
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.3075,
+          25.6975
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            6.5,
+            5.5,
+            8.5
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            6,
+            8.75,
+            8
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            5.5,
+            6.5,
+            6,
+            8.5
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            6.5,
+            8.5,
+            6.75,
+            10.5
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            11,
+            8.75,
+            10.5,
+            8.5
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            9.5,
+            10.5,
+            9,
+            10.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.213,
+        15.9625,
+        23.0375
+      ],
+      "to": [
+        6.997,
+        16.7875,
+        25.2175
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.42593,
+          21.18407
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            2.5,
+            9.5,
+            3,
+            10
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            8,
+            1,
+            9,
+            1.5
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            3,
+            9.5,
+            3.5,
+            10
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            8,
+            4,
+            9,
+            4.5
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            9,
+            4,
+            8.5,
+            3
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            5,
+            8.5,
+            4.5,
+            9.5
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.213,
+        16.2825,
+        27.9675
+      ],
+      "to": [
+        6.997,
+        16.5225,
+        30.0075
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.1225,
+          25.6475
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            10.5,
+            5.5,
+            10.75
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            9.5,
+            3,
+            10.5,
+            3.25
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            6,
+            10.5,
+            6.5,
+            10.75
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            9.5,
+            3.5,
+            10.5,
+            3.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            5.5,
+            9.5,
+            5,
+            8.5
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            9,
+            5,
+            8.5,
+            6
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.213,
+        13.5675,
+        27.9675
+      ],
+      "to": [
+        6.997,
+        16.2975,
+        31.0075
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.2825,
+          25.6075
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            7.5,
+            7,
+            8,
+            8.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            4,
+            5,
+            5.5,
+            6.25
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            0,
+            8,
+            0.5,
+            9.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            5.5,
+            5,
+            7,
+            6.25
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            7.5,
+            8.5,
+            7,
+            7
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            8,
+            0,
+            7.5,
+            1.5
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.213,
+        14.8575,
+        25.2175
+      ],
+      "to": [
+        6.997,
+        16.6375,
+        27.9675
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          14.2825,
+          25.6475
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5.5,
+            8.5,
+            6,
+            9.5
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            6,
+            0,
+            7.5,
+            1
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            6,
+            8.5,
+            6.5,
+            9.5
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            6,
+            1,
+            7.5,
+            2
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            8,
+            4.5,
+            7.5,
+            3
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            8,
+            5.5,
+            7.5,
+            7
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.205,
+        14.10167,
+        19.65822
+      ],
+      "to": [
+        7.005,
+        15.36167,
+        31.26822
+      ],
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          6.205,
+          13.7975,
+          26.4725
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            9,
+            0,
+            9.5,
+            0.75
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            5.75,
+            0.75
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            9,
+            3,
+            9.5,
+            3.75
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            0,
+            1,
+            5.75,
+            1.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            7.75,
+            0,
+            2
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            1,
+            2,
+            0.5,
+            7.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.43,
+        14.07667,
+        19.68322
+      ],
+      "to": [
+        6.78,
+        14.11167,
+        19.93072
+      ],
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          6.205,
+          13.7975,
+          26.4725
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            12.5,
+            0.5,
+            12.75,
+            0.75
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            1,
+            12.75,
+            1.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12.5,
+            1.5,
+            12.75,
+            1.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            2,
+            12.5,
+            2.25,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            12.75,
+            2.25,
+            12.5,
+            2
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            2.75,
+            12.5,
+            2.5,
+            12.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.455,
+        14.02667,
+        20.00572
+      ],
+      "to": [
+        6.755,
+        14.11167,
+        23.39322
+      ],
+      "rotation": {
+        "angle": 22.5,
+        "axis": "x",
+        "origin": [
+          6.205,
+          13.7975,
+          26.4725
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13.5,
+            9.5,
+            13.75,
+            9.75
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            8.5,
+            8,
+            10.25,
+            8.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10,
+            13.5,
+            10.25,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            8.5,
+            8.5,
+            10.25,
+            8.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            7.25,
+            10.25,
+            7,
+            8.5
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            7.75,
+            8.5,
+            7.5,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        6.205,
+        16.8075,
+        -1.4475
+      ],
+      "to": [
+        7.005,
+        17.6775,
+        9.2825
+      ],
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.205,
+          13.7175,
+          23.4725
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            3.5,
+            9.5,
+            4,
+            10
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            2,
+            3,
+            7.25,
+            3.5
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            9.5,
+            5,
+            10
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            2,
+            3.5,
+            7.25,
+            4
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            2.5,
+            9.25,
+            2,
+            4
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            3,
+            4,
+            2.5,
+            9.25
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        6.36701,
+        17.41608,
+        -7.2875
+      ],
+      "to": [
+        6.84701,
+        17.89608,
+        15.0375
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          6.60701,
+          17.65608,
+          0.3375
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            12,
+            5.25,
+            12.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            1,
+            2,
+            12.25,
+            2.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12,
+            5,
+            12.25,
+            5.25
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            1,
+            2.5,
+            12.25,
+            2.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            1.25,
+            14.25,
+            1,
+            3
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            1.75,
+            3,
+            1.5,
+            14.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        8.93769,
+        15.92166,
+        -3.2395
+      ],
+      "to": [
+        9.53769,
+        16.52166,
+        -2.7875
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          6.205,
+          13.7575,
+          23.4725
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5.5,
+            12,
+            5.75,
+            12.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            12,
+            5.5,
+            12.25,
+            5.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            6,
+            12,
+            6.25,
+            12.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            12,
+            6,
+            12.25,
+            6.25
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            6.75,
+            12.25,
+            6.5,
+            12
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            12.25,
+            6.5,
+            12,
+            6.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        8.93769,
+        15.92166,
+        -1.9145
+      ],
+      "to": [
+        9.53769,
+        16.52166,
+        -1.4625
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          6.205,
+          13.7575,
+          24.7975
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            11,
+            12,
+            11.25,
+            12.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            12,
+            11,
+            12.25,
+            11.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            11.5,
+            12,
+            11.75,
+            12.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            12,
+            11.5,
+            12.25,
+            11.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            12.25,
+            12.25,
+            12,
+            12
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            0.25,
+            12.5,
+            0,
+            12.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        8.97769,
+        15.96166,
+        6.0255
+      ],
+      "to": [
+        9.53769,
+        16.52166,
+        6.4975
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          6.205,
+          13.7575,
+          32.6175
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            7,
+            12,
+            7.25,
+            12.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            12,
+            7,
+            12.25,
+            7.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7.5,
+            12,
+            7.75,
+            12.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            12,
+            7.5,
+            12.25,
+            7.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            8.25,
+            12.25,
+            8,
+            12
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            12.25,
+            8,
+            12,
+            8.25
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        8.97769,
+        15.96166,
+        13.9255
+      ],
+      "to": [
+        9.53769,
+        16.52166,
+        14.3975
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          6.205,
+          13.7575,
+          40.5175
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            13.5,
+            8,
+            13.75,
+            8.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8.5,
+            13.5,
+            8.75,
+            13.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            13.5,
+            8.5,
+            13.75,
+            8.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            9,
+            13.5,
+            9.25,
+            13.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            13.75,
+            9.25,
+            13.5,
+            9
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            9.75,
+            13.5,
+            9.5,
+            13.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        9.398,
+        15.52666,
+        -5.6075
+      ],
+      "to": [
+        9.558,
+        15.68666,
+        -3.2325
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          6.31,
+          12.8425,
+          23.4475
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            8.5,
+            12,
+            8.75,
+            12.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            9,
+            1,
+            10.25,
+            1.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12,
+            8.5,
+            12.25,
+            8.75
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            9,
+            4,
+            10.25,
+            4.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            8.75,
+            10.25,
+            8.5,
+            9
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            9.25,
+            9,
+            9,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        9.37769,
+        15.42166,
+        -5.8475
+      ],
+      "to": [
+        9.66769,
+        15.71166,
+        -5.6075
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          6.31,
+          12.7625,
+          22.9125
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            9,
+            12,
+            9.25,
+            12.25
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            12,
+            9,
+            12.25,
+            9.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9.5,
+            12,
+            9.75,
+            12.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            12,
+            9.5,
+            12.25,
+            9.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            10.25,
+            12.25,
+            10,
+            12
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            12.25,
+            10,
+            12,
+            10.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "from": [
+        8.85769,
+        16.00166,
+        15.0275
+      ],
+      "to": [
+        9.41769,
+        16.56166,
+        19.3125
+      ],
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          6.205,
+          13.9175,
+          27.5925
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            10.5,
+            12,
+            10.75,
+            12.25
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            7.5,
+            1.5,
+            9.75,
+            1.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            12,
+            10.5,
+            12.25,
+            10.75
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            7.5,
+            4.5,
+            9.75,
+            4.75
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            0.75,
+            10.25,
+            0.5,
+            8
+          ],
+          "texture": "#0",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "down": {
+          "uv": [
+            8.25,
+            5.5,
+            8,
+            7.75
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "s_glow",
+      "from": [
+        8.4207,
+        16.6647,
+        8.8155
+      ],
+      "to": [
+        9.0047,
+        17.2487,
+        21.0245
+      ],
+      "shade": false,
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15
+      },
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            0,
+            12,
+            0.5
+          ],
+          "texture": "#lsglow"
+        },
+        "west": {
+          "uv": [
+            0,
+            1,
+            12,
+            1.5
+          ],
+          "texture": "#lsglow"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            14,
+            0,
+            2
+          ],
+          "texture": "#lsglow"
+        }
+      },
+      "rotation": {
+        "angle": 45,
+        "axis": "z",
+        "origin": [
+          5.78,
+          14.5925,
+          29.2925
+        ]
+      }
+    },
+    {
+      "name": "el_glow",
+      "from": [
+        6.161,
+        16.7705,
+        6.0155
+      ],
+      "to": [
+        7.049,
+        17.7145,
+        6.5145
+      ],
+      "shade": false,
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            9.5,
+            5.5,
+            10
+          ],
+          "texture": "#lsglow"
+        }
+      },
+      "rotation": {
+        "angle": 0,
+        "axis": "y",
+        "origin": [
+          6.165,
+          13.7175,
+          31.4475
+        ]
+      }
+    }
+  ],
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        0,
+        -12,
+        0
+      ],
+      "translation": [
+        2.5,
+        -7.25,
+        -8.75
+      ],
+      "scale": [
+        0.84,
+        0.84,
+        0.78
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        178.25,
+        -6,
+        179.82
+      ],
+      "translation": [
+        2.25,
+        -7,
+        12
+      ],
+      "scale": [
+        0.84,
+        0.84,
+        0.78
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        5.36,
+        -5.11,
+        2.59
+      ],
+      "translation": [
+        4.0,
+        -10.5,
+        -12.25
+      ],
+      "scale": [
+        0.89,
+        0.91,
+        0.87
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        78.42,
+        0.19,
+        2.85
+      ],
+      "translation": [
+        -5.0,
+        -3.0,
+        0.5
+      ],
+      "scale": [
+        0.54,
+        0.54,
+        0.54
+      ]
+    },
+    "ground": {
+      "rotation": [
+        0,
+        0,
+        90
+      ],
+      "translation": [
+        0,
+        -1.5,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
+    },
+    "gui": {
+      "rotation": [
+        108.77,
+        -48.43,
+        97.33
+      ],
+      "translation": [
+        4.75,
+        -1.75,
+        0.5
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.55
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        90,
+        48.5,
+        -90
+      ],
+      "translation": [
+        -6,
+        -2.25,
+        -1
+      ],
+      "scale": [
+        0.68,
+        0.68,
+        0.68
+      ]
+    }
+  },
+  "gui_light": "front"
+}

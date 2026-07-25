@@ -1,0 +1,147 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: "circle"
+	filename: "sanctuary"
+	group: ""
+	icon: {
+		id: "minecraft:lantern"
+	}
+	id: "5A9C1E0B7F2D4A10"
+	order_index: 0
+	quest_links: [ ]
+	quests: [
+		{
+			icon: {
+				id: "minecraft:lantern"
+			}
+			id: "5A9C1E0B7F2D4A11"
+			rewards: [
+				{
+					id: "5A9C1E0B7F2D4A13"
+					item: {
+						count: 1
+						id: "ftbquests:book"
+					}
+					type: "item"
+				}
+				{
+					count: 4
+					id: "5A9C1E0B7F2D4A14"
+					item: {
+						count: 1
+						id: "minecraft:torch"
+					}
+					type: "item"
+				}
+			]
+			shape: "hexagon"
+			size: 1.25d
+			tasks: [{
+				id: "5A9C1E0B7F2D4A12"
+				type: "checkmark"
+			}]
+			x: 0.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["5A9C1E0B7F2D4A11"]
+			icon: {
+				id: "minecraft:writable_book"
+			}
+			id: "5A9C1E0B7F2D4A20"
+			rewards: [
+				{
+					id: "5A9C1E0B7F2D4A22"
+					item: {
+						count: 1
+						id: "minecraft:stone_pickaxe"
+					}
+					type: "item"
+				}
+				{
+					id: "5A9C1E0B7F2D4A23"
+					item: {
+						count: 1
+						id: "minecraft:stone_axe"
+					}
+					type: "item"
+				}
+				{
+					id: "5A9C1E0B7F2D4A24"
+					item: {
+						count: 1
+						id: "minecraft:stone_sword"
+					}
+					type: "item"
+				}
+				{
+					id: "5A9C1E0B7F2D4A25"
+					item: {
+						count: 1
+						id: "minecraft:stone_shovel"
+					}
+					type: "item"
+				}
+				{
+					count: 16
+					id: "5A9C1E0B7F2D4A26"
+					item: {
+						count: 1
+						id: "minecraft:torch"
+					}
+					type: "item"
+				}
+				{
+					count: 8
+					id: "5A9C1E0B7F2D4A27"
+					item: {
+						count: 1
+						id: "minecraft:bread"
+					}
+					type: "item"
+				}
+				{
+					id: "5A9C1E0B7F2D4A28"
+					type: "xp"
+					xp: 40
+				}
+			]
+			tasks: [{
+				id: "5A9C1E0B7F2D4A21"
+				type: "checkmark"
+			}]
+			x: 0.0d
+			y: 2.0d
+		}
+		{
+			dependencies: ["5A9C1E0B7F2D4A20"]
+			icon: {
+				id: "waystones:waystone"
+			}
+			id: "5A9C1E0B7F2D4A30"
+			rewards: [
+				{
+					id: "5A9C1E0B7F2D4A32"
+					item: {
+						count: 1
+						id: "waystones:warp_scroll"
+					}
+					type: "item"
+				}
+				{
+					id: "5A9C1E0B7F2D4A33"
+					type: "xp"
+					xp: 50
+				}
+			]
+			shape: "hexagon"
+			size: 1.25d
+			tasks: [{
+				id: "5A9C1E0B7F2D4A31"
+				type: "checkmark"
+			}]
+			x: 0.0d
+			y: 4.0d
+		}
+	]
+}

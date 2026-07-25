@@ -1,0 +1,64 @@
+{
+	"size": "medium",
+	"color": "#7D3C98",
+	"waves": [
+		{
+			"entities": [
+				{ "entity": "minecraft:zombie", "count": 6 },
+				{ "entity": "minecraft:skeleton", "count": 3 },
+				{ "entity": "minecraft:spider", "count": 2 }
+			],
+			"modifiers": [],
+			"rewards": [
+				{ "type": "gateways:entity_loot", "entity": "minecraft:zombie", "rolls": 8 },
+				{ "type": "gateways:entity_loot", "entity": "minecraft:skeleton", "rolls": 6 }
+			],
+			"max_wave_time": 1200,
+			"setup_time": 100
+		},
+		{
+			"entities": [
+				{ "entity": "minecraft:husk", "count": 5 },
+				{ "entity": "minecraft:stray", "count": 4 },
+				{ "entity": "minecraft:vindicator", "count": 2 }
+			],
+			"modifiers": [
+				{ "attribute": "generic.max_health", "operation": "add_multiplied_total", "value": 0.15 }
+			],
+			"rewards": [
+				{ "type": "gateways:entity_loot", "entity": "minecraft:husk", "rolls": 8 },
+				{ "type": "gateways:stack", "stack": { "id": "minecraft:emerald", "count": 6 } }
+			],
+			"max_wave_time": 1400,
+			"setup_time": 120
+		},
+		{
+			"entities": [
+				{ "entity": "minecraft:wither_skeleton", "count": 4 },
+				{ "entity": "minecraft:vindicator", "count": 3 },
+				{ "entity": "cataclysm:ignited_revenant", "count": 1 }
+			],
+			"modifiers": [
+				{ "attribute": "generic.max_health", "operation": "add_multiplied_total", "value": 0.25 },
+				{ "attribute": "generic.movement_speed", "operation": "add_multiplied_total", "value": 0.1 }
+			],
+			"rewards": [
+				{ "type": "gateways:entity_loot", "entity": "minecraft:wither_skeleton", "rolls": 8 },
+				{ "type": "gateways:stack", "stack": { "id": "minecraft:diamond", "count": 3 } }
+			],
+			"max_wave_time": 1600,
+			"setup_time": 140
+		}
+	],
+	"rewards": [
+		{ "type": "gateways:loot_table", "loot_table": "minecraft:chests/simple_dungeon", "rolls": 6, "desc": "rewards.gateways.loot_table.simple_dungeon" },
+		{ "type": "gateways:stack", "stack": { "id": "minecraft:emerald", "count": 12 } }
+	],
+	"failures": [
+		{ "type": "gateways:mob_effect", "effect": "minecraft:blindness", "duration": 300 },
+		{ "type": "gateways:summon", "entity": { "entity": "minecraft:vindicator", "count": 2 } }
+	],
+	"rules": {
+		"allow_discarding": true
+	}
+}

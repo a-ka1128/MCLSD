@@ -1,0 +1,3046 @@
+{
+  "textures": {
+    "staff_divine_staff": "lsrelics:item/sage",
+    "particle": "lsrelics:item/sage",
+    "lsglow": "lsrelics:item/sage_glow"
+  },
+  "elements": [
+    {
+      "name": "Box1",
+      "from": [
+        5.5,
+        14.25,
+        8.125
+      ],
+      "to": [
+        6,
+        14.5,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            5.5,
+            1.5,
+            6,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            5.5,
+            1.75,
+            6,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            6,
+            1.5,
+            5.5,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            5.5,
+            1.5,
+            6,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            5.5,
+            1.5,
+            5.75,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            6,
+            1.75,
+            5.75,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box2",
+      "from": [
+        5.5,
+        13.75,
+        8.125
+      ],
+      "to": [
+        5.75,
+        14.25,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            5.5,
+            2,
+            5.75,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            5.75,
+            1.75,
+            5.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            5.5,
+            1.75,
+            5.75,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            5.5,
+            1.75,
+            5.75,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            5.75,
+            2.25,
+            5.5,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box3",
+      "from": [
+        5.75,
+        14.5,
+        8.125
+      ],
+      "to": [
+        7,
+        14.75,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            5.75,
+            1.25,
+            7,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            5.75,
+            1.5,
+            7,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            7,
+            1.25,
+            5.75,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            5.75,
+            1.25,
+            7,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            5.75,
+            1.25,
+            6,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            7,
+            1.5,
+            6.75,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box4",
+      "from": [
+        6,
+        14.75,
+        8.125
+      ],
+      "to": [
+        6.75,
+        15,
+        8.375
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            6,
+            1.25,
+            6.75,
+            1
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            6.75,
+            1,
+            6,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            6,
+            1,
+            6.75,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            6,
+            1,
+            6.25,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            6.75,
+            1.25,
+            6.5,
+            1
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box5",
+      "from": [
+        6.25,
+        13,
+        8.125
+      ],
+      "to": [
+        6.75,
+        13.5,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            6.25,
+            2.75,
+            6.75,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            6.25,
+            2.75,
+            6.75,
+            2.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            6.75,
+            2.5,
+            6.25,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            6.25,
+            2.5,
+            6.75,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            6.25,
+            2.5,
+            6.5,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box6",
+      "from": [
+        6.5,
+        14.25,
+        8.125
+      ],
+      "to": [
+        7.25,
+        14.5,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            6.5,
+            1.5,
+            7.25,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            6.5,
+            1.75,
+            7.25,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            7.25,
+            1.5,
+            6.5,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            6.5,
+            1.5,
+            7.25,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            6.5,
+            1.5,
+            6.75,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            7.25,
+            1.75,
+            7,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box7",
+      "from": [
+        6.5,
+        12.75,
+        8.125
+      ],
+      "to": [
+        6.75,
+        13.75,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            6.5,
+            3,
+            6.75,
+            3.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            6.5,
+            2.5,
+            6.75,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            6.75,
+            2.25,
+            6.5,
+            3.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            6.5,
+            2.25,
+            6.75,
+            3.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            6.5,
+            2.25,
+            6.75,
+            3.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            6.75,
+            3.25,
+            6.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box8",
+      "from": [
+        6.75,
+        14,
+        8.125
+      ],
+      "to": [
+        7.25,
+        14.25,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            6.75,
+            1.75,
+            7.25,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            7.25,
+            1.75,
+            6.75,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            6.75,
+            1.75,
+            7.25,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            6.75,
+            1.75,
+            7,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            7.25,
+            2,
+            7,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box9",
+      "from": [
+        6.75,
+        12.5,
+        8.125
+      ],
+      "to": [
+        7,
+        13,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            6.75,
+            3.25,
+            7,
+            3.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            6.75,
+            3.25,
+            7,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            7,
+            3,
+            6.75,
+            3.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            6.75,
+            3,
+            7,
+            3.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            6.75,
+            3,
+            7,
+            3.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            7,
+            3.5,
+            6.75,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box10",
+      "from": [
+        7,
+        13.75,
+        8.125
+      ],
+      "to": [
+        7.5,
+        14,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7,
+            2,
+            7.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            7,
+            2.25,
+            7.5,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            7.5,
+            2,
+            7,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7,
+            2,
+            7.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            7,
+            2,
+            7.25,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            7.5,
+            2.25,
+            7.25,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box11",
+      "from": [
+        7,
+        12.5,
+        8.125
+      ],
+      "to": [
+        9.25,
+        12.75,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7,
+            3.25,
+            9.25,
+            3.5
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "up": {
+          "uv": [
+            7,
+            3.5,
+            9.25,
+            3.25
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "north": {
+          "uv": [
+            9.25,
+            3.25,
+            7,
+            3.5
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "south": {
+          "uv": [
+            7,
+            3.25,
+            9.25,
+            3.5
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "east": {
+          "uv": [
+            9.25,
+            3.5,
+            9,
+            3.25
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box12",
+      "from": [
+        7,
+        11,
+        8.125
+      ],
+      "to": [
+        9,
+        11.5,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7,
+            4.75,
+            9,
+            5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            7,
+            4.75,
+            9,
+            4.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            9,
+            4.5,
+            7,
+            5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7,
+            4.5,
+            9,
+            5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            7,
+            4.5,
+            7.25,
+            5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9,
+            5,
+            8.75,
+            4.5
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box13",
+      "from": [
+        7.25,
+        13.5,
+        8.125
+      ],
+      "to": [
+        8.75,
+        13.75,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.25,
+            2.25,
+            8.75,
+            2.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            7.25,
+            2.5,
+            8.75,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            8.75,
+            2.25,
+            7.25,
+            2.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7.25,
+            2.25,
+            8.75,
+            2.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            7.25,
+            2.25,
+            7.5,
+            2.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8.75,
+            2.5,
+            8.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box14",
+      "from": [
+        7.5,
+        14,
+        8
+      ],
+      "to": [
+        8.5,
+        14.75,
+        8.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.5,
+            1.75,
+            8.5,
+            2
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "up": {
+          "uv": [
+            7.5,
+            1.5,
+            8.5,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            8.5,
+            1.25,
+            7.5,
+            2
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "south": {
+          "uv": [
+            7.5,
+            1.25,
+            8.5,
+            2
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "west": {
+          "uv": [
+            7.5,
+            1.25,
+            7.75,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8.5,
+            2,
+            8.25,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box15",
+      "from": [
+        7.5,
+        13.25,
+        8.125
+      ],
+      "to": [
+        8.5,
+        13.5,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.5,
+            2.5,
+            8.5,
+            2.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            8.5,
+            2.5,
+            7.5,
+            2.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7.5,
+            2.5,
+            8.5,
+            2.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            7.5,
+            2.5,
+            7.75,
+            2.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8.5,
+            2.75,
+            8.25,
+            2.5
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box16",
+      "from": [
+        7.5,
+        12.25,
+        8
+      ],
+      "to": [
+        8.5,
+        13,
+        8.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.5,
+            3.5,
+            8.5,
+            3.75
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "up": {
+          "uv": [
+            7.5,
+            3.25,
+            8.5,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            8.5,
+            3,
+            7.5,
+            3.75
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "south": {
+          "uv": [
+            7.5,
+            3,
+            8.5,
+            3.75
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "west": {
+          "uv": [
+            7.5,
+            3,
+            7.75,
+            3.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8.5,
+            3.75,
+            8.25,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box17",
+      "from": [
+        7.5,
+        0.75,
+        8.125
+      ],
+      "to": [
+        8.5,
+        1,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.5,
+            15,
+            8.5,
+            15.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            7.5,
+            15.25,
+            8.5,
+            15
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            8.5,
+            15,
+            7.5,
+            15.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7.5,
+            15,
+            8.5,
+            15.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            7.5,
+            15,
+            7.75,
+            15.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8.5,
+            15.25,
+            8.25,
+            15
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box18",
+      "from": [
+        7.5,
+        0.25,
+        8.125
+      ],
+      "to": [
+        7.75,
+        0.75,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.5,
+            15.5,
+            7.75,
+            15.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            7.75,
+            15.25,
+            7.5,
+            15.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7.5,
+            15.25,
+            7.75,
+            15.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            7.5,
+            15.25,
+            7.75,
+            15.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box19",
+      "from": [
+        7.75,
+        1,
+        8
+      ],
+      "to": [
+        8.25,
+        15.25,
+        8.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.75,
+            14.75,
+            8.25,
+            15
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            7.75,
+            1,
+            8.25,
+            0.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            8.25,
+            0.75,
+            7.75,
+            15
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "south": {
+          "uv": [
+            7.75,
+            0.75,
+            8.25,
+            15
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "west": {
+          "uv": [
+            7.75,
+            0.75,
+            8,
+            15
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "east": {
+          "uv": [
+            8.25,
+            15,
+            8,
+            0.75
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180
+        }
+      }
+    },
+    {
+      "name": "Box20",
+      "from": [
+        7.75,
+        0,
+        8.125
+      ],
+      "to": [
+        8.25,
+        0.25,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.75,
+            15.75,
+            8.25,
+            16
+          ],
+          "texture": "#staff_divine_staff",
+          "cullface": "down",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            8.25,
+            15.75,
+            7.75,
+            16
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            7.75,
+            15.75,
+            8.25,
+            16
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            7.75,
+            15.75,
+            8,
+            16
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8.25,
+            16,
+            8,
+            15.75
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box21",
+      "from": [
+        8.25,
+        0.25,
+        8.125
+      ],
+      "to": [
+        8.5,
+        0.75,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.25,
+            15.5,
+            8.5,
+            15.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            8.5,
+            15.25,
+            8.25,
+            15.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            8.25,
+            15.25,
+            8.5,
+            15.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            8.5,
+            15.75,
+            8.25,
+            15.25
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box22",
+      "from": [
+        8.5,
+        13.75,
+        8.125
+      ],
+      "to": [
+        9,
+        14,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.5,
+            2,
+            9,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            8.5,
+            2.25,
+            9,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            9,
+            2,
+            8.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            8.5,
+            2,
+            9,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            8.5,
+            2,
+            8.75,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9,
+            2.25,
+            8.75,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box23",
+      "from": [
+        8.75,
+        14.25,
+        8.125
+      ],
+      "to": [
+        9.5,
+        14.5,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.75,
+            1.5,
+            9.5,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            8.75,
+            1.75,
+            9.5,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            9.5,
+            1.5,
+            8.75,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            8.75,
+            1.5,
+            9.5,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            8.75,
+            1.5,
+            9,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9.5,
+            1.75,
+            9.25,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box24",
+      "from": [
+        8.75,
+        14,
+        8.125
+      ],
+      "to": [
+        9.25,
+        14.25,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            8.75,
+            1.75,
+            9.25,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            9.25,
+            1.75,
+            8.75,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            8.75,
+            1.75,
+            9.25,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            8.75,
+            1.75,
+            9,
+            2
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9.25,
+            2,
+            9,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box25",
+      "from": [
+        9,
+        14.5,
+        8.125
+      ],
+      "to": [
+        10.25,
+        14.75,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            9,
+            1.25,
+            10.25,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            9,
+            1.5,
+            10.25,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10.25,
+            1.25,
+            9,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9,
+            1.25,
+            10.25,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            9,
+            1.25,
+            9.25,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            10.25,
+            1.5,
+            10,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box26",
+      "from": [
+        9,
+        12.75,
+        8.125
+      ],
+      "to": [
+        9.5,
+        13,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            9,
+            3,
+            9.5,
+            3.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            9,
+            3.25,
+            9.5,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            9.5,
+            3,
+            9,
+            3.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9,
+            3,
+            9.5,
+            3.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            9,
+            3,
+            9.25,
+            3.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9.5,
+            3.25,
+            9.25,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box27",
+      "from": [
+        9.25,
+        14.75,
+        8.125
+      ],
+      "to": [
+        10,
+        15,
+        8.375
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            9.25,
+            1.25,
+            10,
+            1
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10,
+            1,
+            9.25,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9.25,
+            1,
+            10,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            9.25,
+            1,
+            9.5,
+            1.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            10,
+            1.25,
+            9.75,
+            1
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box28",
+      "from": [
+        9.25,
+        13,
+        8.125
+      ],
+      "to": [
+        9.5,
+        13.75,
+        8.375
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            9.25,
+            2.5,
+            9.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            9.5,
+            2.25,
+            9.25,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9.25,
+            2.25,
+            9.5,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            9.25,
+            2.25,
+            9.5,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9.5,
+            3,
+            9.25,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box29",
+      "from": [
+        9.5,
+        13,
+        8.125
+      ],
+      "to": [
+        9.75,
+        13.5,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            9.5,
+            2.75,
+            9.75,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            9.5,
+            2.75,
+            9.75,
+            2.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            9.75,
+            2.5,
+            9.5,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            9.5,
+            2.5,
+            9.75,
+            3
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            9.75,
+            3,
+            9.5,
+            2.5
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box30",
+      "from": [
+        10,
+        14.25,
+        8.125
+      ],
+      "to": [
+        10.5,
+        14.5,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            10,
+            1.5,
+            10.5,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "up": {
+          "uv": [
+            10,
+            1.75,
+            10.5,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10.5,
+            1.5,
+            10,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10,
+            1.5,
+            10.5,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10,
+            1.5,
+            10.25,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            10.5,
+            1.75,
+            10.25,
+            1.5
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box31",
+      "from": [
+        10.25,
+        13.75,
+        8.125
+      ],
+      "to": [
+        10.5,
+        14.25,
+        8.375
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            10.25,
+            2,
+            10.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "north": {
+          "uv": [
+            10.5,
+            1.75,
+            10.25,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "south": {
+          "uv": [
+            10.25,
+            1.75,
+            10.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "west": {
+          "uv": [
+            10.25,
+            1.75,
+            10.5,
+            2.25
+          ],
+          "texture": "#staff_divine_staff",
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        },
+        "east": {
+          "uv": [
+            10.5,
+            2.25,
+            10.25,
+            1.75
+          ],
+          "texture": "#staff_divine_staff",
+          "rotation": 180,
+          "neoforge_data": {
+            "block_light": 15,
+            "sky_light": 15
+          }
+        }
+      }
+    },
+    {
+      "name": "Box18",
+      "from": [
+        7.75,
+        0.25,
+        8
+      ],
+      "to": [
+        8.25,
+        0.75,
+        8.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.75,
+            15.5,
+            8.25,
+            15.75
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "up": {
+          "uv": [
+            7.75,
+            15.5,
+            8.25,
+            15.25
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "north": {
+          "uv": [
+            8.25,
+            15.25,
+            7.75,
+            15.75
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "south": {
+          "uv": [
+            7.75,
+            15.25,
+            8.25,
+            15.75
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "west": {
+          "uv": [
+            7.75,
+            15.25,
+            8,
+            15.75
+          ],
+          "texture": "#staff_divine_staff"
+        },
+        "east": {
+          "uv": [
+            8.25,
+            15.25,
+            8,
+            15.75
+          ],
+          "texture": "#staff_divine_staff"
+        }
+      }
+    },
+    {
+      "name": "Box11_glow",
+      "from": [
+        6.988,
+        12.488,
+        8.113
+      ],
+      "to": [
+        9.262,
+        12.762,
+        8.387
+      ],
+      "shade": false,
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15
+      },
+      "faces": {
+        "down": {
+          "uv": [
+            7,
+            3.25,
+            9.25,
+            3.5
+          ],
+          "texture": "#lsglow"
+        },
+        "up": {
+          "uv": [
+            7,
+            3.5,
+            9.25,
+            3.25
+          ],
+          "texture": "#lsglow"
+        },
+        "north": {
+          "uv": [
+            9.25,
+            3.25,
+            7,
+            3.5
+          ],
+          "texture": "#lsglow"
+        },
+        "south": {
+          "uv": [
+            7,
+            3.25,
+            9.25,
+            3.5
+          ],
+          "texture": "#lsglow"
+        }
+      }
+    },
+    {
+      "name": "Box14_glow",
+      "from": [
+        7.488,
+        13.988,
+        7.988
+      ],
+      "to": [
+        8.512,
+        14.762,
+        8.512
+      ],
+      "shade": false,
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15
+      },
+      "faces": {
+        "down": {
+          "uv": [
+            7.5,
+            1.75,
+            8.5,
+            2
+          ],
+          "texture": "#lsglow"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            1.25,
+            7.5,
+            2
+          ],
+          "texture": "#lsglow"
+        },
+        "south": {
+          "uv": [
+            7.5,
+            1.25,
+            8.5,
+            2
+          ],
+          "texture": "#lsglow"
+        }
+      }
+    },
+    {
+      "name": "Box16_glow",
+      "from": [
+        7.488,
+        12.238,
+        7.988
+      ],
+      "to": [
+        8.512,
+        13.012,
+        8.512
+      ],
+      "shade": false,
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15
+      },
+      "faces": {
+        "down": {
+          "uv": [
+            7.5,
+            3.5,
+            8.5,
+            3.75
+          ],
+          "texture": "#lsglow"
+        },
+        "north": {
+          "uv": [
+            8.5,
+            3,
+            7.5,
+            3.75
+          ],
+          "texture": "#lsglow"
+        },
+        "south": {
+          "uv": [
+            7.5,
+            3,
+            8.5,
+            3.75
+          ],
+          "texture": "#lsglow"
+        }
+      }
+    },
+    {
+      "name": "Box19_glow",
+      "from": [
+        7.738,
+        0.988,
+        7.988
+      ],
+      "to": [
+        8.262,
+        15.262,
+        8.512
+      ],
+      "shade": false,
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            8.25,
+            0.75,
+            7.75,
+            15
+          ],
+          "texture": "#lsglow"
+        },
+        "south": {
+          "uv": [
+            7.75,
+            0.75,
+            8.25,
+            15
+          ],
+          "texture": "#lsglow"
+        },
+        "west": {
+          "uv": [
+            7.75,
+            0.75,
+            8,
+            15
+          ],
+          "texture": "#lsglow"
+        },
+        "east": {
+          "uv": [
+            8.25,
+            15,
+            8,
+            0.75
+          ],
+          "texture": "#lsglow",
+          "rotation": 180
+        }
+      }
+    }
+  ],
+  "gui_light": "front",
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        2.5
+      ],
+      "scale": [
+        2.4,
+        2.4,
+        2.4
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        2.5
+      ],
+      "scale": [
+        2.4,
+        2.4,
+        2.4
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        -180,
+        0
+      ],
+      "translation": [
+        0,
+        4,
+        1
+      ],
+      "scale": [
+        1.6,
+        1.6,
+        1.6
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        -180,
+        0
+      ],
+      "translation": [
+        0,
+        4,
+        1
+      ],
+      "scale": [
+        1.6,
+        1.6,
+        1.6
+      ]
+    },
+    "gui": {
+      "rotation": [
+        0,
+        0,
+        -45
+      ],
+      "scale": [
+        1.04,
+        1.04,
+        1.04
+      ]
+    },
+    "ground": {
+      "rotation": [
+        0,
+        0,
+        -45
+      ],
+      "translation": [
+        0,
+        2,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        -180,
+        -45
+      ],
+      "scale": [
+        1.6,
+        1.6,
+        1.6
+      ]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "attributes": {
+    "range_bonus": 0.5,
+    "pose": "bettercombat:pose_two_handed_heavy",
+    "two_handed": true,
+    "category": "hammer",
+    "attacks": [
+      {
+        "hitbox": "VERTICAL_PLANE",
+        "damage_multiplier": 1.2,
+        "angle": 90,
+        "upswing": 0.55,
+        "animation": "bettercombat:two_handed_slam",
+        "swing_sound": { "id": "bettercombat:hammer_slam" }
+      },
+      {
+        "hitbox": "HORIZONTAL_PLANE",
+        "damage_multiplier": 0.9,
+        "angle": 130,
+        "upswing": 0.5,
+        "animation": "bettercombat:two_handed_slash_horizontal_right",
+        "swing_sound": { "id": "bettercombat:claymore_swing" }
+      }
+    ]
+  }
+}

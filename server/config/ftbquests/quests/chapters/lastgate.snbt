@@ -1,0 +1,144 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: "circle"
+	filename: "lastgate"
+	group: ""
+	icon: {
+		id: "minecraft:dragon_head"
+	}
+	id: "4F2E6B8D0C3A5B10"
+	order_index: 4
+	quest_links: [ ]
+	quests: [
+		{
+			dependencies: ["3E1D5A7C0B2F4A29"]
+			icon: {
+				id: "minecraft:dragon_head"
+			}
+			id: "4F2E6B8D0C3A5B11"
+			rewards: [
+				{
+					count: 2
+					id: "4F2E6B8D0C3A5B13"
+					item: {
+						count: 1
+						id: "minecraft:diamond_block"
+					}
+					type: "item"
+				}
+				{
+					id: "4F2E6B8D0C3A5B14"
+					type: "xp"
+					xp: 150
+				}
+			]
+			shape: "hexagon"
+			size: 1.25d
+			tasks: [{
+				id: "4F2E6B8D0C3A5B12"
+				type: "checkmark"
+			}]
+			x: 0.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["4F2E6B8D0C3A5B11"]
+			icon: {
+				id: "minecraft:crossbow"
+			}
+			id: "4F2E6B8D0C3A5B15"
+			rewards: [
+				{
+					count: 6
+					id: "4F2E6B8D0C3A5B17"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					id: "4F2E6B8D0C3A5B18"
+					type: "xp"
+					xp: 180
+				}
+			]
+			tasks: [{
+				id: "4F2E6B8D0C3A5B16"
+				type: "checkmark"
+			}]
+			x: -2.0d
+			y: 2.0d
+		}
+		{
+			dependencies: ["4F2E6B8D0C3A5B11"]
+			icon: {
+				id: "minecraft:wither_skeleton_skull"
+			}
+			id: "4F2E6B8D0C3A5B19"
+			rewards: [
+				{
+					count: 8
+					id: "4F2E6B8D0C3A5B1B"
+					item: {
+						count: 1
+						id: "minecraft:diamond"
+					}
+					type: "item"
+				}
+				{
+					id: "4F2E6B8D0C3A5B1C"
+					type: "xp"
+					xp: 220
+				}
+			]
+			tasks: [{
+				entity: "bosses_of_mass_destruction:lich"
+				id: "4F2E6B8D0C3A5B1A"
+				type: "kill"
+				value: 1L
+			}]
+			x: 2.0d
+			y: 2.0d
+		}
+		{
+			dependencies: [
+				"4F2E6B8D0C3A5B15"
+				"4F2E6B8D0C3A5B19"
+			]
+			icon: {
+				id: "minecraft:beacon"
+			}
+			id: "4F2E6B8D0C3A5B1D"
+			rewards: [
+				{
+					command: "/apoth set_world_tier @s pinnacle"
+					id: "4F2E6B8D0C3A5B1F"
+					permission_level: 2
+					type: "command"
+				}
+				{
+					id: "4F2E6B8D0C3A5B20"
+					item: {
+						count: 1
+						id: "minecraft:netherite_block"
+					}
+					type: "item"
+				}
+				{
+					id: "4F2E6B8D0C3A5B21"
+					type: "xp"
+					xp: 500
+				}
+			]
+			shape: "hexagon"
+			size: 1.75d
+			tasks: [{
+				id: "4F2E6B8D0C3A5B1E"
+				type: "checkmark"
+			}]
+			x: 0.0d
+			y: 4.0d
+		}
+	]
+}

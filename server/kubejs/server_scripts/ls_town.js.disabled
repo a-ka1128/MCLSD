@@ -1,0 +1,317 @@
+// ⚠ 2026-07-25: 이 시스템은 lsrelics 모드로 이관되었다 — 이 파일은 더 이상 로드되지 않는다.
+//   이유: 스크립트로는 실제 아이템 슬롯(보관함)을 만들 수 없고, KubeJS 함정
+//   (runCommandSilent 가 void · try 안 const · 전역 스코프 공유 · NaN 통과)에 반복해서 걸렸다.
+//   새 위치: moddev/lsrelics/.../data/TownCatalog.java (밸런스 수치)
+//            moddev/lsrelics/.../data/TownData.java    (저장·보관함)
+//            moddev/lsrelics/.../town/TownService.java (판정)
+//   남겨두는 이유: 이관 직후 비교·복구용. 문제 없으면 나중에 지운다.
+
+// Last Stardust — 마을 발전 시스템 (Town Development)  [차별화 핵심 II]
+// 공동 금고 Ducat + 제출 자원으로 성역을 4개 트랙 × 4레벨로 키운다.
+// 효과는 공동(모두 적용), 기여도는 개인별로 기록(명예). 방어↔발전이 엮인다.
+// 저장(오버월드 persistentData, ls_siege.js와 공유): town_<track>(레벨) · town_<track>_res(현 레벨 자원 풀)
+//   · town_c_<name>(기여점수) · town_cnames(CSV) · town_flag_<x>(구역 해금 플래그, 리셋후 시스템이 읽음)
+
+function twStore(server) { return server.overworld().persistentData }
+// putInt 는 NaN 을 받으면 예외를 던진다 — 값이 어디서 오든 여기서 한 번 걸러 저장을 지킨다.
+// (JS 의 NaN 은 비교가 전부 false 라 `v < 0` 같은 가드를 그냥 통과한다)
+function twInt(v, fallback) {
+  const n = Math.floor(Number(v))
+  return isFinite(n) ? n : (fallback || 0)
+}
+function twTre(server) { return twStore(server).getInt('ls_treasury') }
+function twTreSpend(server, n) { const c = twTre(server); const amt = twInt(n); if (c < amt) return false; twStore(server).putInt('ls_treasury', twInt(c - amt)); return true }
+function twLevel(server, t) { return twStore(server).getInt('town_' + t) }
+function twSetLevel(server, t, v) { twStore(server).putInt('town_' + t, twInt(v)) }
+function twRes(server, t) { return twStore(server).getInt('town_' + t + '_res') }
+function twSetRes(server, t, v) { const n = twInt(v); twStore(server).putInt('town_' + t + '_res', n < 0 ? 0 : n) }
+function tsay(server, text) { server.players.forEach(p => p.tell(Text.of(text))) }
+function tplay(server, s, v, p) { server.runCommandSilent(`execute as @a at @s run playsound ${s} master @s ~ ~ ~ ${v} ${p}`) }
+
+// 아이템 짧은 이름 (표시용, 네임스페이스 제거)
+function shortItem(id) { return id.replace(/^[a-z0-9_]+:/, '') }
+
+// ── 발전 트랙 정의 (각 레벨: ducat + 자원 1종×수량 + 이름 + 효과) ──
+// L3~L4는 '균열 정수(kubejs:rift_essence)'로 게이팅 = 보스를 잡아야(=콘텐츠) 모이는 전용 재화.
+//   제작·장비·수집품과 전혀 안 겹치고, 보스 진행에 비례해 쌓임. 만렙엔 17개 필요.
+//   공급처: 보스 처치 · 균열 노드 파괴(2~3) · 대공세 격퇴(2) · 생존자 구출(1)
+// 시간의 무게는 Ducat(꾸준한 지출) + 정수(보스 진행)에서 오고, 자원 노가다에서 오지 않는다.
+const ESS = 'kubejs:rift_essence'
+const TRACKS = {
+  ramparts: {
+    icon: '▦', name: '방벽', blurb: '수성 직접 강화',
+    levels: [
+      { ducat: 200, item: 'minecraft:iron_ingot', count: 24, name: '성역 결계', fx: '공성 중 성역 내부 재생+저항' },
+      { ducat: 450, item: 'minecraft:iron_block', count: 16, name: '자동 방어 포화', fx: '공성 중 성벽이 적을 자동 사격' },
+      { ducat: 850, item: ESS, count: 2, name: '방벽 강화', fx: '위협도 상시 -1' },
+      { ducat: 1850, item: ESS, count: 4, name: '불굴의 성벽', fx: '대공세 웨이브 1개 감소' }
+    ]
+  },
+  workshop: {
+    icon: '⚙', name: '공방', blurb: '편의·생산',
+    levels: [
+      { ducat: 150, item: 'minecraft:oak_planks', count: 64, name: '공용 작업대', fx: '성역 생산 거점 (상징)' },
+      { ducat: 450, item: 'minecraft:iron_ingot', count: 32, name: '대장간 지원', fx: '공성 방어 보상 +20%' },
+      { ducat: 900, item: 'minecraft:gold_ingot', count: 24, name: '자동 생산 라인', fx: '매일 새벽 공동 금고 +25' },
+      { ducat: 1750, item: 'minecraft:diamond', count: 24, name: '귀환의 요람', fx: '성역이 모두의 부활 지점이 됨' }
+    ]
+  },
+  sanctum: {
+    icon: '✧', name: '성소', blurb: '진행·RPG',
+    levels: [
+      { ducat: 200, item: 'minecraft:ender_pearl', count: 16, name: '웨이스톤 공명', fx: '거점 이동망 강화 (상징)' },
+      { ducat: 550, item: 'minecraft:lapis_block', count: 12, name: '경험의 제단', fx: '공성 중 성역 내부 경험치 획득' },
+      { ducat: 1000, item: ESS, count: 2, name: '관문 안정기', fx: '균열 노드 파괴 보상 강화' },
+      { ducat: 2000, item: ESS, count: 4, name: '별빛 축복', fx: '성역 내부 상시 힘·신속 버프' }
+    ]
+  },
+  districts: {
+    icon: '⌂', name: '구역', blurb: '서사·정체성',
+    levels: [
+      { ducat: 250, item: 'minecraft:emerald', count: 16, name: '상인 광장', fx: '상점 확장 (리셋 후 연동)', flag: 'market' },
+      { ducat: 550, item: 'minecraft:book', count: 32, name: '기록관', fx: '스토리텔러 NPC (리셋 후 연동)', flag: 'archive' },
+      { ducat: 1000, item: 'minecraft:emerald_block', count: 4, name: '재건된 마을', fx: '주민 이주 (리셋 후 연동)', flag: 'village' },
+      { ducat: 2350, item: ESS, count: 5, name: '별빛 등대', fx: '세상을 되찾은 상징물', flag: 'lighthouse' }
+    ]
+  }
+}
+const TRACK_KEYS = ['ramparts', 'workshop', 'sanctum', 'districts']
+
+function nextLevel(t) { const lv = TRACKS[t].levels; return lv } // 헬퍼
+function trackMax(t) { return TRACKS[t].levels.length }
+
+// 기여도
+function addContribution(server, name, pts) {
+  const p = twStore(server)
+  p.putInt('town_c_' + name, twInt(p.getInt('town_c_' + name) + pts))
+  const csv = String(p.getString('town_cnames') || '')
+  const names = csv ? csv.split(',') : []
+  if (names.indexOf(name) < 0) { names.push(name); p.putString('town_cnames', names.join(',')) }
+}
+
+// 업그레이드 효과 적용 (즉시·1회성 + 플래그)
+function applyUpgrade(server, t, newLevel) {
+  const def = TRACKS[t].levels[newLevel - 1]
+  // 구역 플래그
+  if (def.flag) twStore(server).putBoolean('town_flag_' + def.flag, true)
+  // 워크샵4: 성역이 부활 지점
+  if (t === 'workshop' && newLevel === 4) {
+    const s = twStore(server)
+    if (s.getBoolean('ls_sanc_set')) {
+      server.runCommandSilent(`setworldspawn ${s.getInt('ls_sanc_x')} ${s.getInt('ls_sanc_y')} ${s.getInt('ls_sanc_z')}`)
+    }
+  }
+  // 등대: 승리 축포
+  if (def.flag === 'lighthouse') tplay(server, 'minecraft:block.beacon.activate', 1, 1)
+}
+
+function tryUpgrade(server, t, actorName) {
+  const lv = twLevel(server, t)
+  if (lv >= trackMax(t)) { tsay(server, `§7${TRACKS[t].icon} ${TRACKS[t].name}은 이미 최대 단계입니다.`); return 0 }
+  const def = TRACKS[t].levels[lv]
+  const haveRes = twRes(server, t)
+  const haveDuc = twTre(server)
+  if (haveRes < def.count) { tsay(server, `§c자원 부족: ${shortItem(def.item)} ${haveRes}/${def.count} — /town contribute ${t} 로 제출`); return 0 }
+  if (haveDuc < def.ducat) { tsay(server, `§c공동 금고 부족: ${haveDuc}/${def.ducat} Ducat — 공성 방어로 적립`); return 0 }
+  // 집행
+  twTreSpend(server, def.ducat)
+  twSetRes(server, t, 0)
+  const nl = lv + 1
+  twSetLevel(server, t, nl)
+  applyUpgrade(server, t, nl)
+  server.runCommandSilent(`title @a title {"text":"${TRACKS[t].icon} ${def.name}","color":"gold","bold":true}`)
+  server.runCommandSilent('title @a subtitle {"text":"성역이 성장했다","color":"yellow"}')
+  tplay(server, 'minecraft:ui.toast.challenge_complete', 1, 1)
+  tsay(server, `§6❖ 마을 발전! §e${TRACKS[t].icon} ${TRACKS[t].name} Lv${nl} — ${def.name} §7(${actorName} 완성)`)
+  tsay(server, `§7   → ${def.fx}`)
+  console.log(`[LS-TOWN] ${t} -> Lv${nl} (${def.name})`)
+  return 1
+}
+
+function contribute(server, player, t) {
+  const lv = twLevel(server, t)
+  if (lv >= trackMax(t)) { player.tell(Text.of(`§7${TRACKS[t].name}은 최대 단계입니다.`)); return 0 }
+  const def = TRACKS[t].levels[lv]
+  const need = def.count - twRes(server, t)
+  if (need <= 0) { player.tell(Text.of('§a자원은 이미 다 모였습니다. §7/town upgrade ' + t)); return 0 }
+  const name = player.username
+  // /clear 로 보유량 확인 후 회수 (인벤 API 대신 명령어 = 안정)
+  // 개수는 인벤토리를 직접 읽는다 (ls_util.js) — /clear 반환값으로 세는 건 애초에 불가능하다.
+  const have = lsCountItem(player, def.item)
+  if (have <= 0) {
+    player.tell(Text.of(`§7제출할 ${shortItem(def.item)} 이(가) 없습니다. §8(${need}개 더 필요)`))
+    return 0
+  }
+  const take = lsTakeItem(player, def.item, Math.min(need, have))
+  if (take <= 0) { player.tell(Text.of('§c제출에 실패했습니다.')); return 0 }
+  twSetRes(server, t, twRes(server, t) + take)
+  addContribution(server, name, take)
+  const now = twRes(server, t)
+  player.tell(Text.of(`§a+${take} ${shortItem(def.item)} → ${TRACKS[t].name} §7(${now}/${def.count})`))
+  if (now >= def.count) {
+    const enoughDuc = twTre(server) >= def.ducat
+    tsay(server, `§6${TRACKS[t].icon} ${TRACKS[t].name} 자원 완료! §7${enoughDuc ? '/town upgrade ' + t + ' 로 완성' : '금고 Ducat ' + twTre(server) + '/' + def.ducat + ' (공성 방어로 적립)'}`)
+  }
+  return 1
+}
+
+// ── 지속 효과: 별빛 축복 (성소 4) — 성역 내부 상시 버프 ──
+let TW_TICK = 0
+ServerEvents.tick(event => {
+  TW_TICK++
+  if (TW_TICK % 100 !== 0) return // 5초마다
+  const server = event.server
+  const s = twStore(server)
+  if (!s.getBoolean('ls_sanc_set')) return
+  if (twLevel(server, 'sanctum') >= 4) {
+    const x = s.getInt('ls_sanc_x'), y = s.getInt('ls_sanc_y'), z = s.getInt('ls_sanc_z')
+    server.runCommandSilent(`execute positioned ${x} ${y} ${z} run effect give @a[distance=..64] minecraft:strength 8 0 true`)
+    server.runCommandSilent(`execute positioned ${x} ${y} ${z} run effect give @a[distance=..64] minecraft:speed 8 0 true`)
+  }
+})
+
+// ════════════════════════════════════════════════════════════
+//  마을 관리 화면용 현황 (lsrelics 모드가 그린다)
+// ════════════════════════════════════════════════════════════
+// 화면은 lsrelics(Java)가 그리지만 데이터는 전부 여기 있다 — 모드는 persistentData 를 읽을 수 없다.
+// 그래서 현황을 JSON 으로 만들어 /townui 로 넘긴다.
+//
+// 이 구조 덕분에 아래 TRACKS 의 수치·효과 문구를 고쳐도 모드를 다시 빌드할 필요가 없다.
+// 파일만 고치고 /reload 하면 화면에 바로 반영된다. (화면 배치를 바꿀 때만 모드 재빌드)
+
+function twEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') }
+
+// 성벽 정보는 ls_siege.js 소유다. 그쪽 함수가 있으면 그걸 쓰고, 없으면 계산식을 흉내낸다.
+// (로드 순서에 기대지 않으려는 것 — ls_siege 가 먼저 로드되지 않아도 화면이 열려야 한다)
+function twWallMax(server) {
+  if (typeof wallMax === 'function') { try { return wallMax(server) } catch (e) { } }
+  return 150 + twLevel(server, 'ramparts') * 50
+}
+function twWallHp(server) {
+  if (typeof wallHp === 'function') { try { return wallHp(server) } catch (e) { } }
+  const p = twStore(server)
+  const v = p.getInt('wall_hp')
+  return v > 0 ? Math.min(v, twWallMax(server)) : (p.getBoolean('wall_init') ? 0 : twWallMax(server))
+}
+
+function twStateJson(server) {
+  const p = twStore(server)
+  const parts = []
+  parts.push(`"treasury":${twTre(server)}`)
+  parts.push(`"threat":${p.getInt('ls_threat')}`)
+  parts.push(`"sanctuary":${p.getBoolean('ls_sanc_set') ? 'true' : 'false'}`)
+
+  const wmax = twWallMax(server), whp = twWallHp(server)
+  parts.push(`"wall":{"hp":${whp},"max":${wmax},"broken":${p.getBoolean('wall_init') && whp <= 0 ? 'true' : 'false'}}`)
+
+  const tracks = TRACK_KEYS.map(t => {
+    const T = TRACKS[t], lv = twLevel(server, t), max = trackMax(t)
+    const head = `"key":"${t}","icon":"${twEsc(T.icon)}","name":"${twEsc(T.name)}","blurb":"${twEsc(T.blurb)}","lv":${lv},"max":${max}`
+    if (lv >= max) return `{${head},"next":null,"canUpgrade":false,"resourceFull":false}`
+    const def = T.levels[lv]
+    const have = twRes(server, t)
+    const isEss = def.item === ESS
+    const itemName = isEss ? '균열 정수' : shortItem(def.item)
+    const resOk = have >= def.count
+    const ducOk = twTre(server) >= def.ducat
+    const next = `"next":{"name":"${twEsc(def.name)}","fx":"${twEsc(def.fx)}","ducat":${def.ducat},`
+      + `"item":"${twEsc(itemName)}","need":${def.count},"have":${have},"essence":${isEss ? 'true' : 'false'}}`
+    return `{${head},${next},"canUpgrade":${resOk && ducOk ? 'true' : 'false'},"resourceFull":${resOk ? 'true' : 'false'}}`
+  })
+  parts.push(`"tracks":[${tracks.join(',')}]`)
+
+  const csv = String(p.getString('town_cnames') || '')
+  const names = csv ? csv.split(',') : []
+  names.sort((a, b) => p.getInt('town_c_' + b) - p.getInt('town_c_' + a))
+  const board = names.slice(0, 6).map(n => `{"name":"${twEsc(n)}","pts":${p.getInt('town_c_' + n)}}`)
+  parts.push(`"board":[${board.join(',')}]`)
+
+  return `{${parts.join(',')}}`
+}
+
+// 화면 열기/갱신. 모드가 없으면(서버만 켠 경우 등) 조용히 실패하고 채팅 화면으로 안내한다.
+function twOpenUi(server, player) {
+  if (!player) return 0
+  // ※ try 블록 안에서는 const/let 을 쓰지 않는다 — KubeJS 의 Rhino 가
+  //   'redeclaration of var' 로 터진다. var 는 재선언이 합법이라 안전하다.
+  var json = ''
+  try {
+    json = twStateJson(server)
+    server.runCommandSilent(`execute as ${player.username} run townui ${json}`)
+    console.log(`[LS-TOWN] ui -> ${player.username} (${json.length}자)`)
+    return 1
+  } catch (e) {
+    player.tell(Text.of('§c마을 화면을 열 수 없습니다 §7— lsrelics 모드가 필요합니다. §8/town list 로 확인하세요.'))
+    console.log('[LS-TOWN] townui fail: ' + e)
+    return 0
+  }
+}
+
+// ── 명령어 ──
+ServerEvents.commandRegistry(event => {
+  const { commands: Commands, arguments: Arguments } = event
+  const trackArg = () => Commands.argument('track', Arguments.STRING.create(event))
+    .suggests((ctx, b) => { TRACK_KEYS.forEach(k => b.suggest(k)); return b.buildFuture() })
+
+  // 채팅 현황 — GUI 를 못 쓰는 상황(모드 없음·콘솔)의 대비책이자 빠른 확인용
+  const townChat = ctx => {
+      const s = ctx.source.server
+      ctx.source.sendSystemMessage(Text.of(`§6═══ ❖ 마을 발전 §7(금고 ${twTre(s)} Ducat) §6═══`))
+      TRACK_KEYS.forEach(t => {
+        const lv = twLevel(s, t); const max = trackMax(t); const T = TRACKS[t]
+        const bar = '§a' + '■'.repeat(lv) + '§8' + '□'.repeat(max - lv)
+        if (lv >= max) { ctx.source.sendSystemMessage(Text.of(`§f${T.icon} ${T.name} ${bar} §6MAX §8— ${T.blurb}`)); return }
+        const def = T.levels[lv]
+        const res = twRes(s, t)
+        const isEss = def.item === 'kubejs:rift_essence'
+        const esstag = isEss ? ' §5[보스 처치로 획득]' : ''
+        const itemName = isEss ? '균열 정수' : shortItem(def.item)
+        ctx.source.sendSystemMessage(Text.of(`§f${T.icon} ${T.name} ${bar} §7→ §eLv${lv + 1} ${def.name}${esstag}`))
+        ctx.source.sendSystemMessage(Text.of(`§8   ${def.ducat} Ducat §7(${Math.min(twTre(s), def.ducat)}/${def.ducat}) §8+ ${itemName} §7(${res}/${def.count}) §8· /town contribute ${t}`))
+      })
+      return 1
+  }
+
+  event.register(Commands.literal('town')
+    // 기본 = 관리 화면. 채팅으로 보고 싶으면 /town list.
+    // (평소엔 키바인드 M 으로 연다 — 이 명령은 키가 다른 모드와 겹쳤을 때의 대비책이기도 하다)
+    .executes(ctx => {
+      const p = ctx.source.player
+      if (!p) return townChat(ctx)
+      return twOpenUi(ctx.source.server, p)
+    })
+    // 모드(TownOpenPayload 핸들러)가 호출하는 경로. 화면 갱신도 이걸 다시 부른다.
+    .then(Commands.literal('gui').executes(ctx => {
+      const p = ctx.source.player
+      if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
+      return twOpenUi(ctx.source.server, p)
+    }))
+    .then(Commands.literal('list').executes(townChat))
+    .then(Commands.literal('contribute').then(trackArg().executes(ctx => {
+      const t = Arguments.STRING.getResult(ctx, 'track'); const p = ctx.source.player
+      if (!TRACKS[t]) { ctx.source.sendSystemMessage(Text.of('§c트랙: ramparts/workshop/sanctum/districts')); return 0 }
+      if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
+      return contribute(ctx.source.server, p, t)
+    })))
+    .then(Commands.literal('upgrade').then(trackArg().executes(ctx => {
+      const t = Arguments.STRING.getResult(ctx, 'track')
+      if (!TRACKS[t]) { ctx.source.sendSystemMessage(Text.of('§c트랙: ramparts/workshop/sanctum/districts')); return 0 }
+      const actor = ctx.source.player ? ctx.source.player.username : '서버'
+      return tryUpgrade(ctx.source.server, t, actor)
+    })))
+    .then(Commands.literal('board').executes(ctx => {
+      const s = ctx.source.server
+      const csv = String(twStore(s).getString('town_cnames') || '')
+      const names = csv ? csv.split(',') : []
+      if (!names.length) { ctx.source.sendSystemMessage(Text.of('§7아직 기여 기록이 없습니다.')); return 1 }
+      names.sort((a, b) => twStore(s).getInt('town_c_' + b) - twStore(s).getInt('town_c_' + a))
+      ctx.source.sendSystemMessage(Text.of('§6═══ ✪ 성역 재건 기여도 ═══'))
+      names.slice(0, 10).forEach((n, i) => {
+        const medal = i === 0 ? '§e①' : i === 1 ? '§7②' : i === 2 ? '§6③' : '§8' + (i + 1)
+        ctx.source.sendSystemMessage(Text.of(`${medal} §f${n} §7— ${twStore(s).getInt('town_c_' + n)} 자원`))
+      })
+      return 1
+    })))
+})
+
+console.log('[Last Stardust] 마을 발전 시스템 로드됨 — 4트랙 × 4레벨')
