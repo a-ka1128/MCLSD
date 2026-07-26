@@ -468,6 +468,9 @@ public final class RelicSkills {
             "attribute " + n + " minecraft:generic.attack_damage modifier remove last_stardust:frailty_attack");
         // 떨어뜨린 자기 아이템 중 아직 바닥에 남은 것을 걷어 돌려준다 (ReviveManager 주석 참고)
         int back = com.laststardust.relics.ReviveManager.reclaimDrops(revived);
+        // 그리고 시체를 치운다 — 아이템을 돌려줬는데 시체에도 같은 게 남아 있으면 복사가 된다.
+        // 죽은 자리와 되살아난 자리가 같으므로 where 주변만 보면 되고, 반경은 넉넉히 8칸.
+        com.laststardust.relics.ReviveManager.removeCorpses(level, revived.getUUID(), where, 8.0);
         if (back > 0) {
             revived.displayClientMessage(Component.literal(
                 "§7소지품 §e" + back + "§7묶음을 되찾았다."), true);
@@ -960,11 +963,26 @@ public final class RelicSkills {
         SoundScheduler.at(sl, player.position(), SoundEvents.PLAYER_ATTACK_SWEEP, 0.6f, 1.8f, 3);
     }
 
+    // 순간이동 착지점 보정 — 원하는 자리에 플레이어 몸이 들어갈 수 있는지 실제로 검사하고,
+    // 막혀 있으면 위아래로 훑어 설 수 있는 가장 가까운 자리를 돌려준다. 없으면 null.
+    //
+    // 위를 먼저 보는 이유: 지면을 겨눴을 때 반 칸 파묻히는 게 가장 흔한 실패라, 살짝 올리면 대개 해결된다.
+    // 아래로도 보는 건 천장 아래를 겨눈 경우다. 범위를 좁게 잡아(±3) 엉뚱한 곳으로 튀지 않게 한다.
+    private static final int[] BLINK_DY = {0, 1, 2, 3, -1, -2, -3};
+
+    private static Vec3 safeSpot(ServerLevel sl, Player p, Vec3 want) {
+        for (int dy : BLINK_DY) {
+            Vec3 c = new Vec3(want.x, want.y + dy, want.z);
+            // 현재 히트박스를 후보 위치로 옮겨 충돌을 본다 — 키(웅크림 포함)가 자동으로 반영된다
+            if (sl.noCollision(p, p.getBoundingBox().move(c.subtract(p.position())))) return c;
+        }
+        return null;
+    }
+
     // ─────────────────────────────── 이동기: 셀레스티아 "성간 도약" (이동·V·2성) ───────────────────────────────
     // 조준한 지점으로 순간이동하는 마법 블링크. 딜 없음. 쿨 7초.
     public static void blink(Level level, Player player, ItemStack stack) {
         if (!(level instanceof ServerLevel sl)) return;
-        if (!ready(sl, player, stack, "cdBlink", "성간 도약", 140, 2)) return;
         Vec3 from = player.position();
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
@@ -978,9 +996,22 @@ public final class RelicSkills {
         }
         // 발 높이 기준으로 착지 (눈높이만큼 내림)
         double dy = player.getEyeY() - player.getY();
-        player.teleportTo(target.x, target.y - dy + 0.1, target.z);
+        Vec3 want = new Vec3(target.x, target.y - dy + 0.1, target.z);
+
+        // ── 착지점 보정 (2026-07-27) ──
+        // 땅을 내려다보고 쓰면 충돌 지점이 지표면이라, 거기서 눈높이(1.62)만큼 내리면
+        // 발이 지면 아래로 들어가 블록에 파묻혔다. 설 수 있는 자리인지 실제로 검사한다.
+        Vec3 dest = safeSpot(sl, player, want);
+        if (dest == null) {
+            // 쿨타임을 먹기 전에 돌아간다 — 못 간 주제에 7초를 물리면 억울하다.
+            player.displayClientMessage(
+                net.minecraft.network.chat.Component.literal("§7그곳엔 설 자리가 없다."), true);
+            return;
+        }
+        if (!ready(sl, player, stack, "cdBlink", "성간 도약", 140, 2)) return;
+        player.teleportTo(dest.x, dest.y, dest.z);
         if (player instanceof ServerPlayer sp)
-            sp.connection.teleport(target.x, target.y - dy + 0.1, target.z, player.getYRot(), player.getXRot());
+            sp.connection.teleport(dest.x, dest.y, dest.z, player.getYRot(), player.getXRot());
         player.resetFallDistance();
 
         // 사라진 자리·나타난 자리 별빛

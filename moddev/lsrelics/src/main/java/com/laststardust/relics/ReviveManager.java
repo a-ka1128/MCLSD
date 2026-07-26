@@ -7,11 +7,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+
+import com.mojang.logging.LogUtils;
+
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -31,6 +40,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 @EventBusSubscriber(modid = LSRelics.MODID)
 public final class ReviveManager {
     private ReviveManager() {}
+
+    private static final Logger LOG = LogUtils.getLogger();
 
     // 되살릴 수 있는 시간(틱). 90초 쿨다운 스킬이라 30초면 "그 전투 안"이라는 감각과 맞는다.
     public static final int WINDOW_TICKS = 600;
@@ -121,6 +132,40 @@ public final class ReviveManager {
             ie.discard();
             n++;
         }
+        return n;
+    }
+
+    // ── Corpse 모드 시체 제거 (2026-07-27) ──
+    //
+    // 아이템 복사 버그의 원인이다. Corpse 모드는 사망 시 드롭을 가로채 "시체"에 담아두는데,
+    // 우리 소생은 LivingDropsEvent 로 붙잡아둔 목록에서 아이템을 돌려준다. 그래서 되살아난
+    // 사람은 물건을 손에 넣고, 시체에도 같은 물건이 그대로 남아 있었다 — 열면 두 벌이 된다.
+    //
+    // 컴파일 의존성이 아니므로 엔티티 타입 ID(corpse:corpse)와 저장 NBT 로만 다룬다.
+    // 주인 UUID 는 IDMost/IDLeast 에 들어 있다.
+    //   ※ DeathIDMost/DeathIDLeast 는 시체 자신의 식별자다 — 이걸로 비교하면 아무것도 안 지워진다.
+    private static final ResourceLocation CORPSE_ID =
+        ResourceLocation.fromNamespaceAndPath("corpse", "corpse");
+
+    public static int removeCorpses(ServerLevel level, UUID owner, Vec3 near, double radius) {
+        int n = 0;
+        AABB box = new AABB(near.x - radius, near.y - radius, near.z - radius,
+                            near.x + radius, near.y + radius, near.z + radius);
+        for (Entity e : level.getEntities((Entity) null, box, x -> true)) {
+            if (!CORPSE_ID.equals(BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()))) continue;
+            try {
+                CompoundTag tag = new CompoundTag();
+                e.saveWithoutId(tag);
+                if (!tag.contains("IDMost") || !tag.contains("IDLeast")) continue;
+                UUID who = new UUID(tag.getLong("IDMost"), tag.getLong("IDLeast"));
+                if (!owner.equals(who)) continue;   // 남의 시체는 절대 건드리지 않는다
+                e.discard();
+                n++;
+            } catch (Exception ex) {
+                LOG.warn("[LS-REVIVE] 시체 확인 실패: {}", ex.toString());
+            }
+        }
+        if (n > 0) LOG.info("[LS-REVIVE] 시체 {}구 제거 (주인 {})", n, owner);
         return n;
     }
 

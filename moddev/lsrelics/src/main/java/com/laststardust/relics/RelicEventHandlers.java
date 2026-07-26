@@ -159,17 +159,30 @@ public final class RelicEventHandlers {
         long left = tag.getLong("parryUntil") - guard.level().getGameTime();
         if (left <= 0 || left > 60) return; // 태세 아님(또는 시간 되감김)
 
-        event.setAmount(event.getAmount() * 0.6f); // 받는 피해 −40%
+        event.setAmount(event.getAmount() * 0.6f); // 받는 피해 −40% (환경 피해에도 적용 — 반격 '태세'다)
 
         if (!(guard.level() instanceof ServerLevel sl)) return;
+
+        // ── 반사는 "때린 놈"이 있을 때만 (2026-07-27) ──
+        // 예전엔 모든 피해에 반사가 나갔다. 용암·불처럼 틱마다 들어오는 환경 피해는 공격자가
+        // 없으니 반사가 통째로 주변 AoE 로 새고, 이펙트와 소리가 매 틱 도배됐다.
+        // 반격은 공격을 받아넘기는 기술이지 용암을 받아넘기는 기술이 아니다.
+        if (!(event.getSource().getEntity() instanceof LivingEntity attacker)
+                || attacker instanceof Player) return;
+
+        // ── 연타 제한 ──
+        // 공세에서 몹 여럿이 같은 틱에 때리면 각각이 광역 반사를 한 번씩 터뜨려
+        // 피해도 이펙트도 몹 수만큼 곱해졌다. 0.5초에 한 번으로 묶는다.
+        long now = sl.getGameTime();
+        long lastParry = guard.getPersistentData().getLong("lsParryBurst");
+        if (lastParry != 0 && now - lastParry < 10) return;
+        guard.getPersistentData().putLong("lsParryBurst", now);
+
         float power = tag.getFloat("parryPower");
         if (power <= 0) power = 8.0f;
         // 공격자에게 강하게, 주변 잡몹에 약하게 반사
         double cx = guard.getX(), cy = guard.getY() + 1.0, cz = guard.getZ();
-        if (event.getSource().getEntity() instanceof LivingEntity attacker
-                && !(attacker instanceof Player)) {
-            attacker.hurt(sl.damageSources().thorns(guard), power * 1.5f);
-        }
+        attacker.hurt(sl.damageSources().thorns(guard), power * 1.5f);
         AABB box = new AABB(cx - 3.5, cy - 2, cz - 3.5, cx + 3.5, cy + 2, cz + 3.5);
         for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, box,
                 en -> en != guard && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {

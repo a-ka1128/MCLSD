@@ -654,8 +654,11 @@ ServerEvents.tick(event => {
   if (LS_TICK % 40 === 0) dayBossbar(server)
 
   // 공성 중 경보음 (15초마다)
+  // ※ 예전엔 warden.heartbeat 였는데, 공성에 워든이 실제로 섞여 나온다(위협도 표 참고).
+  //    그래서 워든을 잡고도 심장 소리가 계속 나면 "안 죽은 건가?" 하고 헷갈렸다.
+  //    워든과 무관한 소리로 바꾼다 — 무거운 발소리 쪽이 "몰려온다"는 뜻도 더 맞다.
   if (sfGetB(server, 'ls_siege_active') && LS_TICK % 300 === 0) {
-    playAll(server, 'minecraft:entity.warden.heartbeat', 0.6, 1)
+    playAll(server, 'minecraft:entity.ravager.step', 0.7, 0.6)
   }
   // 공성 중: 상단 보스바 갱신 (2초마다 — 피해/수리 실시간 반영)
   if (sfGetB(server, 'ls_siege_active') && LS_TICK % 40 === 0) wallBossbar(server, true)
@@ -774,7 +777,8 @@ ServerEvents.tick(event => {
       var target = NIGHT_T0 + Math.floor((1 - frac) * (NIGHT_T1 - NIGHT_T0))
       var cur = dayTime(server)
       if (cur < target) server.runCommandSilent(`time add ${Math.min(target - cur, 240)}`)
-      if (LS_TICK % 300 === 0) playAll(server, 'minecraft:entity.warden.heartbeat', 0.8, 0.8)
+      // 최종장 보스 심박 — 여기도 워든 소리를 피한다(위 경보음과 같은 이유)
+      if (LS_TICK % 300 === 0) playAll(server, 'minecraft:entity.ravager.step', 0.9, 0.5)
     } else {
       BOSS_LOST_SEC++
       if (BOSS_LOST_SEC >= 12) { BOSS_LOST_SEC = 0; say(server, '§5흩어졌던 어둠이 다시 뭉친다...'); spawnFinalBoss(server) }
