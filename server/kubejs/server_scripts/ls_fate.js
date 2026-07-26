@@ -165,10 +165,35 @@ function ftClear(server, name) {
   return cur
 }
 
+// 이 가호를 이미 가진 사람 — 없으면 ''.
+// 저장이 fate_<이름> 이라 키 목록을 훑는 수밖에 없다(인원이 8명이라 비용은 무시할 만하다).
+// ※ 블록 안에서는 var — const/let 은 Rhino 재선언 오류를 낸다
+function ftTakenBy(server, key, exceptName) {
+  var st = ftStore(server)
+  var found = ''
+  try {
+    st.getAllKeys().forEach(k => {
+      if (found) return
+      var ks = String(k)
+      if (ks.indexOf('fate_') !== 0) return
+      var who = ks.substring(5)
+      if (exceptName && who === exceptName) return
+      if (String(st.getString(ks) || '') === key) found = who
+    })
+  } catch (e) { lsWarn('ls_fate:taken-by', e) }
+  return found
+}
+
 function ftChoose(server, player, key) {
   if (!FATES[key]) { player.tell(Text.of('§c가호: ' + FATE_KEYS.join(' / '))); return 0 }
   const cur = ftGet(server, player)
   if (cur) { player.tell(Text.of(`§c이미 §e${FATES[cur].name}§c의 가호를 받았습니다. §7(가호는 바꿀 수 없다 — OP만 /fate reset)`)); return 0 }
+  // 한 서버에 같은 직업이 둘일 수 없다 — 8종·8인이라 겹치면 누군가는 못 고른다.
+  const owner = ftTakenBy(server, key, player.username)
+  if (owner) {
+    player.tell(Text.of(`§c§e${FATES[key].name}§c의 가호는 이미 §e${owner}§c이(가) 받았습니다. §7다른 가호를 고르세요.`))
+    return 0
+  }
   const f = FATES[key]
   ftStore(server).putString('fate_' + player.username, key)
   ftApply(server, player, key)
@@ -244,8 +269,12 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of('§6═══ ✦ 별의 가호 §7(1회 선택 · 변경 불가) §6═══'))
       FATE_KEYS.forEach(k => {
         const f = FATES[k]
-        ctx.source.sendSystemMessage(Text.of(`§e${f.icon} ${f.name} §8(${k}) §7— ${f.desc}`))
-        f.story.forEach(line => ctx.source.sendSystemMessage(Text.of(`§8   ${line}`)))
+        // 누가 가져갔는지 여기서 보여준다 — 고른 뒤에 "이미 있습니다"를 듣는 것보다 낫다
+        var by = ftTakenBy(s, k, null)
+        ctx.source.sendSystemMessage(Text.of(by
+          ? `§8${f.icon} ${f.name} (${k}) §7— §c선택됨 §8(${by})`
+          : `§e${f.icon} ${f.name} §8(${k}) §7— ${f.desc}`))
+        if (!by) f.story.forEach(line => ctx.source.sendSystemMessage(Text.of(`§8   ${line}`)))
       })
       if (p) {
         var cur = ftGet(s, p)
@@ -276,6 +305,9 @@ ServerEvents.commandRegistry(event => {
         if (!FATES[key]) { ctx.source.sendSystemMessage(Text.of('§c가호: ' + FATE_KEYS.join(' / '))); return 0 }
         const p = lsPlayerByName(s, target)
         if (!p) { ctx.source.sendSystemMessage(Text.of(`§c${target} 은(는) 접속 중이 아닙니다. §7(패시브를 붙이려면 접속이 필요)`)); return 0 }
+        // 중복은 막지 않는다 — OP가 일부러 겹치게 할 수도 있으니 알려만 준다.
+        const dup = ftTakenBy(s, key, target)
+        if (dup) ctx.source.sendSystemMessage(Text.of(`§e※ ${FATES[key].name}은(는) 이미 ${dup}이(가) 가지고 있습니다 — 중복 지정합니다.`))
 
         const had = ftClear(s, target)   // 있으면 갈아끼우기, 없으면 '' 반환
         if (had === key) { ctx.source.sendSystemMessage(Text.of(`§7${target} 은(는) 이미 ${FATES[key].name}입니다. §8(패시브만 다시 붙임)`)) }
