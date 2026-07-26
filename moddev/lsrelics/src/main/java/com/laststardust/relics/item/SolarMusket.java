@@ -40,9 +40,11 @@ public class SolarMusket extends Item implements RelicActions {
     public static final int MAG_SIZE = 6;
     public static final int FIRE_RATE = 20;     // 발사 간격(틱) — 1초에 1발
     public static final int RELOAD_TICKS = 30;  // 재장전 1.5초
-    // 2026-07-26 하향: 4인 60초 실측에서 46.7 DPS 로 딜러 최상단이었고 체감도 과했다.
-    // 15.0 → 12.5 (약 -17%). 스코프도 같은 비율로 낮춘다.
-    private static final float BULLET_DMG = 12.5f;
+    // 2026-07-26 하향 2회: 15.0 → 12.5 → 11.5.
+    // 최종 근거는 **최적 플레이 60초 실측 58.9 DPS** (목표 54) → ×0.92.
+    // 최적 플레이 = 스코프 사격 + 궁극만. 작열탄·산탄은 오히려 DPS 를 떨어뜨린다
+    // (작열탄 30 < 스코프 87) — 그건 배율이 아니라 구조 문제라 따로 봐야 한다.
+    private static final float BULLET_DMG = 11.5f;
     private static final int BULLET_LIFE = 30;  // 틱 (속도 3.0 → 사거리 약 90칸)
 
     // ── 스코프 (기본 스킬 · 1성 · 우클릭 홀드) ──
@@ -53,7 +55,7 @@ public class SolarMusket extends Item implements RelicActions {
     public static final int SCOPE_CHARGE = 10;    // 진입 0.5초 — 그 전엔 노스코프 수치
     public static final int SCOPE_FIRE_RATE = 40; // 2초에 1발
     public static final int SCOPE_AMMO_COST = 2;
-    private static final float SCOPE_DMG = 29.0f;   // 35.0 → 29.0 (평타와 같은 -17%)
+    private static final float SCOPE_DMG = 26.68f;   // 35.0 → 29.0 → 26.68 (평타와 같은 비율)
     private static final int SCOPE_BULLET_LIFE = 30;
     private static final int USE_DURATION = 72000; // 망원경과 동일 — 사실상 무제한 홀드
 

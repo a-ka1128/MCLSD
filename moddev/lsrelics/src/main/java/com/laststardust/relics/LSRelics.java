@@ -121,7 +121,7 @@ public class LSRelics {
     // ※ 실제 쌍수 DPS는 콤보 재생 속도에 달려 있어 인겜 실측 후 미세 조정이 필요하다.
     public static final DeferredItem<SoulDagger> ASSASSIN = ITEMS.register("assassin",
         () -> new SoulDagger(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-            .attributes(weapon(1.766, -1.6))));
+            .attributes(weapon(2.402, -1.6))));
 
     // 게볼그 — 창(쿠훌린의 가호). 근접 하이브리드, 긴 사거리.
     // 공격력 8.3333 × 공속 1.5 = DPS 12.5. 사거리 +1.5는 Better Combat weapon_attributes(range_bonus).
