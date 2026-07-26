@@ -68,3 +68,6 @@ moddev/**/run/
 
 # NeoForge MDK 배포물 — 공식 사이트에서 받으면 된다
 moddev/mdk.zip
+
+# 믹스인 런타임 덤프 — 서버가 켜질 때마다 갱신되는 빌드 산물이다
+server/.mixin.out/
