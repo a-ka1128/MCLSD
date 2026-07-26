@@ -23,7 +23,7 @@ public class StarBow extends BowItem implements RelicActions {
     private static final float CRIT_CHANCE = 0.6f; // 크리 확률 60% → 발당 평균 ~+30%
     private static final float ARROW_SPEED = 3.0f;
     private static final float ARROW_INACCURACY = 1.0f;
-    private static final double ARROW_DMG = 1.231; // 명중 ~3.7, 크리 포함 실효 DPS 12.0 (속사 중엔 2배)
+    private static final double ARROW_DMG = 1.354; // 명중 ~3.7, 크리 포함 실효 DPS 12.0 (속사 중엔 2배)
 
     public StarBow(Properties properties) {
         super(properties);

@@ -131,17 +131,25 @@ public final class RelicSkills {
         Vec3 look = player.getViewVector(1.0f);
 
         int n = 3;
-        double spreadDeg = 6.0;
+        // ── 확산각과 거리의 관계 (2026-07-26) ──
+        // 인접 화살 간격 = 거리 × tan(각). 몹 폭이 0.6칸이라 간격이 0.4칸을 넘으면 곁 화살이 빗나간다.
+        //   6도 → 3발 다 맞는 거리 3.8m 까지   (실측: 근접 56.6 vs 15m 45.4 — 20% 절벽)
+        //   4도 → 5.7m 까지
+        //   2도 → 11.4m 까지                   ← 지금
+        // 2도를 골랐다. 실전 사거리(10~20m) 안에서 유성이 거리와 무관하게 3발 다 꽂히므로
+        // "붙어야 세다"는 왜곡이 사라진다. 사냥꾼이 거리를 두는 정석 플레이가 손해를 보지 않는 게
+        // 이 유물의 정체성에 맞고, 밸런스도 배율 하나로 맞출 수 있게 된다.
+        double spreadDeg = 2.0;
         for (int i = 0; i < n; i++) {
             double offRad = Math.toRadians((i - (n - 1) / 2.0) * spreadDeg);
             Vec3 dir = rotateYaw(look, offRad);
             Arrow arrow = com.laststardust.relics.LsArrows.create(sl, player, stack);
             arrow.setPos(eye.x, eye.y - 0.1, eye.z);
             arrow.shoot(dir.x, dir.y, dir.z, 3.2f, 0.4f);
-            arrow.setBaseDamage(1.2); // 명중 ~3.6
+            arrow.setBaseDamage(1.32); // 명중 ~4.0
             if (sl.getRandom().nextFloat() < 0.6f) arrow.setCritArrow(true); // 화살 크리
             arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
-            arrow.getPersistentData().putFloat("lsExplode", dmg(stack, 6.0f));  // 폭발 피해
+            arrow.getPersistentData().putFloat("lsExplode", dmg(stack, 6.6f));  // 폭발 피해
             arrow.getPersistentData().putFloat("lsExplodeR", 2.5f); // 폭발 반경
             sl.sendParticles(ParticleTypes.END_ROD, arrow.getX(), arrow.getY(), arrow.getZ(), 6, 0.05, 0.05, 0.05, 0.02);
             sl.addFreshEntity(arrow);
@@ -762,7 +770,7 @@ public final class RelicSkills {
         Vec3 center = aimPoint(level, player, 40.0);
         // 반경을 넓혀 "광역기"로 세운다 — 좁으면 결국 단일 표적에 몰려 단일 딜러가 된다.
         double r = 8.0;
-        ArrowStormManager.start(level, player, center, r, 60, dmgTick(stack, 4.0f)); // 반경8, 3초
+        ArrowStormManager.start(level, player, center, r, 60, dmgTick(stack, 4.4f)); // 반경8, 3초
 
         // ── 시전 연출: 조준 지점에서 하늘로 치솟는 별빛 기둥 + 다중 링 ──
         level.sendParticles(ParticleTypes.FLASH, center.x, center.y + 1, center.z, 3, 0.2, 0.2, 0.2, 0);
