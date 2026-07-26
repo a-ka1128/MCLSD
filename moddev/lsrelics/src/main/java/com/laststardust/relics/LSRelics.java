@@ -48,7 +48,13 @@ public class LSRelics {
             .build();
     }
 
-    // 근접 무기 속성 + 넉백 저항(방벽의 수호자 패시브)
+    // 근접 무기 속성 + 방어 패시브(방벽의 수호자)
+    // ── 2026-07-27: 탱커를 더 단단하게 ──
+    // 넉백 저항만으로는 "탱커"라는 느낌이 안 났다. DPS(실측 43.3 / 목표 44)는 이미 맞아 있으니
+    // 딜을 건드리지 않고 생존만 올린다 — 방어구와 달리 갑옷 관통에도 방어 강도가 같이 붙는다.
+    //   방어력 +6      = 갑옷 1.5벌 분량. 잡몹 타격을 눈에 띄게 깎는다
+    //   방어 강도 +4   = 공성 보스처럼 한 방이 큰 피해에서 방어력이 무력해지는 걸 막는다
+    // 둘 다 주손 한정이라 무기를 바꾸면 즉시 사라진다(탱킹하려면 들고 있어야 한다).
     public static ItemAttributeModifiers guardianAttrs(double dmg, double spd) {
         return ItemAttributeModifiers.builder()
             .add(Attributes.ATTACK_DAMAGE,
@@ -59,6 +65,12 @@ public class LSRelics {
                 EquipmentSlotGroup.MAINHAND)
             .add(Attributes.KNOCKBACK_RESISTANCE,
                 new AttributeModifier(ResourceLocation.fromNamespaceAndPath(MODID, "guardian_kb"), 1.0, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ARMOR,
+                new AttributeModifier(ResourceLocation.fromNamespaceAndPath(MODID, "guardian_armor"), 6.0, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ARMOR_TOUGHNESS,
+                new AttributeModifier(ResourceLocation.fromNamespaceAndPath(MODID, "guardian_tough"), 4.0, AttributeModifier.Operation.ADD_VALUE),
                 EquipmentSlotGroup.MAINHAND)
             .build();
     }

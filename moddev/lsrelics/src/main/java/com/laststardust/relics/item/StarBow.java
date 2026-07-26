@@ -4,6 +4,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
@@ -27,6 +29,26 @@ public class StarBow extends BowItem implements RelicActions {
 
     public StarBow(Properties properties) {
         super(properties);
+    }
+
+    // ── 내구도를 소모하지 않는다 (2026-07-27) ──
+    // 유물은 첫 공세를 맨몸으로 버텨야 얻는 물건이라 소모품이 아니다. 닳아 없어지면
+    // 그 직업을 통째로 잃는다. RiftAxe 와 같은 처리 — 이 훅 하나가 모든 경로를 덮는다.
+    @Override
+    public <T extends net.minecraft.world.entity.LivingEntity> int damageItem(
+            ItemStack stack, int amount, T entity, java.util.function.Consumer<net.minecraft.world.item.Item> onBroken) {
+        return 0;
+    }
+
+    // ── 우클릭 없음 (2026-07-27) ──
+    // BowItem 을 상속만 해두니 우클릭이 바닐라 활 그대로였는데, 쓸 이유가 없는 기능이었다.
+    //   · 화살이 있어야 당겨진다 — 이 무기의 평타(좌클릭 별빛 화살)는 화살이 필요 없다
+    //   · 풀차지 바닐라 화살이 평타보다 약하다 — 별빛 화살만 각성 배율(ascension)을 받는다
+    // 이득이 없는데 조작만 차지하고, 실수로 당겨지면 평타가 끊긴다. 아예 막는다.
+    // pass 를 돌려주므로 블록 우클릭 등 다른 상호작용은 그대로 동작한다.
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        return InteractionResultHolder.pass(player.getItemInHand(hand));
     }
 
     // ── 좌클릭 평타 (연사) ──

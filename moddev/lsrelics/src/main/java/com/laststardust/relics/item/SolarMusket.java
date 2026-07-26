@@ -40,10 +40,16 @@ public class SolarMusket extends Item implements RelicActions {
     public static final int MAG_SIZE = 6;
     public static final int FIRE_RATE = 20;     // 발사 간격(틱) — 1초에 1발
     public static final int RELOAD_TICKS = 30;  // 재장전 1.5초
-    // 2026-07-26 하향 2회: 15.0 → 12.5 → 11.5.
-    // 최종 근거는 **최적 플레이 60초 실측 58.9 DPS** (목표 54) → ×0.92.
-    // 최적 플레이 = 스코프 사격 + 궁극만. 작열탄·산탄은 오히려 DPS 를 떨어뜨린다
-    // (작열탄 30 < 스코프 87) — 그건 배율이 아니라 구조 문제라 따로 봐야 한다.
+    // 하향 2회: 15.0 → 12.5 → 11.5 (2026-07-26, 최적 플레이 실측 58.9 / 목표 54 → ×0.92).
+    //
+    // ── 배율 조정은 여기서 멈춘다 (2026-07-27) ──
+    // 6인 파티 실측 60.9 DPS (60.4 / 61.0 / 61.3, 더미 1기). 편차 0.9 로 7종 중 가장 안정적이고
+    // 가장 높았다. ×0.89 를 한 번 더 걸어봤지만 되돌렸다 — 배율로는 진짜 문제가 안 고쳐진다.
+    //
+    // 진짜 문제: **최적 플레이가 "스코프만 쏘기"다.** 작열탄 30 < 스코프 87 이라 스킬을 쓸수록
+    // DPS 가 내려간다. 그래서 잘 쓰는 사람일수록 조작이 단순해지고(편차 0.9 가 그 증거다),
+    // 균등 하향은 이 격차를 그대로 유지한 채 전체만 낮춘다.
+    // 구조를 다시 짤 것 — 그때까지 수치는 손대지 않는다.
     private static final float BULLET_DMG = 11.5f;
     private static final int BULLET_LIFE = 30;  // 틱 (속도 3.0 → 사거리 약 90칸)
 
@@ -298,5 +304,14 @@ public class SolarMusket extends Item implements RelicActions {
             sb.append(i < ammo ? "●" : "○");
         }
         return sb.toString();
+    }
+
+    // ── 내구도를 소모하지 않는다 (2026-07-27) ──
+    // 유물은 첫 공세를 맨몸으로 버텨야 얻는 물건이라 소모품이 아니다. 닳아 없어지면
+    // 그 직업을 통째로 잃는다. RiftAxe 와 같은 처리 — 이 훅 하나가 모든 경로를 덮는다.
+    @Override
+    public <T extends net.minecraft.world.entity.LivingEntity> int damageItem(
+            ItemStack stack, int amount, T entity, java.util.function.Consumer<net.minecraft.world.item.Item> onBroken) {
+        return 0;
     }
 }
