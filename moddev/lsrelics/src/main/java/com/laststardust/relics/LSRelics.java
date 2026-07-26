@@ -88,13 +88,16 @@ public class LSRelics {
     // 평타를 다이아~네더라이트 검 구간에 둔다.
     // 공격력 6.4375 × 공속 1.6 = DPS 10.3 (근접 탱커)
     public static final DeferredItem<BulwarkBlade> GUARDIAN = ITEMS.register("guardian",
-        () -> new BulwarkBlade(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(guardianAttrs(5.4375, -2.4))));
+        () -> new BulwarkBlade(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(guardianAttrs(6.0813, -2.4))));
 
     // 순수 근접 딜러 — 채굴 겸용을 뺀 대신 공격력이 가장 높다.
     // 공격력 9.4286 × 공속 1.4 = DPS 13.2 (묵직하게 느리고 세게)
     public static final DeferredItem<RiftAxe> PIONEER = ITEMS.register("pioneer",
         () -> new RiftAxe(Tiers.NETHERITE, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-            .attributes(weapon(8.4286, -2.6)).durability(2000)));
+            // 공속 -2.6(1.4회/초) → -3.0(1.0회/초). 바닐라 네더라이트 도끼와 같은 속도다.
+            // 도끼가 검보다 빠를 이유가 없는데 1.4회/초였고, 실측 68.8 DPS 의 상당 부분이
+            // 여기서 나왔다. 한 방이 무거운 무기라는 정체성에도 느린 쪽이 맞다.
+            .attributes(weapon(8.0514, -3.0)).durability(2000)));
 
     public static final DeferredItem<StargazerStaff> SAGE = ITEMS.register("sage",
         () -> new StargazerStaff(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
@@ -118,7 +121,7 @@ public class LSRelics {
     // ※ 실제 쌍수 DPS는 콤보 재생 속도에 달려 있어 인겜 실측 후 미세 조정이 필요하다.
     public static final DeferredItem<SoulDagger> ASSASSIN = ITEMS.register("assassin",
         () -> new SoulDagger(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-            .attributes(weapon(1.75, -1.6))));
+            .attributes(weapon(1.766, -1.6))));
 
     // 게볼그 — 창(쿠훌린의 가호). 근접 하이브리드, 긴 사거리.
     // 공격력 8.3333 × 공속 1.5 = DPS 12.5. 사거리 +1.5는 Better Combat weapon_attributes(range_bonus).
@@ -130,7 +133,7 @@ public class LSRelics {
 
     public static final DeferredItem<GaeBolg> LANCER = ITEMS.register("lancer",
         () -> new GaeBolg(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-            .attributes(weapon(7.3333, -2.5))));
+            .attributes(weapon(6.4167, -2.5))));
 
     // 크리에이티브 탭 (테스트/EMI 노출)
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("relics",

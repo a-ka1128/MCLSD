@@ -35,15 +35,20 @@ public final class TitanManager {
         ResourceLocation.fromNamespaceAndPath(LSRelics.MODID, "titan_ascension");
 
     // 속성, 값, 연산 방식
+    // ── 2026-07-26 하향 ──
+    // 실측 68.8 DPS 로 8종 중 최고였는데 편차는 4.7% 로 가장 작았다 — **가장 쉬우면서 가장 셌다.**
+    // 원인은 이 목록이 혼자 다 한다는 것이었다: 공격력·사거리·크기·넉백·체력·흡수를 동시에 준다.
+    // 딜 기여는 줄이되 "거인이 된다"는 감각(크기·사거리·넉백)은 그대로 둔다.
+    //   · 공격력 +6 → +4      (절대값 가산이라 각성 배율과 무관하게 평타에 그대로 얹힌다)
+    //   · 최대체력 +10 제거    (흡수 IV 가 이미 8칸을 주는데 체력까지 얹으면 생존이 과했다)
     private static final Object[][] BUFFS = {
         // ADD_MULTIPLIED_BASE 0.6 → 1 + 0.6 = 1.6배. (1.6을 넣으면 2.6배가 돼 실내에서 끼임)
         {Attributes.SCALE,                    0.6,  AttributeModifier.Operation.ADD_MULTIPLIED_BASE},
-        {Attributes.ATTACK_DAMAGE,            6.0,  AttributeModifier.Operation.ADD_VALUE},
+        {Attributes.ATTACK_DAMAGE,            3.84, AttributeModifier.Operation.ADD_VALUE},
         {Attributes.ENTITY_INTERACTION_RANGE, 2.5,  AttributeModifier.Operation.ADD_VALUE},
         {Attributes.ATTACK_KNOCKBACK,         2.0,  AttributeModifier.Operation.ADD_VALUE},
         {Attributes.KNOCKBACK_RESISTANCE,     1.0,  AttributeModifier.Operation.ADD_VALUE},
         {Attributes.STEP_HEIGHT,              1.0,  AttributeModifier.Operation.ADD_VALUE},
-        {Attributes.MAX_HEALTH,               10.0, AttributeModifier.Operation.ADD_VALUE},
         {Attributes.SAFE_FALL_DISTANCE,       6.0,  AttributeModifier.Operation.ADD_VALUE},
     };
 
@@ -64,9 +69,13 @@ public final class TitanManager {
             inst.addTransientModifier(new AttributeModifier(ID, (Double) b[1],
                 (AttributeModifier.Operation) b[2]));
         }
-        p.setHealth(p.getHealth() + 10.0f); // 늘어난 최대 체력만큼 바로 채워줌
+        // ※ 예전엔 여기서 setHealth(+10) 로 늘어난 최대 체력을 채워줬다. 최대체력 버프를
+        //   없앴으므로 이 줄도 지운다 — 안 지우면 최대치는 그대로인 채 체력만 10 회복하는,
+        //   설계에 없던 힐이 된다.
         // 히트박스가 1.6배로 커져 훨씬 잘 맞으므로 보호막으로 그만큼 보상한다.
-        p.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 260, 3, false, true)); // 흡수 IV = 8칸, 13초
+        // 흡수 IV = 8칸. 지속을 버프(200틱)와 맞춘다 — 예전엔 260틱이라 거인이 끝난 뒤에도
+        // 3초간 방패가 남아, "언제 끝났는지" 가 흐릿했다.
+        p.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 200, 3, false, true));
     }
 
     @SuppressWarnings("unchecked")

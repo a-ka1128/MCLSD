@@ -97,7 +97,7 @@ public final class RelicSkills {
         shockRing(sl, end.x, end.y - 0.5, end.z, r, 40, ParticleTypes.END_ROD, 0.35);
         shockRing(sl, end.x, end.y - 0.5, end.z, r * 1.4, 46, ParticleTypes.ELECTRIC_SPARK, 0.5);
 
-        beamHurt(sl, player, eye, look, 11.0, r, dmg(stack, 12.0f), 0.3, false);
+        beamHurt(sl, player, eye, look, 11.0, r, dmg(stack, 13.08f), 0.3, false);
 
         // 6초 쿨로 자주 쓰는 스킬이라 볼륨을 낮게 유지 (귀 아픔 방지)
         play(level, player, SoundEvents.WITHER_SHOOT, 0.45f, 1.5f);
@@ -113,7 +113,7 @@ public final class RelicSkills {
         Vec3 look = player.getViewVector(1.0f);
         if (player instanceof ServerPlayer sp) {
             // 4.56 × 초당 2.5발 = DPS 11.4 (원거리 하이브리드)
-            BoltManager.fire(level, sp, eye.add(look.scale(0.5)), look, dmg(stack, 4.56f), 22);
+            BoltManager.fire(level, sp, eye.add(look.scale(0.5)), look, dmg(stack, 4.97f), 22);
         }
         // 총구 섬광만 짧게
         level.sendParticles(ParticleTypes.END_ROD,
@@ -199,7 +199,7 @@ public final class RelicSkills {
         shockRing(sl, end.x, end.y - 0.6, end.z, r, 42, ParticleTypes.SCULK_CHARGE_POP, 0.3);
         shockRing(sl, end.x, end.y - 0.6, end.z, r * 1.5, 50, ParticleTypes.REVERSE_PORTAL, 0.55);
 
-        beamHurt(sl, player, eye, look, 6.0, r, dmg(stack, 10.0f), 0.6, true);
+        beamHurt(sl, player, eye, look, 6.0, r, dmg(stack, 9.6f), 0.6, true);
 
         play(level, player, SoundEvents.SCULK_SHRIEKER_SHRIEK, 1.3f, 0.8f);
         play(level, player, SoundEvents.WARDEN_SONIC_BOOM, 0.9f, 1.2f);
@@ -226,7 +226,7 @@ public final class RelicSkills {
             double dist = to.length();
             if (dist > length) continue;
             if (dist > 0.01 && to.normalize().dot(flat) < cosHalf) continue;
-            e.hurt(relicSource(sl, player), dmg(stack, 8.0f));
+            e.hurt(relicSource(sl, player), dmg(stack, 7.68f));
             e.knockback(0.4, origin.x - e.getX(), origin.z - e.getZ());
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1, false, true));
             sl.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(),
@@ -234,7 +234,7 @@ public final class RelicSkills {
         }
         // 지속 균열 지대 (5초, 초당 2뎀) — 총합이 균열 붕괴와 비슷하게
         if (player instanceof ServerPlayer sp) {
-            FissureManager.start(sl, sp, origin, flat, length, halfAngle, dmgTick(stack, 2.0f), 100);
+            FissureManager.start(sl, sp, origin, flat, length, halfAngle, dmgTick(stack, 1.92f), 100);
         }
 
         // ── 연출: 앞으로 뻗어나가는 균열 ──
@@ -265,7 +265,7 @@ public final class RelicSkills {
     // X 키. 12초간 거대화 — 공격력·사거리·넉백·체력 증가, 넉백 면역. 쿨 60초.
     public static void titanAscension(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdTitan", "타이탄 강림", 1200, 4)) return;
-        TitanManager.start(level, player, 240); // 12초
+        TitanManager.start(level, player, 200); // 10초 (12→10 하향, TitanManager 주석 참고)
     }
 
     // ─────────────────────────────── 스킬: 별빛의 방벽 "수호의 파동" ───────────────────────────────
@@ -293,7 +293,7 @@ public final class RelicSkills {
             }
             sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cx, cy + 1.0, cz, 40, r * 0.4, 0.6, r * 0.4, 0.3);
 
-            hurtAround(sl, player, cx, cy + 1, cz, r, dmg(stack, 6.0f), 0.2); // 딜 낮게·넉백 최소(몹 붙잡아두기)
+            hurtAround(sl, player, cx, cy + 1, cz, r, dmg(stack, 6.6f), 0.2); // 딜 낮게·넉백 최소(몹 붙잡아두기)
             // 도발 — 8칸 내 적들이 4초간 시전자를 노림.
             // (쿨 8초라 8초로 두면 어그로가 영구 고정돼 다른 유물이 위협을 못 느낌)
             TauntManager.taunt(sl, player, 8.0, 80);
@@ -540,7 +540,7 @@ public final class RelicSkills {
         Vec3 right = look.cross(new Vec3(0, 1, 0)).normalize();
         Vec3 hand = eye.add(look.scale(0.6)).add(right.scale(0.35)).add(0, -0.3, 0);
         JavelinManager.throwSpear(sl, player, hand, look,
-            dmg(stack, 10.0f) * power, dmgTick(stack, 2.0f), 60, charge); // 출혈 초당 2 × 3초
+            dmg(stack, 8.9f) * power, dmgTick(stack, 1.78f), 60, charge); // 출혈 초당 2 × 3초
 
         dustBurst(sl, eye, 0.5, 12 + (int) (charge * 18), GOLD, 1.2f);
         sl.sendParticles(ParticleTypes.FLASH, eye.x + look.x, eye.y + look.y, eye.z + look.z, 1, 0, 0, 0, 0);
@@ -562,7 +562,7 @@ public final class RelicSkills {
         player.setDeltaMovement(look.x * p, look.y * p + 0.1, look.z * p);
         player.hurtMarked = true;
         player.resetFallDistance();
-        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 20, dmg(stack, 9.0f));
+        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 20, dmg(stack, 8.01f));
 
         // ── 연출: 앞으로 뻗는 질풍 ──
         Vec3 eye = player.getEyePosition();
@@ -582,11 +582,13 @@ public final class RelicSkills {
     // 결이 다른 "쏟아지는 창의 폭풍"이다.
     public static void hundredSpears(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdBabylon", "백 개의 창", 1200, 4)) return;
-        // 4인 실측 34.3 DPS 로 밴드(44~49) 아래였지만 **배율은 올리지 않았다.**
-        // 원인이 무적 프레임이었기 때문이다 — 창이 7초간 꽂히는데 표적이 파티원에게 맞아
-        // 무적인 동안은 전부 씹혔다. 시리우스 때 무적을 고치면서 배율까지 올렸다가 DPS 140 으로
-        // 튄 적이 있어, 이번엔 **원인만 고치고 값은 그대로 두고 다시 잰다.**
-        BabylonManager.start(level, player, dmgTick(stack, 1.3f), 140); // 창 1발 1.3 · 7초
+        // ── 발당 피해를 올린 이유 (2026-07-26) ──
+        // 타수는 손대지 않는다(표적별 8틱 상한 유지 — 단일 표적에 17발). 대신 발당을 올린다.
+        //   1.3 → 2.0 : 5성 발당 3.9 → 6.0, 단일 표적 궁극 총합 66 → **102**
+        // 실측에서 백창이 게볼그 전체 피해의 **3.9%** 밖에 안 됐다. 7초간 창 105발이 쏟아지는
+        // 연출인데 일식(108)의 61%, 초신성(84)의 79% 라 궁극기로서 존재감이 없었다.
+        // 102 면 다른 궁극기와 같은 층위이면서, 7초에 걸쳐 들어가는 만큼 즉발보다 조금 높다.
+        BabylonManager.start(level, player, dmgTick(stack, 1.78f), 140); // 창 1발 2.0 · 7초
         // 시전자 발밑에서 솟구치는 금빛 기둥 (개막 임팩트 보강)
         Vec3 c = player.position();
         for (int i = 0; i < 30; i++) {
@@ -598,7 +600,7 @@ public final class RelicSkills {
     // ─────────────────────────────── 이동기: 스틱스 "그림자 도약" (이동·V·2성) ───────────────────────────────
     // 우클릭. 조준한 적의 뒤로 순간이동하며 즉시 타격. 대상이 없으면 전방으로 짧게 대시.
     // 뒤로 잡으면 곧바로 패시브 "배후의 일격"(+35%) 각이 나와, 도약→평타가 자동으로 폭딜이 된다.
-    private static final float LEAP_DMG = 9.0f;
+    private static final float LEAP_DMG = 9.05f;
     private static final double LEAP_RANGE = 12.0;
 
     public static void shadowLeap(Level level, Player player, ItemStack stack) {
@@ -677,7 +679,8 @@ public final class RelicSkills {
     // 차징 중 몸이 굳어(둔화 IV) 겨냥만 할 수 있다 — 쏘기 전 2초가 곧 리스크다.
     public static void eclipse(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdEclipse", "일식", 1200, 4)) return;
-        EclipseManager.start(level, player, dmg(stack, 36.0f), 40); // 2초 차징
+        // 36.0 → 39.6 (+10%). 5성 실피해 108 → 119.
+        EclipseManager.start(level, player, dmg(stack, 39.6f), 40); // 2초 차징
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3, false, false));
         Vec3 eye = player.getEyePosition();
         dustBurst(level, eye, 1.0, 40, GOLD, 1.6f);
@@ -696,7 +699,7 @@ public final class RelicSkills {
         // 돌진 (수평 + 살짝 위로)
         player.setDeltaMovement(look.x * 1.7, 0.35, look.z * 1.7);
         player.hurtMarked = true; // 클라에 속도 동기화
-        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 16, dmg(stack, 10.0f));
+        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 16, dmg(stack, 11.0f));
 
         // 시전 연출
         Vec3 eye = player.getEyePosition();
@@ -801,7 +804,7 @@ public final class RelicSkills {
             e.setDeltaMovement(pull.x, pull.y * 0.5 + 0.1, pull.z);
             e.hasImpulse = true;
             e.fallDistance = 0.0f;
-            e.hurt(relicSource(sl, player), dmg(stack, 9.0f));
+            e.hurt(relicSource(sl, player), dmg(stack, 9.81f));
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2, false, true));
         }
         // 연출 — 안으로 빨려드는 소용돌이
@@ -827,7 +830,8 @@ public final class RelicSkills {
     public static void supernova(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdSupernova", "초신성", 1200, 4)) return;
         Vec3 center = aimPoint(level, player, 32.0);
-        SupernovaManager.start(level, player, center, 7.0, dmg(stack, 28.0f), 30); // 반경7·28뎀·1.5초 차징
+        // 28.0 → 34.0. 백창(102)과 **같은 피해 수준**으로 맞췄다 — 5성 실피해 84 → 102.
+        SupernovaManager.start(level, player, center, 7.0, dmg(stack, 37.06f), 30); // 반경7·34뎀·1.5초 차징
 
         // ── 시전 연출: 시전자 → 조준 지점 별빛 궤적 + 지정 지점 개시 링 ──
         Vec3 eye = player.getEyePosition();
@@ -866,7 +870,11 @@ public final class RelicSkills {
         long end = tag.getLong(SAGE_KEYS[i]);
         long now = level.getGameTime();
         if (end <= now) return; // 이미 준비된 스킬
-        long cut = Math.min(Math.round(SAGE_CDS[i] * 0.05), 12); // 5%, 상한 0.6초
+        // 2026-07-26 상향: 5% → 8%, 상한 0.6초 → 1.0초.
+        // 셀레스티아의 정체성이 "때릴수록 스킬이 빨리 돌아온다" 인데, 상한 12틱이 낮아서
+        // 긴 쿨 스킬(초신성 1200틱)은 사실상 5%가 아니라 1% 씩만 줄고 있었다.
+        // 평타를 계속 맞히는 플레이가 실제로 보상받게 한다.
+        long cut = Math.min(Math.round(SAGE_CDS[i] * 0.08), 20); // 8%, 상한 1.0초
         tag.putLong(SAGE_KEYS[i], Math.max(now, end - cut));
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
     }
@@ -990,7 +998,7 @@ public final class RelicSkills {
         long now = sl.getGameTime();
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         tag.putLong("parryUntil", now + 60); // 3초
-        tag.putFloat("parryPower", dmgTick(stack, 8.0f)); // 반사 기본 피해(각성 반영)
+        tag.putFloat("parryPower", dmgTick(stack, 8.8f)); // 반사 기본 피해(각성 반영)
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 
         Vec3 c = player.position().add(0, 1, 0);
@@ -1037,7 +1045,7 @@ public final class RelicSkills {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
         double reach = beamReach(sl, player, eye, look, 7.0);
-        beamHurt(sl, player, eye, look, reach, 1.2, dmg(stack, 12.0f), 0.4, false);
+        beamHurt(sl, player, eye, look, reach, 1.2, dmg(stack, 10.68f), 0.4, false);
 
         Vec3 end = eye.add(look.scale(reach));
         beamParticles(sl, eye, end, 0.25, ParticleTypes.CRIT, 0.0);
@@ -1068,8 +1076,8 @@ public final class RelicSkills {
             double along = rel.dot(look);
             if (along < 0 || along > reach) continue;
             if (rel.subtract(look.scale(along)).length() > 1.5) continue;
-            e.hurt(relicSource(sl, player), dmg(stack, 7.0f)); // 백어택이면 패시브 +35%가 자동으로 얹힘
-            if (player instanceof ServerPlayer sp) BleedManager.apply(sl, e, sp, dmgTick(stack, 1.5f), 60);
+            e.hurt(relicSource(sl, player), dmg(stack, 7.04f)); // 백어택이면 패시브 +35%가 자동으로 얹힘
+            if (player instanceof ServerPlayer sp) BleedManager.apply(sl, e, sp, dmgTick(stack, 1.509f), 60);
             sl.sendParticles(ParticleTypes.CRIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(), 10, 0.3, 0.3, 0.3, 0.15);
             hitAny = true;
         }

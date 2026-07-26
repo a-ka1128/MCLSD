@@ -275,7 +275,7 @@ public final class RelicEventHandlers {
     //                           직접 개입하기 어렵고, 잡몹은 방어도가 낮아 이 근사로 충분하다
     //   망각의 안개(추가)     : 은신이 풀린 뒤 첫 공격 2배
     // 세 배수는 서로 곱해진다(뒤에서 기습하면 크게 터진다).
-    private static final float BACKSTAB_BONUS = 1.35f;
+    private static final float BACKSTAB_BONUS = 1.20f;
     private static final float ABYSS_BONUS = 1.30f;
     private static final float AMBUSH_BONUS = 2.0f;
 
