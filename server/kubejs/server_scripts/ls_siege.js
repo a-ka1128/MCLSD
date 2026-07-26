@@ -948,6 +948,9 @@ ServerEvents.commandRegistry(event => {
 
   event.register(Commands.literal('siege')
     .then(Commands.literal('start').requires(s => s.hasPermission(2)).executes(ctx => startSiege(ctx.source.server, false)))
+    // 대공세를 그날이 아니어도 강제로 연다. 원래는 GRAND_EVERY(12일)의 배수 밤에만 붙는데,
+    // 테스트하려고 /time set 으로 날짜를 넘기는 건 다른 주기(공성일·현상금·시세)까지 흔든다.
+    .then(Commands.literal('grand').requires(s => s.hasPermission(2)).executes(ctx => startSiege(ctx.source.server, false, true)))
     .then(Commands.literal('status').executes(ctx => {
       const s = ctx.source.server
       const d = worldDay(s)

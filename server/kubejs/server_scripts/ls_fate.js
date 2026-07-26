@@ -148,6 +148,23 @@ function ftApply(server, player, key) {
   })
 }
 
+// 가호 해제 — 저장값을 지우고 패시브(속성·효과)를 떼어낸다.
+// /fate reset 과 /fate set(덮어쓰기) 둘 다 여기를 쓴다. 이름만 받으므로 오프라인도 된다
+// (속성 제거 명령은 대상이 없으면 조용히 실패하고, 재접속 시 ftApply 가 다시 정리한다).
+// ※ 블록 안에서는 var — const/let 은 Rhino 재선언 오류를 낸다 (docs/TODO.md 함정 #1)
+function ftClear(server, name) {
+  var cur = String(ftStore(server).getString('fate_' + name) || '')
+  if (!cur || !FATES[cur]) return ''
+  FATES[cur].attrs.forEach((a, i) => {
+    try { server.runCommandSilent(`attribute ${name} ${a[0]} modifier remove ${ftModId(cur, i)}`) } catch (err) { lsWarn('ls_fate:ftClear-attr', err) }
+  })
+  ;(FATES[cur].effects || []).forEach(eff => {
+    try { server.runCommandSilent(`effect clear ${name} ${eff}`) } catch (err) { lsWarn('ls_fate:ftClear-eff', err) }
+  })
+  ftStore(server).putString('fate_' + name, '')
+  return cur
+}
+
 function ftChoose(server, player, key) {
   if (!FATES[key]) { player.tell(Text.of('§c가호: ' + FATE_KEYS.join(' / '))); return 0 }
   const cur = ftGet(server, player)
@@ -202,6 +219,15 @@ ServerEvents.commandRegistry(event => {
   const keyArg = () => Commands.argument('key', Arguments.STRING.create(event))
     .suggests((ctx, b) => { FATE_KEYS.forEach(k => b.suggest(k)); return b.buildFuture() })
 
+  // 대상 플레이어 — 접속자 이름을 탭 완성으로 띄운다.
+  // ※ EntityArgument 를 쓰지 않는 이유: 가호는 이름 문자열 키(fate_<name>)로 저장돼 있어
+  //   오프라인 대상도 지정·해제할 수 있어야 한다. EntityArgument 는 접속자만 잡는다.
+  const targetArg = () => Commands.argument('target', Arguments.STRING.create(event))
+    .suggests((ctx, b) => {
+      try { ctx.source.server.players.forEach(p => b.suggest(String(p.username))) } catch (e) { lsWarn('ls_fate:suggest', e) }
+      return b.buildFuture()
+    })
+
   event.register(Commands.literal('fate')
     // 선택 화면(lsrelics 모드의 /fateui)을 연다 — 유물 아이콘과 소개를 보고 고른다.
     // 현재 가호는 여기(persistentData)에만 있으므로 인자로 넘겨준다.
@@ -232,22 +258,50 @@ ServerEvents.commandRegistry(event => {
       if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
       return ftChoose(ctx.source.server, p, Arguments.STRING.getResult(ctx, 'key'))
     })))
-    .then(Commands.literal('reset').requires(s => s.hasPermission(2)).then(Commands.argument('target', Arguments.STRING.create(event)).executes(ctx => {
+    .then(Commands.literal('reset').requires(s => s.hasPermission(2)).then(targetArg().executes(ctx => {
       const s = ctx.source.server
       const target = Arguments.STRING.getResult(ctx, 'target')
-      const cur = String(ftStore(s).getString('fate_' + target) || '')
-      if (!cur) { ctx.source.sendSystemMessage(Text.of('§7해당 플레이어는 가호가 없습니다.')); return 0 }
-      // 패시브 제거 (속성 + 효과형 둘 다)
-      FATES[cur].attrs.forEach((a, i) => {
-        try { s.runCommandSilent(`attribute ${target} ${a[0]} modifier remove ${ftModId(cur, i)}`) } catch (err) { lsWarn('ls_fate:242', err) }
-      })
-      ;(FATES[cur].effects || []).forEach(eff => {
-        try { s.runCommandSilent(`effect clear ${target} ${eff}`) } catch (err) { lsWarn('ls_fate:245', err) }
-      })
-      ftStore(s).putString('fate_' + target, '')
-      ctx.source.sendSystemMessage(Text.of(`§a${target}의 가호(${FATES[cur].name}) 해제 — 재선택 가능`))
+      const gone = ftClear(s, target)
+      if (!gone) { ctx.source.sendSystemMessage(Text.of('§7해당 플레이어는 가호가 없습니다.')); return 0 }
+      ctx.source.sendSystemMessage(Text.of(`§a${target}의 가호(${FATES[gone].name}) 해제 — 재선택 가능`))
       return 1
-    }))))
+    })))
+    // OP가 남의 가호를 직접 지정한다. 이미 가호가 있으면 갈아끼운다(옛 패시브는 떼어낸다).
+    // 시작 키트는 "처음 받는 경우"에만 준다 — 재지정 때마다 주면 장비가 불어난다.
+    .then(Commands.literal('set').requires(s => s.hasPermission(2))
+      .then(targetArg().then(keyArg().executes(ctx => {
+        const s = ctx.source.server
+        const target = Arguments.STRING.getResult(ctx, 'target')
+        const key = Arguments.STRING.getResult(ctx, 'key')
+        if (!FATES[key]) { ctx.source.sendSystemMessage(Text.of('§c가호: ' + FATE_KEYS.join(' / '))); return 0 }
+        const p = lsPlayerByName(s, target)
+        if (!p) { ctx.source.sendSystemMessage(Text.of(`§c${target} 은(는) 접속 중이 아닙니다. §7(패시브를 붙이려면 접속이 필요)`)); return 0 }
+
+        const had = ftClear(s, target)   // 있으면 갈아끼우기, 없으면 '' 반환
+        if (had === key) { ctx.source.sendSystemMessage(Text.of(`§7${target} 은(는) 이미 ${FATES[key].name}입니다. §8(패시브만 다시 붙임)`)) }
+        ftStore(s).putString('fate_' + target, key)
+        ftApply(s, p, key)
+
+        const f = FATES[key]
+        if (!had) {
+          STARTER_KIT.concat(dyedArmor(f.color)).forEach(it => { s.runCommandSilent(`give ${target} ${it[0]} ${it[1]}`) })
+          try { vStar(s, target, 1) } catch (e) { lsWarn('ls_fate:set-star', e) }
+          ftSay(s, `§6✦ ${target}§7이(가) §e${f.icon} ${f.name}§7의 가호를 받았다 — ${f.desc}`)
+        } else {
+          ftSay(s, `§6✦ ${target}§7의 가호가 §e${f.icon} ${f.name}§7(으)로 바뀌었다.`)
+        }
+        s.runCommandSilent(`title ${target} title {"text":"${f.icon} ${f.name}의 가호","color":"gold","bold":true}`)
+
+        ctx.source.sendSystemMessage(Text.of(
+          `§a${target} → §e${f.name}§a 지정${had ? ` §7(${FATES[had].name}에서 변경)` : ' §7(신규 · 시작 키트 지급)'}`))
+        // 유물은 별개 저장이라 옛 직업 유물이 그대로 남는다 — 조용히 손대지 않고 알려만 준다.
+        if (ftStore(s).getBoolean('relic_' + target)) {
+          ctx.source.sendSystemMessage(Text.of(`§7※ ${target} 은(는) 이미 유물을 받은 상태입니다 — 옛 직업 유물이 인벤에 남아 있습니다.`))
+        }
+        console.log(`[LS-FATE] admin set ${target} -> ${key} (had=${had || 'none'})`)
+        return 1
+      }))))
+    )
 })
 
 console.log('[Last Stardust] 별의 가호 로드됨 — ' + FATE_KEYS.length + '가호 (아틀라스/오리온/우라니아/크라토스/헬리오스/히기에이아/에레보스/쿠훌린)')
