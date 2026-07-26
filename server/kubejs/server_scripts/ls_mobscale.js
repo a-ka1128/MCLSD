@@ -44,15 +44,13 @@ function msForced(server) { return msStore(server).getInt('ms_force') > 0 }
 //   적대로 본다 — 철골렘·늑대·벌·눈사람도 스케일링을 받는다. 여태 이렇게 돌아왔으니
 //   동작을 바꾸지 않고 그대로 두되, 좁힐지는 밸런스 판단이라 TODO 로 올린다.
 function msIsHostile(e) {
-  // ※ ID 는 반드시 `minecraft:generic.attack_damage` 다. `generic.` 을 빼면 null 이 돌아와
-  //   **모든 몹이 "비적대"로 판정되어 스케일링이 통째로 사라진다** — 예외도 안 나서 몇 달을 몰랐다.
-  //   확인법: /attribute <대상> minecraft:generic.attack_damage base get
-  // 살아 있는 것만 속성을 가진다. 화살·아이템(ItemEntity)까지 들어오는데 그쪽엔
-  // getAttribute 자체가 없어 매번 예외가 났다 — 결과는 어차피 false 라 동작은 맞았지만,
-  // 스폰마다 예외를 만들고 경고 로그를 채웠다. 부르기 전에 걸러낸다.
+  // 살아 있는 것만 속성을 가진다. 화살·아이템(ItemEntity)·경험치 구슬까지 들어오는데
+  // 그쪽엔 getAttribute 자체가 없어 매번 예외가 났다 — 결과는 어차피 false 라 동작은
+  // 맞았지만, 스폰마다 예외를 만들고 경고 로그를 채웠다. 부르기 전에 거른다.
   if (!e || typeof e.getAttribute !== 'function') return false
   // ※ ID 는 반드시 `minecraft:generic.attack_damage` 다. `generic.` 을 빼면 null 이 돌아와
   //   **모든 몹이 "비적대"로 판정되어 스케일링이 통째로 사라진다** — 예외도 안 나서 몇 달을 몰랐다.
+  //   확인법: /attribute <대상> minecraft:generic.attack_damage base get
   try { return e.getAttribute('minecraft:generic.attack_damage') != null } catch (err) { lsWarn('ls_mobscale:attack-attr', err); return false }
 }
 

@@ -18,9 +18,13 @@ public final class TownScreens {
             return;
         }
         // 갱신 요청 — 열려 있는 화면만 새로 그린다(제출 직후 수치가 바로 바뀌어야 한다).
-        if (mc.screen instanceof TownTrackScreen track) { track.setView(view); return; }
-        if (mc.screen instanceof TownHubScreen hub) { hub.setView(view); return; }
-        mc.setScreen(new TownHubScreen(view));
+        //
+        // ※ 예전엔 여기서 열린 화면이 없으면 허브를 새로 열었다. 그런데 갱신은 금고가 바뀔
+        //   때마다 TownGui.syncAll 로 **접속자 전원에게** 나간다 — 공성 보상이 들어오는
+        //   순간 모두의 화면에 마을 창이 튀어나왔다(싸우는 중에도).
+        //   갱신은 갱신만 한다. 화면을 여는 건 openHub=true 인 경우뿐이다.
+        if (mc.screen instanceof TownTrackScreen track) track.setView(view);
+        else if (mc.screen instanceof TownHubScreen hub) hub.setView(view);
     }
 
     // 컨테이너 화면이 열린 직후 현황을 채워 넣는다 (메뉴는 아이템만 알지 수치는 모른다).
