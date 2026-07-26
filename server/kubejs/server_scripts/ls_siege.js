@@ -94,12 +94,27 @@ function setSanc(server, x, y, z) { LS.setSanctuary(server, x, y, z) }
 // 성벽 라인(반경) 안으로 공성 몹이 들어오려 하면 밖으로 밀려나며 성벽을 두드린다(HP 감소).
 // HP 0 = 성벽 붕괴 → 더 이상 막지 못하고 몹이 안으로 쏟아진다(내부 백병전). 수리 전까지 뚫린 채 유지.
 // 신호기 등 중심물은 장식 — 체력은 성벽 자체에 있다. 방벽(ramparts) 레벨 = 성벽 내구도.
-const WALL_BASE_HP = 150      // 최대 HP = 150 + 방벽Lv×50
+// 실제 몹 공격력으로 깎이므로(아래 bangDmg) 예전 값(150)과는 자릿수가 다르다.
+// 티어4 웨이브 12마리면 2초당 약 120 — 3,000 이면 대략 50초 버틴다(예전 체감과 같은 길이).
+const WALL_BASE_HP = 3000     // 최대 HP = 3000 + 방벽Lv×1000
+
+// ── 성벽 수리 비용 ──
+// 금고(공동)와 재료(개인)를 둘 다 받는다. 금고만 받으면 "숫자만 있으면 되는" 일이 되어
+// 마을 밖에 나가 캘 이유가 사라진다.
+//   [아이템, 표시이름, HP당 개수의 역수]  — 예: 40이면 40HP당 1개
+// 완전 수리(3000) 기준 = 300 Ducat · 원목 75 · 철괴 30 · 조약돌 150.
+// 원목/조약돌은 흔하고 철괴만 아프게 잡았다 — 철이 병목이 되어야 "준비"라는 게 생긴다.
+const WALL_REPAIR_PER_DUCAT = 10   // 10HP당 1 Ducat
+const WALL_REPAIR_MATS = [
+  ['minecraft:oak_log',  '원목',   40],
+  ['minecraft:iron_ingot', '철괴', 100],
+  ['minecraft:cobblestone', '조약돌', 20]
+]
 const WALL_DEFAULT_R = 24     // 성벽 반경 기본값 (실제 성벽에 맞춰 /wall radius 로 조정)
 function wallR(server) { const v = sfGetI(server, 'wall_r'); return v > 0 ? v : WALL_DEFAULT_R }
 // 방벽 레벨당 최대 내구도 +100 (기본 150 → 4레벨 550).
 // 방벽 트랙의 가장 직관적인 보상이라 눈에 띄게 올린다.
-function wallMax(server) { return WALL_BASE_HP + townLvl(server, 'ramparts') * 100 }
+function wallMax(server) { return WALL_BASE_HP + townLvl(server, 'ramparts') * 1000 }
 function wallHp(server) { const v = sfGetI(server, 'wall_hp'); return v > 0 ? Math.min(v, wallMax(server)) : (sfGetB(server, 'wall_init') ? 0 : wallMax(server)) }
 function wallSetHp(server, v) { sfSetB(server, 'wall_init', true); sfSetI(server, 'wall_hp', Math.max(0, Math.min(wallMax(server), v))) }
 function wallBroken(server) { return sfGetB(server, 'wall_init') && sfGetI(server, 'wall_hp') <= 0 }
@@ -409,7 +424,7 @@ function finishSiege(server, outcome) {
     addTreasury(server, reward)
     // 공성이 3일에 한 번이므로 승리 한 번이 3일치 상승분을 되돌린다
     setThreat(server, threat - SIEGE_EVERY)
-    if (!wallBroken(server)) wallSetHp(server, wallHp(server) + 15) // 승리 시 성벽 소폭 보수
+    if (!wallBroken(server)) wallSetHp(server, wallHp(server) + 300) // 승리 시 성벽 소폭 보수(최대치의 10%)
     server.runCommandSilent(`title @a title {"text":"${grand ? '대공세 격퇴!' : '성역 방어 성공!'}","color":"green","bold":true}`)
     playAll(server, 'minecraft:ui.toast.challenge_complete', 1, 1)
     playAll(server, 'minecraft:entity.player.levelup', 0.7, 1.2)
@@ -667,6 +682,7 @@ ServerEvents.tick(event => {
     var wc = sancPos(server)
     var R = wallR(server)
     var banging = 0
+    var bangDmg = 0   // 성벽에 붙은 몹들의 공격력 합
     try {
       server.getEntities().forEach(e => {
         if (!e || !e.tags || !(`${e.tags}`).includes('ls_siege') || !e.isAlive()) return
@@ -675,6 +691,13 @@ ServerEvents.tick(event => {
         if (d2 < R * R) {
           // 성벽 안으로 침입 시도 → 밖으로 밀려남 (성벽을 두드리는 연출)
           banging++
+          // 실제 공격력을 더한다 — 예전엔 마릿수만 세고 min(banging,6) 으로 잘라서,
+          // 위협도 1이든 15든, 좀비든 ignited_berserker 든 깎이는 속도가 똑같았다.
+          // 이제 몹 구성과 위협도(=몹 스케일링)가 성벽에 그대로 반영된다.
+          try {
+            var atk = e.getAttribute && e.getAttribute('minecraft:generic.attack_damage')
+            bangDmg += atk ? atk.getValue() : 3
+          } catch (eA) { bangDmg += 3 }
           var d = Math.max(1, Math.sqrt(d2))
           var ox = wc.x + (sfDx / d) * (R + 2), oz = wc.z + (sfDz / d) * (R + 2)
           var oy = surfaceY(server, ox, oz, Math.floor(e.y))
@@ -703,7 +726,7 @@ ServerEvents.tick(event => {
         wallSetHp(server, 1)
         if (LS_TICK % 80 === 0) playAll(server, 'minecraft:block.anvil.land', 0.5, 1.6)
       } else
-      wallSetHp(server, wallHp(server) - Math.min(banging, 6))
+      wallSetHp(server, wallHp(server) - Math.max(1, Math.round(bangDmg)))
       playAll(server, 'minecraft:entity.zombie.attack_iron_door', 0.8, 0.7)
       var hp = wallHp(server), mx = wallMax(server)
       var stage = hp <= mx * 0.25 ? 1 : hp <= mx * 0.5 ? 2 : hp <= mx * 0.75 ? 3 : 4
@@ -820,24 +843,57 @@ ServerEvents.commandRegistry(event => {
   event.register(Commands.literal('wall')
     .executes(ctx => {
       const s = ctx.source.server
-      ctx.source.sendSystemMessage(Text.of(`§6▨ 성벽 내구도 ${wallBar(s)} §8(반경 ${wallR(s)} · 최대 ${wallMax(s)} = 기본 ${WALL_BASE_HP} + 방벽Lv×50)`))
-      if (wallBroken(s)) ctx.source.sendSystemMessage(Text.of('§c   붕괴됨 — 공성 몹이 그대로 들어온다. /wall repair <n> (1HP = 2 Ducat)'))
+      ctx.source.sendSystemMessage(Text.of(`§6▨ 성벽 내구도 ${wallBar(s)} §8(반경 ${wallR(s)} · 최대 ${wallMax(s)} = 기본 ${WALL_BASE_HP} + 방벽Lv×1000)`))
+      if (wallBroken(s)) ctx.source.sendSystemMessage(Text.of('§c   붕괴됨 — 공성 몹이 그대로 들어온다. §7/wall repair <n> §8(필요량은 /wall cost <n>)'))
       return 1
     })
     .then(Commands.literal('repair').then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
       const s = ctx.source.server
+      const p = ctx.source.player
+      if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만 §7(재료를 인벤에서 가져갑니다)')); return 0 }
       const want = Math.max(1, Arguments.INTEGER.getResult(ctx, 'n'))
       const missing = wallMax(s) - wallHp(s)
       if (missing <= 0) { ctx.source.sendSystemMessage(Text.of('§7성벽은 온전합니다.')); return 0 }
       const amt = Math.min(want, missing)
-      const cost = amt * 2
+
+      // ── 비용: 금고 Ducat + 수리하는 사람의 재료 ──
+      // 금고만으로 고치면 "숫자만 있으면 되는" 일이 되고, 마을에 나가서 캐 올 이유가 없다.
+      // 재료는 명령을 친 사람 인벤에서 가져간다 — 공동 금고와 개인 노동이 둘 다 든다.
+      const cost = Math.ceil(amt / WALL_REPAIR_PER_DUCAT)
+      const needs = WALL_REPAIR_MATS.map(m => [m[0], m[1], Math.ceil(amt / m[2])])
       const tre = getTreasury(s)
-      if (tre < cost) { ctx.source.sendSystemMessage(Text.of(`§c공동 금고 부족: ${tre}/${cost} Ducat (1HP=2)`)); return 0 }
+      if (tre < cost) {
+        ctx.source.sendSystemMessage(Text.of(`§c공동 금고 부족: §7${tre}§c/§7${cost}§c Ducat §8(${WALL_REPAIR_PER_DUCAT}HP당 1)`))
+        return 0
+      }
+      // 먼저 전부 있는지 확인하고 나서 소모한다 — 반만 먹고 실패하면 재료가 증발한다
+      var lack = ''
+      needs.forEach(n => {
+        if (lsCountItem(p, n[0]) < n[2]) lack += `§7${n[1]} ${lsCountItem(p, n[0])}/${n[2]}  `
+      })
+      if (lack) {
+        ctx.source.sendSystemMessage(Text.of('§c재료 부족 — ' + lack))
+        return 0
+      }
+      needs.forEach(n => { lsTakeItem(p, n[0], n[2]) })
       addTreasury(s, -cost)
+
       const wasBroken = wallBroken(s)
       wallSetHp(s, wallHp(s) + amt)
-      say(s, `§6▨ 성벽 보수 +${amt} §7(-${cost} Ducat) ${wallBar(s)}${wasBroken && !wallBroken(s) ? ' §a— 방어선 복구!' : ''}`)
+      const matTxt = needs.map(n => `${n[1]} ${n[2]}`).join(' · ')
+      say(s, `§6▨ 성벽 보수 +${amt} §7(-${cost} Ducat · ${matTxt} — ${p.username}) ${wallBar(s)}${wasBroken && !wallBroken(s) ? ' §a— 방어선 복구!' : ''}`)
       playAll(s, 'minecraft:block.anvil.use', 0.8, 1)
+      return 1
+    })))
+    // 필요량 미리 보기 — 재료를 들고 오기 전에 얼마나 필요한지 알아야 한다
+    .then(Commands.literal('cost').then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
+      const s = ctx.source.server
+      const amt = Math.max(1, Arguments.INTEGER.getResult(ctx, 'n'))
+      ctx.source.sendSystemMessage(Text.of(`§6▨ 성벽 ${amt} 수리에 필요한 것`))
+      ctx.source.sendSystemMessage(Text.of(`§7   ${Math.ceil(amt / WALL_REPAIR_PER_DUCAT)} Ducat §8(공동 금고)`))
+      WALL_REPAIR_MATS.forEach(m => {
+        ctx.source.sendSystemMessage(Text.of(`§7   ${m[1]} ${Math.ceil(amt / m[2])}개 §8(개인 인벤)`))
+      })
       return 1
     })))
     .then(Commands.literal('radius').requires(s => s.hasPermission(2)).then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
