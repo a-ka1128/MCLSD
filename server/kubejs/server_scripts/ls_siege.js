@@ -673,7 +673,7 @@ ServerEvents.tick(event => {
           // 성벽 안으로 침입 시도 → 밖으로 밀려남 (성벽을 두드리는 연출)
           banging++
           var d = Math.max(1, Math.sqrt(d2))
-          var ox = wc.x + (dx / d) * (R + 2), oz = wc.z + (dz / d) * (R + 2)
+          var ox = wc.x + (sfDx / d) * (R + 2), oz = wc.z + (sfDz / d) * (R + 2)
           var oy = surfaceY(server, ox, oz, Math.floor(e.y))
           try { server.runCommandSilent(`tp ${e.getUuid()} ${ox.toFixed(1)} ${oy} ${oz.toFixed(1)}`) } catch (e2) { lsWarn('ls_siege:680', e2) }
           server.runCommandSilent(`particle minecraft:block minecraft:stone ${ox.toFixed(1)} ${oy + 1} ${oz.toFixed(1)} 0.4 0.6 0.4 0.1 12`)
