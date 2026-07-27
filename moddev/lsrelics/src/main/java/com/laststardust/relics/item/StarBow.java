@@ -27,7 +27,7 @@ public class StarBow extends BowItem implements RelicActions {
     // 1.354 -> 0.866 (x0.64, 2026-07-27). 스킬별 계측에서 평타가 87% 였다 —
     // 궁극기(별빛 폭풍)가 8% 라 60초 쿨을 쓰고도 안 눌러서 손해가 거의 없었다.
     // 평타 70% / 스킬 30% 가 되도록 내리고, 뺀 몫을 두 스킬로 옮긴다.
-    private static final double ARROW_DMG = 0.866;
+    private static final double ARROW_DMG = 0.854; // 0.866 -> 0.854 (2026-07-27)
 
     public StarBow(Properties properties) {
         super(properties);

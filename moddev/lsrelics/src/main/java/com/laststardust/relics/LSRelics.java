@@ -100,11 +100,13 @@ public class LSRelics {
     //
     // 유물은 첫 공세를 맨몸으로 버텨야 얻는다(ls_relic.js) — 받는 무기가 아니라 쟁취한 무기라
     // 평타를 다이아~네더라이트 검 구간에 둔다.
-    // 공격력 7.0813 -> 6.09 (x0.86, 2026-07-27) × 공속 1.6. 방어력/방어강도는 guardianAttrs 참고.
-    // 스킬별 계측에서 평타 87% / 스킬 13% 였다. 탱커라 총량(51.4)은 그대로 두고,
-    // 평타를 살짝 내린 만큼을 스킬로 옮긴다 (스킬 x1.88 -> 25%).
+    // 공격력 7.0813 -> 6.09 -> 5.524 (2026-07-27) × 공속 1.6. 방어력/방어강도는 guardianAttrs 참고.
+    // 두 번째 조정은 실측 50.1(평타 77% / 스킬 23%) 기준이다. 총량 50 은 그대로 두고
+    // 평타를 x0.907, 스킬을 x1.30 해서 스킬 비중만 30% 로 올린다.
+    // ※ 첫 조정의 응답이 정확했다 — 무기 6.09/7.0813 = x0.860 에 실측 평타가 x0.865 로 따라왔다.
+    //   스틱스에서 보였던 고정값 희석은 이 무기엔 사실상 없다.
     public static final DeferredItem<BulwarkBlade> GUARDIAN = ITEMS.register("guardian",
-        () -> new BulwarkBlade(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(guardianAttrs(5.09, -2.4))));
+        () -> new BulwarkBlade(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(guardianAttrs(4.524, -2.4))));
 
     // 순수 근접 딜러 — 채굴 겸용을 뺀 대신 공격력이 가장 높다.
     // 공격력 9.0514 -> 7.965 (x0.88, 2026-07-27) × 공속 1.0. 바닐라 네더라이트 도끼와 같은 속도다.
@@ -157,7 +159,9 @@ public class LSRelics {
             .attributes(weapon(1.225, -1.6))));
 
     // 게볼그 — 창(쿠훌린의 가호). 근접 하이브리드, 긴 사거리.
-    // 공격력 7.4167 × 공속 1.5 — 실측 6인 52.7 (목표 52).
+    // 공격력 7.4167 -> 5.666 (x0.764, 2026-07-27) × 공속 1.5.
+    // 실측 63.5 로 8유물 중 혼자 높았다. 평타 비중(66%)은 상한(75%) 안이라
+    // 궁극기를 뺀 전부에 같은 배수를 걸어 총량만 54 로 내린다.
     // 사거리 +1.5는 Better Combat weapon_attributes(range_bonus).
     // 귀환석 — 공방 Lv4「귀환의 요람」 보상. 유물이 아니라 마을 발전 산물이다.
     public static final DeferredItem<com.laststardust.relics.item.HearthStone> HEARTHSTONE =
@@ -167,7 +171,7 @@ public class LSRelics {
 
     public static final DeferredItem<GaeBolg> LANCER = ITEMS.register("lancer",
         () -> new GaeBolg(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-            .attributes(weapon(6.4167, -2.5))));
+            .attributes(weapon(4.666, -2.5))));
 
     // 크리에이티브 탭 (테스트/EMI 노출)
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("relics",

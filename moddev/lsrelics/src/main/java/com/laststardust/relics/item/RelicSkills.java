@@ -92,7 +92,7 @@ public final class RelicSkills {
         shockRing(sl, end.x, end.y - 0.5, end.z, r, 40, ParticleTypes.END_ROD, 0.35);
         shockRing(sl, end.x, end.y - 0.5, end.z, r * 1.4, 46, ParticleTypes.ELECTRIC_SPARK, 0.5);
 
-        beamHurt(sl, player, eye, look, 11.0, r, dmg(stack, 14.0f), 0.3, false, "소멸");
+        beamHurt(sl, player, eye, look, 11.0, r, dmg(stack, 14.6f), 0.3, false, "소멸"); // 14.0 -> 14.6 (x1.041)
 
         // 6초 쿨로 자주 쓰는 스킬이라 볼륨을 낮게 유지 (귀 아픔 방지)
         play(level, player, SoundEvents.WITHER_SHOOT, 0.45f, 1.5f);
@@ -110,7 +110,7 @@ public final class RelicSkills {
             // 5.32 -> 2.87 (2026-07-27). 스킬별 계측에서 별지기의 평타가 67% 였다.
             // 마법사는 평타보다 스킬이 우선인 직업이라 그 비율이 뒤집혀 있었다.
             // 평타 40% / 스킬 60% 가 되도록 내린다 (스킬 쪽은 중력 붕괴·초신성을 올린다).
-            BoltManager.fire(level, sp, eye.add(look.scale(0.5)), look, dmg(stack, 2.87f), 22);
+            BoltManager.fire(level, sp, eye.add(look.scale(0.5)), look, dmg(stack, 2.99f), 22); // x1.041
         }
         // 총구 섬광만 짧게
         level.sendParticles(ParticleTypes.END_ROD,
@@ -302,7 +302,7 @@ public final class RelicSkills {
             sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cx, cy + 1.0, cz, 40, r * 0.4, 0.6, r * 0.4, 0.3);
 
             // 6.6 -> 12.4 (x1.88, 2026-07-27). 넉백은 그대로 최소 — 몹을 붙잡아두는 게 목적이다.
-            hurtAround(sl, player, cx, cy + 1, cz, r, dmg(stack, 12.4f), 0.2, "수호의 파동");
+            hurtAround(sl, player, cx, cy + 1, cz, r, dmg(stack, 16.1f), 0.2, "수호의 파동"); // 12.4 -> 16.1 (x1.30)
             // 도발 — 8칸 내 적들이 4초간 시전자를 노림.
             // (쿨 8초라 8초로 두면 어그로가 영구 고정돼 다른 유물이 위협을 못 느낌)
             TauntManager.taunt(sl, player, 8.0, 80);
@@ -352,7 +352,7 @@ public final class RelicSkills {
     // 30발 = 585 가 한 번에 들어가 60초 실측의 19% 를 혼자 먹었다.
     // 발당으로 보면 연사(3.4)의 1.47배 — 5.0 에서도 "쏘느니 누르는" 이득은 그대로다.
     // 이 비율이 1.0 밑으로 내려가면 궁이 함정이 되므로 더 내릴 때는 연사와 같이 봐야 한다.
-    private static final float BARRAGE_PER_AMMO = 5.0f;
+    private static final float BARRAGE_PER_AMMO = 5.1f;  // x1.02 (2026-07-27)
 
     public static boolean solarBarrage(ServerLevel sl, ServerPlayer player, ItemStack stack, int ammo) {
         if (!ready(sl, player, stack, "cdEclipse", "탄막 집중", 1200, 4)) return false;
@@ -403,7 +403,7 @@ public final class RelicSkills {
         if (!ready(sl, player, stack, "cdBuckshot", "산탄", 220, 2)) return;
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
-        float base = dmg(stack, 16.56f);
+        float base = dmg(stack, 16.9f);  // 16.56 -> 16.9 (x1.02, 2026-07-27)
         double cosLimit = Math.cos(Math.toRadians(BUCK_HALF_ANGLE));
 
         AABB box = new AABB(eye.x - BUCK_RANGE, eye.y - BUCK_RANGE, eye.z - BUCK_RANGE,
@@ -627,7 +627,7 @@ public final class RelicSkills {
         Vec3 right = look.cross(new Vec3(0, 1, 0)).normalize();
         Vec3 hand = eye.add(look.scale(0.6)).add(right.scale(0.35)).add(0, -0.3, 0);
         JavelinManager.throwSpear(sl, player, hand, look,
-            dmg(stack, 8.9f) * power, dmgTick(stack, 1.78f), 60, charge); // 출혈 초당 2 × 3초
+            dmg(stack, 6.80f) * power, dmgTick(stack, 1.36f), 60, charge); // 8.9/1.78 -> 6.80/1.36 (x0.764)
 
         dustBurst(sl, eye, 0.5, 12 + (int) (charge * 18), GOLD, 1.2f);
         sl.sendParticles(ParticleTypes.FLASH, eye.x + look.x, eye.y + look.y, eye.z + look.z, 1, 0, 0, 0, 0);
@@ -649,7 +649,8 @@ public final class RelicSkills {
         player.setDeltaMovement(look.x * p, look.y * p + 0.1, look.z * p);
         player.hurtMarked = true;
         player.resetFallDistance();
-        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 20, dmg(stack, 8.01f), "질풍 돌진");
+        // 8.01 -> 6.12 (x0.764, 2026-07-27)
+        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 20, dmg(stack, 6.12f), "질풍 돌진");
 
         // ── 연출: 앞으로 뻗는 질풍 ──
         Vec3 eye = player.getEyePosition();
@@ -675,7 +676,11 @@ public final class RelicSkills {
         // 실측에서 백창이 게볼그 전체 피해의 **3.9%** 밖에 안 됐다. 7초간 창 105발이 쏟아지는
         // 연출인데 일식(108)의 61%, 초신성(84)의 79% 라 궁극기로서 존재감이 없었다.
         // 102 면 다른 궁극기와 같은 층위이면서, 7초에 걸쳐 들어가는 만큼 즉발보다 조금 높다.
-        BabylonManager.start(level, player, dmgTick(stack, 1.78f), 140); // 창 1발 2.0 · 7초
+        // 1.78 -> 7.83 (x4.40, 2026-07-27)
+        // 스킬별 계측에서 60초 창의 - 2% (91) - 였다. 60초 쿨 · 7초 지속 궁극기가
+        // 회당 91 이면 궁극기가 아니다 — 같은 급끼리 비교하면 초신성 362 / 탄막 집중 440 이다.
+        // 게볼그의 총량은 내리면서 이것만 올린다 (400 = 다른 유물 궁극기와 같은 대역).
+        BabylonManager.start(level, player, dmgTick(stack, 7.83f), 140); // 7초
         // 시전자 발밑에서 솟구치는 금빛 기둥 (개막 임팩트 보강)
         Vec3 c = player.position();
         for (int i = 0; i < 30; i++) {
@@ -776,7 +781,7 @@ public final class RelicSkills {
         //
         // ※ 저격 패시브(거리 보정)는 이 스킬에 안 붙는다. EclipseManager 는 BulletManager 를
         //    지나지 않아서다. 60칸짜리 광선인데 거리 이득이 없는 건 따로 볼 문제로 남아 있다.
-        EclipseManager.start(level, player, dmg(stack, 72.86f), 40); // 2초 차징
+        EclipseManager.start(level, player, dmg(stack, 74.3f), 40); // 72.86 -> 74.3 (x1.02)
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3, false, false));
         Vec3 eye = player.getEyePosition();
         dustBurst(level, eye, 1.0, 40, GOLD, 1.6f);
@@ -796,7 +801,7 @@ public final class RelicSkills {
         player.setDeltaMovement(look.x * 1.7, 0.35, look.z * 1.7);
         player.hurtMarked = true; // 클라에 속도 동기화
         // 11.0 -> 20.7 (x1.88, 2026-07-27)
-        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 16, dmg(stack, 20.7f), "이지스 돌진");
+        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 16, dmg(stack, 26.9f), "이지스 돌진"); // 20.7 -> 26.9 (x1.30)
 
         // 시전 연출
         Vec3 eye = player.getEyePosition();
@@ -859,8 +864,10 @@ public final class RelicSkills {
         Vec3 center = aimPoint(level, player, 40.0);
         // 반경을 넓혀 "광역기"로 세운다 — 좁으면 결국 단일 표적에 몰려 단일 딜러가 된다.
         double r = 8.0;
-        // 4.4 -> 8.32 (x1.89, 2026-07-27). 쿨 45초짜리 궁극기가 60초 창에서 308(8%) 이었다.
-        ArrowStormManager.start(level, player, center, r, 60, dmgTick(stack, 8.32f)); // 반경8, 3초
+        // 4.4 -> 8.32 -> 11.65 (2026-07-27). 8% 였던 것이 8.32 에서 16% 가 됐고,
+        // 궁극기를 더 올려달라는 요청에 따라 x1.40 을 더 건다 (60초 창 500 -> 700, 21%).
+        // 속사(평타 강화)를 가진 유물이라 평타 상한은 70% -> 75% 로 완화됐다.
+        ArrowStormManager.start(level, player, center, r, 60, dmgTick(stack, 11.65f)); // 반경8, 3초
 
         // ── 시전 연출: 조준 지점에서 하늘로 치솟는 별빛 기둥 + 다중 링 ──
         level.sendParticles(ParticleTypes.FLASH, center.x, center.y + 1, center.z, 3, 0.2, 0.2, 0.2, 0);
@@ -904,7 +911,7 @@ public final class RelicSkills {
             e.fallDistance = 0.0f;
             // 10.5 -> 20.7 (2026-07-27). 쿨 12초인데 회당 63 으로, 쿨 6초짜리 소멸(회당 61)과
             // 같은 값이었다 — 쿨이 두 배인데 값이 같으면 누를 이유가 없다.
-            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 20.7f), "중력 붕괴");
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 21.5f), "중력 붕괴"); // 20.7 -> 21.5 (x1.041)
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2, false, true));
         }
         // 연출 — 안으로 빨려드는 소용돌이
@@ -935,7 +942,9 @@ public final class RelicSkills {
         // 쿨 1초당 값이 소멸 10.2 / 중력 붕괴 5.3 / 초신성 4.0 이었다 — 쿨이 길수록 값이
         // 떨어져 기울기가 거꾸로였고, 60초를 기다린 궁극기가 가장 나쁜 선택지였다.
         // 세 스킬의 쿨 1초당 값을 맞추되 궁극기에만 프리미엄을 준다 (회당 소멸 60 / 중력 124 / 초신성 724).
-        SupernovaManager.start(level, player, center, 7.0, dmg(stack, 120.6f), 30); // 반경7·1.5초 차징
+        // ※ 60초 창에서 2회 나간다 — 타격할수록 쿨이 줄어드는 유물이라(starCharge) 명목 60초 쿨이
+        //    실제로는 더 짧게 돈다. 회당 362 다(측정 724 / 2회).
+        SupernovaManager.start(level, player, center, 7.0, dmg(stack, 125.6f), 30); // 120.6 -> 125.6 (x1.041)
 
         // ── 시전 연출: 시전자 → 조준 지점 별빛 궤적 + 지정 지점 개시 링 ──
         Vec3 eye = player.getEyePosition();
@@ -1151,7 +1160,7 @@ public final class RelicSkills {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
         double reach = beamReach(sl, player, eye, look, 7.0);
-        beamHurt(sl, player, eye, look, reach, 1.2, dmg(stack, 10.68f), 0.4, false, "꿰뚫기");
+        beamHurt(sl, player, eye, look, reach, 1.2, dmg(stack, 8.16f), 0.4, false, "꿰뚫기"); // 10.68 -> 8.16 (x0.764)
 
         Vec3 end = eye.add(look.scale(reach));
         beamParticles(sl, eye, end, 0.25, ParticleTypes.CRIT, 0.0);
