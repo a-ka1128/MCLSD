@@ -65,21 +65,25 @@ public final class BulletManager {
         final float damage;
         final double speed;
         final Vec3 origin;
+        // 측정용 이름표 — 평타·스코프·연사가 전부 이 클래스를 지나서, 발사한 쪽이 알려주지
+        // 않으면 셋을 구분할 방법이 없다. 밸런스를 총합만 보고 맞추다 세 번 빗나간 원인이다.
+        final String label;
         final Set<Integer> hit = new HashSet<>();
         Vec3 pos;
         int ticksLeft;
         int pierced;
-        Bullet(ServerLevel level, ServerPlayer owner, Vec3 pos, Vec3 dir, float damage, int ticksLeft, double speed) {
+        Bullet(ServerLevel level, ServerPlayer owner, Vec3 pos, Vec3 dir, float damage, int ticksLeft,
+               double speed, String label) {
             this.level = level; this.owner = owner; this.pos = pos;
             this.dir = dir; this.damage = damage; this.ticksLeft = ticksLeft; this.speed = speed;
-            this.origin = pos;
+            this.origin = pos; this.label = label;
         }
     }
 
     public static void fire(ServerLevel level, ServerPlayer owner, Vec3 start, Vec3 dir,
-                            float damage, int ticks, boolean scoped) {
+                            float damage, int ticks, boolean scoped, String label) {
         ACTIVE.add(new Bullet(level, owner, start, dir.normalize(), damage, ticks,
-            scoped ? SCOPE_SPEED : SPEED));
+            scoped ? SCOPE_SPEED : SPEED, label));
     }
 
     @SubscribeEvent
@@ -114,7 +118,7 @@ public final class BulletManager {
                     // 무적 프레임 무시 — 파티에서 표적이 항상 무적이라 스코프 사격이 통째로
                     // 씹히고 있었다 (LsDamage 주석 참고)
                     com.laststardust.relics.LsDamage.hit(e,
-                        com.laststardust.relics.item.RelicSkills.relicSource(b.level, b.owner), dmg);
+                        com.laststardust.relics.item.RelicSkills.relicSource(b.level, b.owner), dmg, b.label);
                     hitFx(b.level, next);
                     if (++b.pierced >= MAX_PIERCE) { done = true; }
                     break;

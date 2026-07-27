@@ -125,7 +125,7 @@ public final class EclipseManager {
             double along = rel.dot(look);
             if (along < 0 || along > reach) continue;            // 광선 뒤쪽이거나 사거리 밖
             if (rel.subtract(look.scale(along)).length() > RADIUS) continue; // 광선에서 너무 멀다
-            com.laststardust.relics.LsDamage.hit(t, com.laststardust.relics.item.RelicSkills.relicSource(lv, p), ec.damage);
+            com.laststardust.relics.LsDamage.hit(t, com.laststardust.relics.item.RelicSkills.relicSource(lv, p), ec.damage, "일식");
             lv.sendParticles(ParticleTypes.FLASH, c.x, c.y, c.z, 1, 0, 0, 0, 0);
         }
 

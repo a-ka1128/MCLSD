@@ -366,7 +366,7 @@ public final class RelicSkills {
             if (to.normalize().dot(look) < cosLimit) continue;
             // 산탄(-60%)보다 완만하게 — 이쪽은 "집중 사격"이라 거리를 덜 탄다
             float falloff = (float) (1.0 - (dist / BARRAGE_RANGE) * 0.3);
-            LsDamage.hit(e, relicSource(sl, player), base * falloff);
+            LsDamage.hit(e, relicSource(sl, player), base * falloff, "탄막");
             sl.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
                 18, 0.35, 0.35, 0.35, 0.12);
             hit++;
@@ -411,7 +411,7 @@ public final class RelicSkills {
 
             // 점블랭크 100% → 최대 사거리 40%
             float falloff = (float) (1.0 - (dist / BUCK_RANGE) * 0.6);
-            LsDamage.hit(e, relicSource(sl, player), base * falloff);
+            LsDamage.hit(e, relicSource(sl, player), base * falloff, "산탄");
             e.knockback(1.5, player.getX() - e.getX(), player.getZ() - e.getZ()); // 평타(0.4)의 약 4배
             sl.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
                 12, 0.3, 0.3, 0.3, 0.1);

@@ -37,16 +37,35 @@ public final class LsDamage {
 
     public static boolean inSkill() { return inSkill; }
 
+    // ── "무엇이 때렸는가" 이름표 ──
+    //
+    // 밸런스 조정이 총 DPS 하나만 보고 굴러가면 배분을 추측으로 맞추게 된다. 실제로
+    // 마총에서 세 번 연속 빗나갔다 — 총량은 목표에 붙였는데 평타·연사·궁의 몫이
+    // 계산과 달랐고, 합계만으로는 어느 쪽이 틀렸는지 알 방법이 없었다.
+    //
+    // 그래서 피해가 지나가는 이 창구에 이름표를 붙인다. DummyManager 가 이걸 읽어
+    // 스킬별로 쪼갠 결과를 내놓는다. 이름표가 없는 피해(바닐라 근접 평타 등)는 "평타"다.
+    private static String label = null;
+
+    public static String currentLabel() { return label; }
+
     // 무적 프레임을 무시하고 때린다. 단발·저빈도 스킬용.
     public static boolean hit(LivingEntity target, DamageSource source, float amount) {
+        return hit(target, source, amount, null);
+    }
+
+    public static boolean hit(LivingEntity target, DamageSource source, float amount, String label) {
         if (target == null || !target.isAlive() || amount <= 0) return false;
         target.invulnerableTime = 0;
         boolean prev = inSkill;
+        String prevLabel = LsDamage.label;
         inSkill = true;
+        LsDamage.label = label;
         try {
             return target.hurt(source, amount);
         } finally {
             inSkill = prev;
+            LsDamage.label = prevLabel;
         }
     }
 
@@ -59,6 +78,11 @@ public final class LsDamage {
     // gameTime 을 직접 받는 이유: 매니저들이 이미 틱 루프 안이라 레벨을 또 뒤질 필요가 없다.
     public static boolean hitLimited(LivingEntity target, DamageSource source, float amount,
                                      String key, long gameTime, int minInterval) {
+        return hitLimited(target, source, amount, key, gameTime, minInterval, null);
+    }
+
+    public static boolean hitLimited(LivingEntity target, DamageSource source, float amount,
+                                     String key, long gameTime, int minInterval, String label) {
         if (target == null || !target.isAlive() || amount <= 0) return false;
         String tag = "lsHit_" + key;
         long last = target.getPersistentData().getLong(tag);
@@ -66,11 +90,14 @@ public final class LsDamage {
         target.getPersistentData().putLong(tag, gameTime);
         target.invulnerableTime = 0;
         boolean prev = inSkill;
+        String prevLabel = LsDamage.label;
         inSkill = true;
+        LsDamage.label = label;
         try {
             return target.hurt(source, amount);
         } finally {
             inSkill = prev;
+            LsDamage.label = prevLabel;
         }
     }
 }

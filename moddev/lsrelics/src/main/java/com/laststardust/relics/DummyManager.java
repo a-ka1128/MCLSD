@@ -59,6 +59,14 @@ public final class DummyManager {
     private static final Map<UUID, Float> DAMAGE = new HashMap<>();
     private static final Map<UUID, String> NAMES = new HashMap<>();
 
+    // 스킬 이름표별 누계 (LsDamage.currentLabel()). 이름표 없는 피해는 UNLABELED 로 모인다.
+    //
+    // 왜: 총합만으로는 배분을 못 본다. 마총을 목표 54 에 맞추면서 세 번 빗나갔는데,
+    // 매번 "총량은 맞는데 어느 스킬이 얼마를 먹었는지"를 손계산으로 추정하다 틀렸다.
+    // 계측기가 이걸 직접 말해주면 그 추정 자체가 필요 없어진다.
+    private static final Map<String, Float> BY_SKILL = new HashMap<>();
+    private static final String UNLABELED = "평타";
+
     // ── 소환 ──
     public static int spawn(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
@@ -137,6 +145,7 @@ public final class DummyManager {
         if (DUMMIES.isEmpty()) return false;
         DAMAGE.clear();
         NAMES.clear();
+        BY_SKILL.clear();
         for (LivingEntity d : DUMMIES) d.setHealth(d.getMaxHealth());
         startTick = tick;
         measuring = true;
@@ -192,6 +201,20 @@ public final class DummyManager {
                 "§f%-12s §7%,.0f §8· §e%.1f DPS §8· %.0f%%",
                 name, dmg, dmg / secs, dmg * 100f / total)));
         }
+        // ── 스킬별 배분 ──
+        // 이름표가 하나뿐이면(=전부 평타) 줄만 늘어나므로 생략한다.
+        if (BY_SKILL.size() > 1) {
+            out.add(Component.literal("§8──── 스킬별 ────"));
+            List<Map.Entry<String, Float>> skills = new ArrayList<>(BY_SKILL.entrySet());
+            skills.sort(Comparator.<Map.Entry<String, Float>>comparingDouble(Map.Entry::getValue).reversed());
+            for (Map.Entry<String, Float> e : skills) {
+                float dmg = e.getValue();
+                out.add(Component.literal(String.format(
+                    "§b%-8s §7%,.0f §8· §e%.1f DPS §8· %.0f%%",
+                    e.getKey(), dmg, dmg / secs, dmg * 100f / total)));
+            }
+        }
+
         out.add(Component.literal("§8──────────────"));
         out.add(Component.literal(String.format(
             "§7보스 체력 환산 §8— 60초 §f%,.0f §8· 90초 §f%,.0f §8· 120초 §f%,.0f",
@@ -209,6 +232,10 @@ public final class DummyManager {
         if (!(src instanceof ServerPlayer p)) return;
         DAMAGE.merge(p.getUUID(), event.getNewDamage(), Float::sum);
         NAMES.put(p.getUUID(), p.getGameProfile().getName());
+        // 이름표가 없으면 평타다 — 바닐라 근접 공격은 LsDamage 를 거치지 않고, 아직
+        // 이름표를 안 붙인 스킬도 여기로 모인다(마총 외 유물은 대부분 아직 그렇다).
+        String label = LsDamage.currentLabel();
+        BY_SKILL.merge(label == null ? UNLABELED : label, event.getNewDamage(), Float::sum);
     }
 
     @SubscribeEvent

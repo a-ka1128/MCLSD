@@ -424,7 +424,8 @@ public class SolarMusket extends Item implements RelicActions {
         Vec3 look = player.getViewVector(1.0f);
         BulletManager.fire(level, player, eye.add(look.scale(0.6)), look,
             RelicSkills.dmg(stack, rifle ? RIFLE_DMG : (scoped ? SCOPE_DMG : BULLET_DMG)),
-            scoped ? SCOPE_BULLET_LIFE : BULLET_LIFE, scoped);
+            scoped ? SCOPE_BULLET_LIFE : BULLET_LIFE, scoped,
+            rifle ? "연사" : (scoped ? "스코프" : "평타"));
 
         // 총구 화염 + 반동감 있는 사운드 (스코프는 더 묵직하게)
         Vec3 muzzle = eye.add(look.scale(1.0));
