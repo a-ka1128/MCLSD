@@ -33,11 +33,12 @@ public final class MusketArmPose implements IClientItemExtensions {
     @Override
     public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
         if (stack.getItem() != com.laststardust.relics.LSRelics.GUNNER.get()) return null;
-        // 스코프 중엔 바닐라가 이미 SPYGLASS 자세를 준다 — 덮지 않는다.
-        if (SolarMusket.isScoped(entity, stack)) return null;
         boolean rifle = stack
             .getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
             .copyTag().getBoolean("rifle");
-        return rifle ? HumanoidModel.ArmPose.CROSSBOW_HOLD : null;
+        // 연사 중엔 조준하고 있어도 두 손을 유지한다 — 라이플을 한 손으로 드는 그림이 안 된다.
+        if (rifle) return HumanoidModel.ArmPose.CROSSBOW_HOLD;
+        // 저격 스코프 중엔 바닐라 SPYGLASS 자세를 덮지 않는다.
+        return null;
     }
 }

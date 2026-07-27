@@ -116,9 +116,9 @@ public class SolarMusket extends Item implements RelicActions {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        // 연사 중엔 스코프를 막는다 (유저 결정). 라이플로 바뀐 총에 스코프까지 겹치면
-        // 지금 무슨 상태인지 읽기 어렵고, 발사율 판정도 두 겹이 된다.
-        if (tag(stack).getBoolean("rifle")) return InteractionResultHolder.fail(stack);
+        // 연사 중에도 우클릭은 살아 있다. 다만 **배율만** 준다 — 피해·발사율·탄 소모는
+        // 그대로다(leftAttack 의 scoped 판정이 rifle 을 우선한다).
+        // 라이플에 저격 스코프까지 얹으면 한 무기가 모든 거리를 다 먹는다.
         player.startUsingItem(hand);
         level.playSound(null, player.blockPosition(), SoundEvents.SPYGLASS_USE, SoundSource.PLAYERS, 0.6f, 1.2f);
         return InteractionResultHolder.consume(stack);

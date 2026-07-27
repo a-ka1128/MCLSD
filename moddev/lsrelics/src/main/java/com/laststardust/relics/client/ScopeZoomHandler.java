@@ -17,7 +17,10 @@ import net.neoforged.neoforge.client.event.ComputeFovModifierEvent;
 public final class ScopeZoomHandler {
     private ScopeZoomHandler() {}
 
-    private static final float ZOOM = 0.35f; // 최대 줌에서의 FOV 배율 (약 3배 확대)
+    private static final float ZOOM = 0.35f;       // 저격 스코프 — FOV 0.35배 (약 3배 확대)
+    // 연사 모드에서는 배율만 주고 피해·발사율은 안 바뀐다(SolarMusket.use 주석 참고).
+    // 조준을 돕는 정도로만 — 3배까지 주면 라이플이 저격총 노릇까지 하게 된다.
+    private static final float RIFLE_ZOOM = 0.55f; // 약 1.8배 확대
 
     @SubscribeEvent
     public static void onComputeFov(ComputeFovModifierEvent event) {
@@ -26,8 +29,14 @@ public final class ScopeZoomHandler {
         if (used.getItem() != LSRelics.GUNNER.get()) return;
         if (!player.isUsingItem()) return;
 
+        boolean rifle = used
+            .getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.EMPTY)
+            .copyTag().getBoolean("rifle");
+        float zoom = rifle ? RIFLE_ZOOM : ZOOM;
+
         // 진입 0.5초 동안 부드럽게 줌인 — 서버의 피해 판정과 같은 진행도를 쓴다
         float p = SolarMusket.scopeProgress(player);
-        event.setNewFovModifier(event.getFovModifier() * (1.0f + (ZOOM - 1.0f) * p));
+        event.setNewFovModifier(event.getFovModifier() * (1.0f + (zoom - 1.0f) * p));
     }
 }
