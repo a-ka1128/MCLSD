@@ -107,8 +107,10 @@ public final class RelicSkills {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
         if (player instanceof ServerPlayer sp) {
-            // 4.56 × 초당 2.5발 = DPS 11.4 (원거리 하이브리드)
-            BoltManager.fire(level, sp, eye.add(look.scale(0.5)), look, dmg(stack, 5.32f), 22);
+            // 5.32 -> 2.87 (2026-07-27). 스킬별 계측에서 별지기의 평타가 67% 였다.
+            // 마법사는 평타보다 스킬이 우선인 직업이라 그 비율이 뒤집혀 있었다.
+            // 평타 40% / 스킬 60% 가 되도록 내린다 (스킬 쪽은 중력 붕괴·초신성을 올린다).
+            BoltManager.fire(level, sp, eye.add(look.scale(0.5)), look, dmg(stack, 2.87f), 22);
         }
         // 총구 섬광만 짧게
         level.sendParticles(ParticleTypes.END_ROD,
@@ -891,7 +893,9 @@ public final class RelicSkills {
             e.setDeltaMovement(pull.x, pull.y * 0.5 + 0.1, pull.z);
             e.hasImpulse = true;
             e.fallDistance = 0.0f;
-            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 10.5f), "중력 붕괴");
+            // 10.5 -> 20.7 (2026-07-27). 쿨 12초인데 회당 63 으로, 쿨 6초짜리 소멸(회당 61)과
+            // 같은 값이었다 — 쿨이 두 배인데 값이 같으면 누를 이유가 없다.
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 20.7f), "중력 붕괴");
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2, false, true));
         }
         // 연출 — 안으로 빨려드는 소용돌이
@@ -918,7 +922,11 @@ public final class RelicSkills {
         if (!ready(level, player, stack, "cdSupernova", "초신성", 1200, 4)) return;
         Vec3 center = aimPoint(level, player, 32.0);
         // 28.0 → 34.0 → 37.06 → 39.65. 백창과 같은 피해 수준으로 맞춘 뒤 셀레스티아 배율을 얹었다.
-        SupernovaManager.start(level, player, center, 7.0, dmg(stack, 39.65f), 30); // 반경7·34뎀·1.5초 차징
+        // 39.65 -> 120.6 (2026-07-27, x3.04)
+        // 쿨 1초당 값이 소멸 10.2 / 중력 붕괴 5.3 / 초신성 4.0 이었다 — 쿨이 길수록 값이
+        // 떨어져 기울기가 거꾸로였고, 60초를 기다린 궁극기가 가장 나쁜 선택지였다.
+        // 세 스킬의 쿨 1초당 값을 맞추되 궁극기에만 프리미엄을 준다 (회당 소멸 60 / 중력 124 / 초신성 724).
+        SupernovaManager.start(level, player, center, 7.0, dmg(stack, 120.6f), 30); // 반경7·1.5초 차징
 
         // ── 시전 연출: 시전자 → 조준 지점 별빛 궤적 + 지정 지점 개시 링 ──
         Vec3 eye = player.getEyePosition();
