@@ -10,7 +10,7 @@ import net.minecraft.world.level.Level;
 //   · 좌클릭 = 평타 (Better Combat 쌍수 콤보, 좌우 번갈아 베기)
 //   · R = 급소 가르기 (기본, 1성)  · V = 그림자 도약 (이동, 2성)
 //   · C = 망각의 안개 (추가, 3성)  · X = 무저갱 (궁극, 4성)
-//   · 패시브 = 배후의 일격(+35%) · 연쇄 살상 — RelicEventHandlers 처리
+//   · 패시브 = 배후의 일격(+20%) · 연쇄 살상 — RelicEventHandlers 처리
 public class SoulDagger extends Item implements RelicActions {
     public SoulDagger(Properties properties) {
         super(properties);

@@ -61,7 +61,7 @@ public final class FlameZoneManager {
                 for (LivingEntity e : z.level.getEntitiesOfClass(LivingEntity.class, box,
                         en -> en != z.caster && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
                     if (e.distanceToSqr(z.center) > z.radius * z.radius) continue;
-                    e.hurt(com.laststardust.relics.item.RelicSkills.relicSource(z.level, z.caster), z.perTick);
+                    com.laststardust.relics.LsDamage.hit(e, com.laststardust.relics.item.RelicSkills.relicSource(z.level, z.caster), z.perTick);
                     e.setRemainingFireTicks(40); // 발화 2초 (지대를 벗어나도 잠깐 탄다)
                 }
             }

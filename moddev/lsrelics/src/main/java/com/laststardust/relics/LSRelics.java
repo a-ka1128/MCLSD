@@ -94,16 +94,18 @@ public class LSRelics {
     //   근접 프리미엄 ×1.10  (원거리는 딜 유지율·안전성이 높아 "원거리 세금"을 문다)
     //   유틸 하이브리드 ×0.95 (CC·버프를 가진 만큼 딜을 뺀다)
     //   탱커 ×0.78 / 힐러 ×0.72
-    // 딜러 6종 격차는 11.4~13.2 (15.8%) — 중간값 ±8%로 "밸런스 잡힌" 구간이다.
+    // ※ 아래 개별 주석의 수치는 **초기 설계 예산이 아니라 실측 기반 목표**다(2026-07-27 갱신).
+    //   설계 예산으로 잡았던 10.3/13.2/12.5 는 두 번의 실측 리밸런스로 폐기됐다.
+    //   현재 목표: 원거리 3종 54 · 게볼그 52 · 타이탄 50 · 이지스 44 · 스틱스 숙련도 밴드.
     //
     // 유물은 첫 공세를 맨몸으로 버텨야 얻는다(ls_relic.js) — 받는 무기가 아니라 쟁취한 무기라
     // 평타를 다이아~네더라이트 검 구간에 둔다.
-    // 공격력 6.4375 × 공속 1.6 = DPS 10.3 (근접 탱커)
+    // 공격력 7.0813 × 공속 1.6 — 실측 6인 43.3 (목표 44). 방어력/방어강도는 guardianAttrs 참고.
     public static final DeferredItem<BulwarkBlade> GUARDIAN = ITEMS.register("guardian",
         () -> new BulwarkBlade(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(guardianAttrs(6.0813, -2.4))));
 
     // 순수 근접 딜러 — 채굴 겸용을 뺀 대신 공격력이 가장 높다.
-    // 공격력 9.4286 × 공속 1.4 = DPS 13.2 (묵직하게 느리고 세게)
+    // 공격력 9.0514 × 공속 1.0 — 실측 6인 52.3 (목표 50). 바닐라 네더라이트 도끼와 같은 속도다.
     public static final DeferredItem<RiftAxe> PIONEER = ITEMS.register("pioneer",
         () -> new RiftAxe(Tiers.NETHERITE, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
             // 공속 -2.6(1.4회/초) → -3.0(1.0회/초). 바닐라 네더라이트 도끼와 같은 속도다.
@@ -119,7 +121,8 @@ public class LSRelics {
     // 스킬 설계가 끝나면 각자 전용 아이템 클래스(RelicActions 구현)로 교체한다.
     // 원거리 2종(솔라리·파나케이아)은 좌클릭 투사체가 평타라 근접 공격력을 주지 않는다.
     // 목표 DPS는 솔라리 12.0(0.8발/초 × 15.0), 파나케이아 8.6(2발/초 × 4.3).
-    // 솔라리 — 마총. 좌클릭 = 태양탄(6발 탄창 + 1.5초 재장전), 실효 DPS 12.0.
+    // 솔라리스 — 마총. 좌클릭 = 태양탄(6발 탄창 + 1.5초 재장전).
+    // 실측 6인 60.9 (목표 54) — 초과 상태지만 구조 재설계 대기 중이라 수치를 안 건드린다(SolarMusket 주석).
     public static final DeferredItem<SolarMusket> GUNNER = ITEMS.register("gunner",
         () -> new SolarMusket(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(1500)));
 
@@ -129,14 +132,16 @@ public class LSRelics {
 
     // 스틱스 — 그림자 쌍단검(에레보스의 가호). 주손+보조손 한 쌍으로 든다.
     // 쌍수(Better Combat)로 두 자루가 번갈아 베므로, 한 자루의 공격력을 낮게 잡아
-    // 두 자루 합이 근접 순수 딜러 예산(DPS 13.2)에 오도록 한다. 각 자루 공격력 2.75 · 공속 2.4.
+    // 각 자루 공격력 3.402 · 공속 2.4. 백어택 ×1.20 과 바닐라 크리 ×1.5 가 평타에만 곱해진다.
+    // 실측: 백어택만 54.2 / 백어택+크리 61~73 — 숙련도로 보상받는 무기다(RelicEventHandlers.onStyxStrike).
     // ※ 실제 쌍수 DPS는 콤보 재생 속도에 달려 있어 인겜 실측 후 미세 조정이 필요하다.
     public static final DeferredItem<SoulDagger> ASSASSIN = ITEMS.register("assassin",
         () -> new SoulDagger(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
             .attributes(weapon(2.402, -1.6))));
 
     // 게볼그 — 창(쿠훌린의 가호). 근접 하이브리드, 긴 사거리.
-    // 공격력 8.3333 × 공속 1.5 = DPS 12.5. 사거리 +1.5는 Better Combat weapon_attributes(range_bonus).
+    // 공격력 7.4167 × 공속 1.5 — 실측 6인 52.7 (목표 52).
+    // 사거리 +1.5는 Better Combat weapon_attributes(range_bonus).
     // 귀환석 — 공방 Lv4「귀환의 요람」 보상. 유물이 아니라 마을 발전 산물이다.
     public static final DeferredItem<com.laststardust.relics.item.HearthStone> HEARTHSTONE =
         ITEMS.register("hearthstone",

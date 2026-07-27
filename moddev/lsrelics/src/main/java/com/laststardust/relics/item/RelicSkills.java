@@ -3,6 +3,7 @@ package com.laststardust.relics.item;
 import com.laststardust.relics.ArrowStormManager;
 import com.laststardust.relics.BleedManager;
 import com.laststardust.relics.BoltManager;
+import com.laststardust.relics.LsDamage;
 import com.laststardust.relics.ChargeManager;
 import com.laststardust.relics.EclipseManager;
 import com.laststardust.relics.FissureManager;
@@ -234,7 +235,7 @@ public final class RelicSkills {
             double dist = to.length();
             if (dist > length) continue;
             if (dist > 0.01 && to.normalize().dot(flat) < cosHalf) continue;
-            e.hurt(relicSource(sl, player), dmg(stack, 7.68f));
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 7.68f));
             e.knockback(0.4, origin.x - e.getX(), origin.z - e.getZ());
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1, false, true));
             sl.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(),
@@ -347,7 +348,7 @@ public final class RelicSkills {
 
             // 점블랭크 100% → 최대 사거리 40%
             float falloff = (float) (1.0 - (dist / BUCK_RANGE) * 0.6);
-            e.hurt(relicSource(sl, player), base * falloff);
+            LsDamage.hit(e, relicSource(sl, player), base * falloff);
             e.knockback(1.5, player.getX() - e.getX(), player.getZ() - e.getZ()); // 평타(0.4)의 약 4배
             sl.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
                 12, 0.3, 0.3, 0.3, 0.1);
@@ -610,7 +611,7 @@ public final class RelicSkills {
 
     // ─────────────────────────────── 이동기: 스틱스 "그림자 도약" (이동·V·2성) ───────────────────────────────
     // 우클릭. 조준한 적의 뒤로 순간이동하며 즉시 타격. 대상이 없으면 전방으로 짧게 대시.
-    // 뒤로 잡으면 곧바로 패시브 "배후의 일격"(+35%) 각이 나와, 도약→평타가 자동으로 폭딜이 된다.
+    // 뒤로 잡으면 곧바로 패시브 "배후의 일격"(+20%) 각이 나와, 도약→평타가 자동으로 폭딜이 된다.
     private static final float LEAP_DMG = 11.13f;
     private static final double LEAP_RANGE = 12.0;
 
@@ -631,7 +632,7 @@ public final class RelicSkills {
                 target.position().add(0, target.getBbHeight() * 0.5, 0));
             if (player instanceof ServerPlayer sp) sp.connection.teleport(dest.x, dest.y, dest.z, player.getYRot(), player.getXRot());
 
-            target.hurt(relicSource(sl, player), dmg(stack, LEAP_DMG));
+            LsDamage.hit(target, relicSource(sl, player), dmg(stack, LEAP_DMG));
             sl.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(),
                 12, 0.3, 0.3, 0.3, 0.2);
         } else {
@@ -690,7 +691,8 @@ public final class RelicSkills {
     // 차징 중 몸이 굳어(둔화 IV) 겨냥만 할 수 있다 — 쏘기 전 2초가 곧 리스크다.
     public static void eclipse(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdEclipse", "일식", 1200, 4)) return;
-        // 36.0 → 39.6 (+10%). 5성 실피해 108 → 119.
+        // 일식은 **솔라리스(마총)** 궁극기다 — 셀레스티아가 아니다(SolarMusket.ultimate).
+        // 36.0 → 39.6 → 36.43. 마지막은 솔라리스 일괄 ×0.92(2026-07-26 실측 58.9 / 목표 54).
         EclipseManager.start(level, player, dmg(stack, 36.43f), 40); // 2초 차징
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3, false, false));
         Vec3 eye = player.getEyePosition();
@@ -815,7 +817,7 @@ public final class RelicSkills {
             e.setDeltaMovement(pull.x, pull.y * 0.5 + 0.1, pull.z);
             e.hasImpulse = true;
             e.fallDistance = 0.0f;
-            e.hurt(relicSource(sl, player), dmg(stack, 10.5f));
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 10.5f));
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2, false, true));
         }
         // 연출 — 안으로 빨려드는 소용돌이
@@ -841,7 +843,7 @@ public final class RelicSkills {
     public static void supernova(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdSupernova", "초신성", 1200, 4)) return;
         Vec3 center = aimPoint(level, player, 32.0);
-        // 28.0 → 34.0. 백창(102)과 **같은 피해 수준**으로 맞췄다 — 5성 실피해 84 → 102.
+        // 28.0 → 34.0 → 37.06 → 39.65. 백창과 같은 피해 수준으로 맞춘 뒤 셀레스티아 배율을 얹었다.
         SupernovaManager.start(level, player, center, 7.0, dmg(stack, 39.65f), 30); // 반경7·34뎀·1.5초 차징
 
         // ── 시전 연출: 시전자 → 조준 지점 별빛 궤적 + 지정 지점 개시 링 ──
@@ -1115,7 +1117,7 @@ public final class RelicSkills {
             double along = rel.dot(look);
             if (along < 0 || along > reach) continue;
             if (rel.subtract(look.scale(along)).length() > 1.5) continue;
-            e.hurt(relicSource(sl, player), dmg(stack, 8.66f)); // 백어택이면 패시브 +35%가 자동으로 얹힘
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 8.66f)); // 백어택이면 패시브 +20%가 자동으로 얹힘
             if (player instanceof ServerPlayer sp) BleedManager.apply(sl, e, sp, dmgTick(stack, 1.856f), 60);
             sl.sendParticles(ParticleTypes.CRIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(), 10, 0.3, 0.3, 0.3, 0.15);
             hitAny = true;

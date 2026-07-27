@@ -149,7 +149,7 @@ public final class JavelinManager {
         for (LivingEntity e : j.level.getEntitiesOfClass(LivingEntity.class, box,
                 en -> en != j.owner && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
             if (!seen.add(e.getId())) continue;
-            e.hurt(com.laststardust.relics.item.RelicSkills.relicSource(j.level, j.owner), j.damage);
+            com.laststardust.relics.LsDamage.hit(e, com.laststardust.relics.item.RelicSkills.relicSource(j.level, j.owner), j.damage);
             BleedManager.apply(j.level, e, j.owner, j.bleedPerSec, j.bleedTicks);
             j.level.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
                 8, 0.3, 0.3, 0.3, 0.1);

@@ -136,7 +136,7 @@ public final class FlareManager {
                 en -> en != f.owner && en.isAlive()
                       && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
             if (e.distanceToSqr(at) > r * r) continue;
-            e.hurt(com.laststardust.relics.item.RelicSkills.relicSource(l, f.owner), f.burstDamage);
+            com.laststardust.relics.LsDamage.hit(e, com.laststardust.relics.item.RelicSkills.relicSource(l, f.owner), f.burstDamage);
             e.setRemainingFireTicks(60);
         }
         FlameZoneManager.start(l, f.owner, at, r, f.zoneDamage, 60);

@@ -65,7 +65,7 @@ public final class ChargeManager {
             for (LivingEntity e : c.level.getEntitiesOfClass(LivingEntity.class, box,
                     en -> en != p && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
                 if (!c.hit.add(e.getUUID())) continue;
-                e.hurt(com.laststardust.relics.item.RelicSkills.relicSource(c.level, p), c.damage);
+                com.laststardust.relics.LsDamage.hit(e, com.laststardust.relics.item.RelicSkills.relicSource(c.level, p), c.damage);
                 c.level.sendParticles(ParticleTypes.CRIT,
                     e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(), 12, 0.3, 0.3, 0.3, 0.1);
             }
