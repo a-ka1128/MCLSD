@@ -30,7 +30,7 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 //   · 좌클릭 홀드 = 태양탄 연사 (1초에 1발, 6발 탄창) · 우클릭 홀드 = 스코프
 //   · R = 재장전 (기본 슬롯) — 20초마다 즉시, 쿨 중이면 2초  · V = 산탄 (이동, 2성)
 //   · C = 작열탄 (추가, 3성)       · X = 일식 (궁극, 4성)
-//   · 탄창을 비우면 자동으로 2초 재장전 — 그동안 무방비
+//   · 탄창을 비우면 자동 재장전 — 즉시가 놀고 있으면 그걸 쓰고, 아니면 2초간 무방비
 //   · 실효 DPS = 6발 x 13.0 x 각성배율 / 7.5초 (5성 기준 31.2, 저격 패시브 최대 +40%)
 //
 // 한 발이 무거운 대신 리듬이 끊긴다는 점이 이 무기의 정체성이라, 활·지팡이의
@@ -232,7 +232,15 @@ public class SolarMusket extends Item implements RelicActions {
 
         int ammo = ammo(t);
         if (ammo < cost) { // 스코프 사격은 2발이 필요하다 — 1발만 남으면 재장전
-            startReload(level, player, stack, t, now);
+            // 즉시 재장전이 놀고 있으면 그걸 쓴다 (2026-07-27).
+            // 쿨이 다 돌았는데 탄이 비어 2초를 서 있는 건 순수 손해다 — 아껴서 얻는 것도 없다.
+            // R 을 눌러 아끼는 쓰임은 "일반 재장전을 중간에 끊는" 쪽이라, 여기서 자동으로 써도
+            // 그 선택지를 뺏지 않는다.
+            if (!pending(t.getLong("quickEnd"), now, QUICK_RELOAD_CD)) {
+                quickReload(level, player, stack, t, now);
+            } else {
+                startReload(level, player, stack, t, now);
+            }
             return;
         }
 
