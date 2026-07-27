@@ -756,8 +756,16 @@ public final class RelicSkills {
     public static void eclipse(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdEclipse", "일식", 1200, 4)) return;
         // 일식은 **솔라리스(마총)** 궁극기다 — 셀레스티아가 아니다(SolarMusket.ultimate).
-        // 36.0 → 39.6 → 36.43. 마지막은 솔라리스 일괄 ×0.92(2026-07-26 실측 58.9 / 목표 54).
-        EclipseManager.start(level, player, dmg(stack, 36.43f), 40); // 2초 차징
+        // 36.0 → 39.6 → 36.43 → 72.86 (2026-07-27, x2)
+        //
+        // 마지막 x2 의 근거: 60초 쿨에 2초 차징(둔화 IV로 그동안 움직이지도 못한다)을 물고
+        // 109 를 한 번 넣는 스킬이었다. 같은 쿨을 쓰는 탄막 집중이 437 을 즉발로 넣는다 —
+        // 값이 4배 차이라 연사 중이 아니어도 X 를 아껴 두는 게 이득이었다.
+        // 218 이면 차징 리스크를 지불할 이유가 생긴다.
+        //
+        // ※ 저격 패시브(거리 보정)는 이 스킬에 안 붙는다. EclipseManager 는 BulletManager 를
+        //    지나지 않아서다. 60칸짜리 광선인데 거리 이득이 없는 건 따로 볼 문제로 남아 있다.
+        EclipseManager.start(level, player, dmg(stack, 72.86f), 40); // 2초 차징
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3, false, false));
         Vec3 eye = player.getEyePosition();
         dustBurst(level, eye, 1.0, 40, GOLD, 1.6f);
