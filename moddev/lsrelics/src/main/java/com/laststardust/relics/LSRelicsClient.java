@@ -44,6 +44,16 @@ public final class LSRelicsClient {
                 ResourceLocation.withDefaultNamespace("pulling"),
                 (stack, level, entity, seed) ->
                     entity != null && entity.isUsingItem() && entity.getUseItem() == stack ? 1.0F : 0.0F);
+
+            // 마총 연사 모드 — 총 외형이 라이플로 바뀐다.
+            // 상태는 custom_data 의 "rifle" 하나뿐이고, CUSTOM_DATA 는 클라까지 동기화되므로
+            // 서버에서 켜면 다음 틱에 모델이 따라온다(별도 패킷이 필요 없다).
+            ItemProperties.register(LSRelics.GUNNER.get(),
+                ResourceLocation.fromNamespaceAndPath(LSRelics.MODID, "rifle"),
+                (stack, level, entity, seed) -> stack
+                    .getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                        net.minecraft.world.item.component.CustomData.EMPTY)
+                    .copyTag().getBoolean("rifle") ? 1.0F : 0.0F);
         });
     }
 }

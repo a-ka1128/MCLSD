@@ -48,6 +48,21 @@ public class SolarMusket extends Item implements RelicActions {
     // 쿨 중에 눌러도 헛치지 않고 일반 2초 재장전으로 내려간다 — 급할 때 R 을 눌렀는데
     // 아무 일도 안 일어나는 게 제일 나쁘다.
     public static final int QUICK_RELOAD_CD = 400; // 20초
+
+    // ── 연사 모드 「과열 전환」 (C · 3성) ──
+    // 총이 라이플로 바뀌어 24발을 4발/초로 쏟아붓는다. 다 쏘면 자동으로 풀린다.
+    //
+    // 왜 이 형태인가: 마총 스킬은 쓰는 시간이 곧 사격을 멈추는 시간이라, "던져서 터지는 것"은
+    // 무엇을 만들어도 결국 평타보다 약하다. 모드 전환은 사격을 대체하지 않고 **사격을 바꾼다** —
+    // 그래서 이 무기에서 유일하게 손해가 아닌 스킬 형태다.
+    //
+    // 쿨 18초는 6초(한 탄창)의 배수다. 20초로 잡으면 탄창 주기와 어긋나 로테이션이 지저분해진다.
+    // 즉시 재장전(20초)과 일부러 어긋내 뒀다 — 늘 같이 돌면 C 뒤에 R 이 항상 준비돼 긴장이 없다.
+    public static final int RIFLE_CD = 360;        // 18초
+    public static final int RIFLE_MAG = 24;        // 전환 시 이 탄창으로 교체
+    public static final int RIFLE_FIRE_RATE = 5;   // 5틱 = 4발/초
+    private static final float RIFLE_DMG = 5.5f;   // 발당. 4발/초 x 5.5 x 3(5성) = 66 DPS
+
     // 15.0 -> 12.5 -> 11.5 -> 13.0
     //
     // ── 균등 하향을 그만두고 구조를 바꿨다 (2026-07-27) ──
@@ -61,7 +76,9 @@ public class SolarMusket extends Item implements RelicActions {
     //
     // 그래서 총량이 아니라 주역을 바꿨다: 평타가 주력, 스코프가 상황용.
     // 이 무기의 정체성은 탄창 리듬인데 주력이 스코프면 그 리듬이 죽는다.
-    private static final float BULLET_DMG = 13.0f;
+    // 13.0 -> 10.0 (2026-07-27). C 연사 모드에 예산을 넘겼다 — 평타가 총 DPS 의 3분의 2를
+    // 먹으면 스킬을 안 눌러도 손해가 없어서 "평타만 치는 무기"가 된다.
+    private static final float BULLET_DMG = 10.0f;
     private static final int BULLET_LIFE = 30;  // 틱 (속도 3.0 → 사거리 약 90칸)
 
     // ── 스코프 (기본 스킬 · 1성 · 우클릭 홀드) ──
@@ -99,6 +116,9 @@ public class SolarMusket extends Item implements RelicActions {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+        // 연사 중엔 스코프를 막는다 (유저 결정). 라이플로 바뀐 총에 스코프까지 겹치면
+        // 지금 무슨 상태인지 읽기 어렵고, 발사율 판정도 두 겹이 된다.
+        if (tag(stack).getBoolean("rifle")) return InteractionResultHolder.fail(stack);
         player.startUsingItem(hand);
         level.playSound(null, player.blockPosition(), SoundEvents.SPYGLASS_USE, SoundSource.PLAYERS, 0.6f, 1.2f);
         return InteractionResultHolder.consume(stack);
@@ -115,6 +135,13 @@ public class SolarMusket extends Item implements RelicActions {
     public void basicSkill(ServerLevel level, ServerPlayer player, ItemStack stack) {
         long now = level.getGameTime();
         CompoundTag t = tag(stack);
+        // 연사 중엔 재장전이 없다. 허용하면 24발짜리 버스트 도중에 6발을 얹어 늘릴 수 있다
+        // (게다가 잔탄이 6 미만이면 오히려 늘어난다 — 명백한 구멍이다).
+        if (t.getBoolean("rifle")) {
+            level.playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_BASS.value(),
+                SoundSource.PLAYERS, 0.4f, 0.6f);
+            return;
+        }
         boolean reloading = pending(t.getLong("reloadEnd"), now, RELOAD_TICKS);
         boolean quickReady = !pending(t.getLong("quickEnd"), now, QUICK_RELOAD_CD);
 
@@ -138,10 +165,39 @@ public class SolarMusket extends Item implements RelicActions {
         RelicSkills.buckshot(level, player, stack);
     }
 
-    // ── C = 작열탄 (추가·3성) ──
+    // ── C = 과열 전환 (추가·3성) ──
+    // 총을 라이플로 바꾸고 24발 탄창을 끼운다. 다 쏘면 자동으로 풀리고 빈 탄창이 된다.
     @Override
     public void extraSkill(ServerLevel level, ServerPlayer player, ItemStack stack) {
-        RelicSkills.solarFlare(level, player, stack);
+        long now = level.getGameTime();
+        CompoundTag t = tag(stack);
+        if (t.getBoolean("rifle")) return;                       // 이미 연사 중
+        if (pending(t.getLong("rifleEnd"), now, RIFLE_CD)) {
+            // 쿨 중 — 액션바에 이미 남은 초가 뜨므로 소리로만 알린다
+            level.playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_BASS.value(),
+                SoundSource.PLAYERS, 0.4f, 0.6f);
+            return;
+        }
+        t.putBoolean("rifle", true);
+        t.putInt("ammo", RIFLE_MAG);
+        t.putLong("reloadEnd", 0);        // 재장전 중이었으면 끊고 바로 전환된다
+        t.putLong("rifleEnd", now + RIFLE_CD);
+        save(stack, t);
+        player.stopUsingItem();           // 스코프 중이었으면 내린다 (연사 중엔 스코프 금지)
+
+        var pos = player.blockPosition();
+        level.playSound(null, pos, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.7f, 1.6f);
+        level.playSound(null, pos, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 0.9f, 0.7f);
+        level.sendParticles(ParticleTypes.FLAME,
+            player.getX(), player.getY() + player.getBbHeight() * 0.7, player.getZ(), 24, 0.4, 0.3, 0.4, 0.03);
+        player.displayClientMessage(Component.literal("§6☀ §c과열 전환 §7— 연사"), true);
+    }
+
+    // 연사 모드 해제 (탄창 소진). 해제 후엔 평소대로 자동 재장전이 걸린다.
+    private static void endRifle(ServerLevel level, ServerPlayer player, CompoundTag t) {
+        t.putBoolean("rifle", false);
+        level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND,
+            SoundSource.PLAYERS, 0.5f, 1.9f);
     }
 
     // ── X = 일식 (궁극·4성) ──
@@ -223,14 +279,21 @@ public class SolarMusket extends Item implements RelicActions {
         long now = level.getGameTime();
         CompoundTag t = tag(stack);
 
-        boolean scoped = isScoped(player, stack);
-        int rate = scoped ? SCOPE_FIRE_RATE : FIRE_RATE;
+        // 연사 모드가 스코프보다 우선한다 (연사 중엔 스코프 진입 자체가 막혀 있다)
+        boolean rifle = t.getBoolean("rifle");
+        boolean scoped = !rifle && isScoped(player, stack);
+        int rate = rifle ? RIFLE_FIRE_RATE : (scoped ? SCOPE_FIRE_RATE : FIRE_RATE);
         int cost = scoped ? SCOPE_AMMO_COST : 1;
 
         if (pending(t.getLong("reloadEnd"), now, RELOAD_TICKS)) return;      // 재장전 중
+        // span 은 "비정상값 회수"용 상한이라 가장 긴 간격(스코프)에 맞춘다 — 어떤 모드든 안전하다
         if (pending(t.getLong("nextShot"), now, SCOPE_FIRE_RATE)) return;    // 연사 간격
 
         int ammo = ammo(t);
+        if (rifle && ammo <= 0) {   // 연사 탄창 소진 -> 모드 해제 후 평소대로 재장전
+            endRifle(level, player, t);
+            rifle = false;
+        }
         if (ammo < cost) { // 스코프 사격은 2발이 필요하다 — 1발만 남으면 재장전
             // 즉시 재장전이 놀고 있으면 그걸 쓴다 (2026-07-27).
             // 쿨이 다 돌았는데 탄이 비어 2초를 서 있는 건 순수 손해다 — 아껴서 얻는 것도 없다.
@@ -257,7 +320,7 @@ public class SolarMusket extends Item implements RelicActions {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
         BulletManager.fire(level, player, eye.add(look.scale(0.6)), look,
-            RelicSkills.dmg(stack, scoped ? SCOPE_DMG : BULLET_DMG),
+            RelicSkills.dmg(stack, rifle ? RIFLE_DMG : (scoped ? SCOPE_DMG : BULLET_DMG)),
             scoped ? SCOPE_BULLET_LIFE : BULLET_LIFE, scoped);
 
         // 총구 화염 + 반동감 있는 사운드 (스코프는 더 묵직하게)
@@ -345,13 +408,21 @@ public class SolarMusket extends Item implements RelicActions {
             return String.format("§6☀ §c재장전 %.1fs", (rEnd - now) / 20.0);
         }
         int a = ammo(t);
-        String scope = isScoped(player, stack) ? " §b◎" : "";
         // 즉시 재장전이 준비됐는지 — 이게 안 보이면 R 을 누를지 말지 판단할 수가 없다
         long qEnd = t.getLong("quickEnd");
         String quick = pending(qEnd, now, QUICK_RELOAD_CD)
             ? String.format(" §8R %.0fs", (qEnd - now) / 20.0)
             : " §aR";
-        return "§6☀ §7" + bar(a) + " §8" + a + "/" + MAG_SIZE + scope + quick;
+        // 연사 모드는 탄이 24발이라 6칸 게이지로는 못 그린다. 숫자로 보여준다.
+        if (t.getBoolean("rifle")) {
+            return "§c⚡ 연사 §e" + a + "§8/" + RIFLE_MAG + quick;
+        }
+        long cEnd = t.getLong("rifleEnd");
+        String cd = pending(cEnd, now, RIFLE_CD)
+            ? String.format(" §8C %.0fs", (cEnd - now) / 20.0)
+            : " §cC";
+        String scope = isScoped(player, stack) ? " §b◎" : "";
+        return "§6☀ §7" + bar(a) + " §8" + a + "/" + MAG_SIZE + scope + quick + cd;
     }
 
     private static String bar(int ammo) {
