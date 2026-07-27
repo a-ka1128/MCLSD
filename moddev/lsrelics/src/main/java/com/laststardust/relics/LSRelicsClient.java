@@ -30,6 +30,13 @@ public final class LSRelicsClient {
         }
     }
 
+    // 아이템별 클라 확장(팔 자세 등). Item.initializeClient 는 deprecated 라 이쪽을 쓴다.
+    @SubscribeEvent
+    public static void onRegisterClientExtensions(
+            net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent event) {
+        event.registerItem(com.laststardust.relics.client.MusketArmPose.INSTANCE, LSRelics.GUNNER.get());
+    }
+
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
