@@ -58,16 +58,19 @@ public class SolarMusket extends Item implements RelicActions {
     //
     // 쿨 18초는 6초(한 탄창)의 배수다. 20초로 잡으면 탄창 주기와 어긋나 로테이션이 지저분해진다.
     // 즉시 재장전(20초)과 일부러 어긋내 뒀다 — 늘 같이 돌면 C 뒤에 R 이 항상 준비돼 긴장이 없다.
-    public static final int RIFLE_CD = 360;        // 18초
-    public static final int RIFLE_MAG = 24;        // 전환 시 이 탄창으로 교체
-    public static final int RIFLE_FIRE_RATE = 5;   // 5틱 = 4발/초
-    // 5.5 -> 6.6 (2026-07-27). 60초 실측 50.0 / 목표 54 -> +8% 가 필요했고, 그 몫을 전부
-    // 연사에 넣었다. 평타에 나눠 주면 "평타만 치는 무기"로 되돌아간다 — 그걸 고치려고
-    // 스킬을 바꾼 것이다.
-    private static final float RIFLE_DMG = 6.6f;   // 발당. 4발/초 x 6.6 x 3(5성) = 79 DPS (6초간)
-    // 안 쏘고 버티면 연사 탄창을 무한정 들고 있게 된다 — 시간으로도 끝낸다.
-    // 24발을 4발/초로 다 쏘면 6초라, 8초면 넉넉하다.
-    public static final int RIFLE_DURATION = 160;  // 8초
+    public static final int RIFLE_CD = 720;        // 36초
+    public static final int RIFLE_MAG = 30;        // 전환 시 이 탄창으로 교체
+    // 초당 6발 = 3.33틱 간격. 틱은 정수라 3,3,4 를 돌려 10틱에 3발 = 정확히 6발/초로 맞춘다.
+    // (3틱 고정이면 6.67발/초라 11% 더 쏜다 — 피해 계산이 어긋난다)
+    private static final int[] RIFLE_RATE_SEQ = {3, 3, 4};
+    // 5.5 -> 6.6 -> 4.5 (2026-07-27). 지속 8초/24발 -> 12초/30발·초당 6발로 늘어나면서
+    // 한 번에 쏟는 양이 2.5배가 됐다. 36초 주기 총량을 목표 54 DPS 에 맞춰 역산한 값이다.
+    //   36초 동안: 연사 60발(12초, 재장전 1회 포함) + 평타 18발 + 산탄 3회 + 일식 0.6회
+    //   연사 몫이 전체의 약 54% — 이 무기를 "평타만 치는 무기"에서 빼내려는 게 목적이었다.
+    private static final float RIFLE_DMG = 4.5f;   // 발당. 6발/초 x 4.5 x 3(5성) = 81 DPS
+    // 지속시간 — 탄이 떨어져도 연사는 안 끝난다(중간에 2초 재장전하고 계속 쏜다).
+    // 30발을 6발/초로 5초에 비우고, 2초 재장전, 다시 5초 = 12초에 딱 두 탄창이다.
+    public static final int RIFLE_DURATION = 240;  // 12초
 
     // 15.0 -> 12.5 -> 11.5 -> 13.0
     //
@@ -201,6 +204,7 @@ public class SolarMusket extends Item implements RelicActions {
         t.putLong("reloadEnd", 0);        // 재장전 중이었으면 끊고 바로 전환된다
         t.putLong("rifleEnd", now + RIFLE_CD);
         t.putLong("rifleUntil", now + RIFLE_DURATION);
+        t.putInt("rifleSeq", 0);
         t.putBoolean("rifleZoom", false);
         save(stack, t);
         player.stopUsingItem();           // 저격 스코프 중이었으면 내린다
@@ -305,7 +309,9 @@ public class SolarMusket extends Item implements RelicActions {
         // 연사 모드가 스코프보다 우선한다 (연사 중엔 스코프 진입 자체가 막혀 있다)
         boolean rifle = t.getBoolean("rifle");
         boolean scoped = !rifle && isScoped(player, stack);
-        int rate = rifle ? RIFLE_FIRE_RATE : (scoped ? SCOPE_FIRE_RATE : FIRE_RATE);
+        int seq = t.getInt("rifleSeq");
+        int rate = rifle ? RIFLE_RATE_SEQ[Math.floorMod(seq, RIFLE_RATE_SEQ.length)]
+                         : (scoped ? SCOPE_FIRE_RATE : FIRE_RATE);
         int cost = scoped ? SCOPE_AMMO_COST : 1;
 
         if (pending(t.getLong("reloadEnd"), now, RELOAD_TICKS)) return;      // 재장전 중
@@ -313,16 +319,14 @@ public class SolarMusket extends Item implements RelicActions {
         if (pending(t.getLong("nextShot"), now, SCOPE_FIRE_RATE)) return;    // 연사 간격
 
         int ammo = ammo(t);
-        if (rifle && ammo <= 0) {   // 연사 탄창 소진 -> 모드 해제 후 평소대로 재장전
-            endRifle(level, player, t);
-            rifle = false;
-        }
         if (ammo < cost) { // 스코프 사격은 2발이 필요하다 — 1발만 남으면 재장전
-            // 즉시 재장전이 놀고 있으면 그걸 쓴다 (2026-07-27).
-            // 쿨이 다 돌았는데 탄이 비어 2초를 서 있는 건 순수 손해다 — 아껴서 얻는 것도 없다.
-            // R 을 눌러 아끼는 쓰임은 "일반 재장전을 중간에 끊는" 쪽이라, 여기서 자동으로 써도
-            // 그 선택지를 뺏지 않는다.
-            if (!pending(t.getLong("quickEnd"), now, QUICK_RELOAD_CD)) {
+            if (rifle) {
+                // 연사 중엔 탄이 떨어져도 모드가 끝나지 않는다 — 2초 재장전하고 계속 쏜다.
+                // 즉시 재장전은 쓰지 않는다. 연사 안에서 소모해버리면 연사가 끝난 뒤
+                // 정작 필요할 때 없다 (그 쿨은 평타 리듬을 지키는 데 써야 한다).
+                startReload(level, player, stack, t, now);
+            } else if (!pending(t.getLong("quickEnd"), now, QUICK_RELOAD_CD)) {
+                // 쿨이 다 돌았는데 탄이 비어 2초를 서 있는 건 순수 손해다 — 아껴서 얻는 것도 없다.
                 quickReload(level, player, stack, t, now);
             } else {
                 startReload(level, player, stack, t, now);
@@ -333,12 +337,10 @@ public class SolarMusket extends Item implements RelicActions {
         ammo -= cost;
         t.putInt("ammo", ammo);
         t.putLong("nextShot", now + rate);
+        if (rifle) t.putInt("rifleSeq", seq + 1);
         if (ammo <= 0) {
-            // 마지막 탄을 쏜 순간 연사를 먼저 끝낸다.
-            // 이걸 안 하면 rifle 이 켜진 채로 재장전에 들어가고, 재장전이 끝나면
-            // **연사 모드 + 일반 탄창 6발**이 되어 그 뒤로 영영 안 풀린다.
-            // (위쪽 `rifle && ammo <= 0` 검사는 재장전 대기 때문에 영영 도달하지 못한다)
-            if (rifle) endRifle(level, player, t);
+            // 연사 중이면 모드를 유지한 채 재장전한다. 재장전 완료 처리(onPlayerTick)가
+            // rifle 을 보고 30발을 채운다 — 그게 없으면 연사 모드에 6발이 들어가 어긋난다.
             startReload(level, player, stack, t, now);
         } else {
             save(stack, t);
@@ -415,7 +417,7 @@ public class SolarMusket extends Item implements RelicActions {
         boolean reloading = pending(rEnd, now, RELOAD_TICKS);
 
         if (rEnd != 0 && !reloading) { // 재장전 완료(또는 비정상값 회수)
-            t.putInt("ammo", MAG_SIZE);
+            t.putInt("ammo", t.getBoolean("rifle") ? RIFLE_MAG : MAG_SIZE);
             t.putLong("reloadEnd", 0);
             save(stack, t);
             // 표시는 hudStatus 가 상시로 하고 있으므로 여기서는 소리만 준다.
