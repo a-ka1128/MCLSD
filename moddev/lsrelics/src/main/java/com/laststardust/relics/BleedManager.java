@@ -53,7 +53,7 @@ public final class BleedManager {
             Bleed b = it.next();
             if (b.victim.isRemoved() || !b.victim.isAlive()) { it.remove(); continue; }
             if (b.ticksLeft % INTERVAL == 0) {
-                com.laststardust.relics.LsDamage.hit(b.victim, com.laststardust.relics.item.RelicSkills.relicSource(b.level, b.source), b.perTick);
+                com.laststardust.relics.LsDamage.hit(b.victim, com.laststardust.relics.item.RelicSkills.relicSource(b.level, b.source), b.perTick, "출혈");
                 Vec3 c = b.victim.position();
                 b.level.sendParticles(ParticleTypes.DAMAGE_INDICATOR,
                     c.x, c.y + b.victim.getBbHeight() * 0.5, c.z, 3, 0.2, 0.2, 0.2, 0.0);

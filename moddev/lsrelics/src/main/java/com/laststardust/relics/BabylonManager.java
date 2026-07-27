@@ -140,7 +140,7 @@ public final class BabylonManager {
             // 그렇게 터졌다). 8틱(초당 2.5회)으로 끊어 설계 의도에 가깝게 되돌린다.
             com.laststardust.relics.LsDamage.hitLimited(t,
                 com.laststardust.relics.item.RelicSkills.relicSource(lv, p), b.perSpear,
-                "babylon", lv.getGameTime(), 8);
+                "babylon", lv.getGameTime(), 8, "백 개의 창");
             // 창이 꽂히는 임팩트 — 폭발·섬광
             lv.sendParticles(ParticleTypes.CRIT, hit.x, hit.y, hit.z, 12, 0.25, 0.25, 0.25, 0.2);
             lv.sendParticles(ParticleTypes.FLASH, hit.x, hit.y, hit.z, 1, 0, 0, 0, 0);

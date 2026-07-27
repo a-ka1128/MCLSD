@@ -112,6 +112,9 @@ public final class ArrowStormManager {
                 // 살짝 빗나가도 들어가게 착탄 소폭 확산 (RelicEventHandlers가 처리)
                 arrow.getPersistentData().putFloat("lsSplash", st.damage * 0.375f);
                 arrow.getPersistentData().putFloat("lsSplashR", 1.5f);
+                // 계측용 이름표 — 화살 직격은 바닐라 피해라 LsDamage 를 거치지 않는다.
+                // 안 붙이면 궁극기의 절반이 평타로 잡힌다(착탄 확산만 이름표를 갖게 되므로).
+                arrow.getPersistentData().putString("lsLabel", "별빛 폭풍");
                 st.level.addFreshEntity(arrow);
                 // 낙하 궤적 — 화살 위쪽으로 꼬리를 그려 "별똥별" 느낌
                 for (int k = 0; k < 4; k++) {

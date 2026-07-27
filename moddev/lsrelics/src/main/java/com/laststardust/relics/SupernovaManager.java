@@ -100,7 +100,7 @@ public final class SupernovaManager {
         for (LivingEntity e : lv.getEntitiesOfClass(LivingEntity.class, box,
                 en -> en != n.caster && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
             if (e.distanceToSqr(x, y, z) > n.radius * n.radius) continue;
-            com.laststardust.relics.LsDamage.hit(e, com.laststardust.relics.item.RelicSkills.relicSource(lv, n.caster), n.damage);
+            com.laststardust.relics.LsDamage.hit(e, com.laststardust.relics.item.RelicSkills.relicSource(lv, n.caster), n.damage, "초신성");
             e.knockback(1.0, x - e.getX(), z - e.getZ());
         }
         // 연출

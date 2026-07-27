@@ -64,7 +64,7 @@ public final class RelicEventHandlers {
                 en -> en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
             if (e.distanceToSqr(x, y, z) > radius * radius) continue;
             com.laststardust.relics.LsDamage.hit(e, owner instanceof Player p
-                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), dmg);
+                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), dmg, "별빛 폭풍");
         }
         level.sendParticles(ParticleTypes.END_ROD, x, y, z, 6, 0.25, 0.15, 0.25, 0.03);
     }
@@ -114,7 +114,7 @@ public final class RelicEventHandlers {
                 en -> en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
             if (e.distanceToSqr(x, y, z) > radius * radius) continue;
             com.laststardust.relics.LsDamage.hit(e, owner instanceof Player p
-                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), finalDmg);
+                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), finalDmg, "유성 사격");
         }
         // ── 폭발 연출 ──
         level.sendParticles(ParticleTypes.FLASH, x, y, z, 2, 0, 0, 0, 0);
@@ -182,11 +182,11 @@ public final class RelicEventHandlers {
         if (power <= 0) power = 8.0f;
         // 공격자에게 강하게, 주변 잡몹에 약하게 반사
         double cx = guard.getX(), cy = guard.getY() + 1.0, cz = guard.getZ();
-        com.laststardust.relics.LsDamage.hit(attacker, sl.damageSources().thorns(guard), power * 1.5f);
+        com.laststardust.relics.LsDamage.hit(attacker, sl.damageSources().thorns(guard), power * 1.5f, "반격");
         AABB box = new AABB(cx - 3.5, cy - 2, cz - 3.5, cx + 3.5, cy + 2, cz + 3.5);
         for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, box,
                 en -> en != guard && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
-            com.laststardust.relics.LsDamage.hit(e, sl.damageSources().thorns(guard), power);
+            com.laststardust.relics.LsDamage.hit(e, sl.damageSources().thorns(guard), power, "반격");
             e.knockback(0.5, cx - e.getX(), cz - e.getZ());
         }
         sl.sendParticles(ParticleTypes.CRIT, cx, cy, cz, 20, 1.5, 0.8, 1.5, 0.2);

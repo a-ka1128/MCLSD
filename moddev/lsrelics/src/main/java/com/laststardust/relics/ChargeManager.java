@@ -39,15 +39,19 @@ public final class ChargeManager {
         final ServerPlayer player;
         final Set<UUID> hit = new HashSet<>();
         final float damage;
+        // 계측용 이름표 — 이 매니저를 두 스킬(질풍 돌진·이지스 돌진)이 공유해서,
+        // 여기서 이름을 정해버리면 둘이 한 줄로 합쳐진다.
+        final String label;
         int ticksLeft;
         int elapsed;
-        Charge(ServerLevel level, ServerPlayer player, int ticksLeft, float damage) {
+        Charge(ServerLevel level, ServerPlayer player, int ticksLeft, float damage, String label) {
             this.level = level; this.player = player; this.ticksLeft = ticksLeft; this.damage = damage;
+            this.label = label;
         }
     }
 
-    public static void start(ServerLevel level, ServerPlayer player, int ticks, float damage) {
-        ACTIVE.add(new Charge(level, player, ticks, damage));
+    public static void start(ServerLevel level, ServerPlayer player, int ticks, float damage, String label) {
+        ACTIVE.add(new Charge(level, player, ticks, damage, label));
     }
 
     @SubscribeEvent
@@ -65,7 +69,7 @@ public final class ChargeManager {
             for (LivingEntity e : c.level.getEntitiesOfClass(LivingEntity.class, box,
                     en -> en != p && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
                 if (!c.hit.add(e.getUUID())) continue;
-                com.laststardust.relics.LsDamage.hit(e, com.laststardust.relics.item.RelicSkills.relicSource(c.level, p), c.damage);
+                com.laststardust.relics.LsDamage.hit(e, com.laststardust.relics.item.RelicSkills.relicSource(c.level, p), c.damage, c.label);
                 c.level.sendParticles(ParticleTypes.CRIT,
                     e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(), 12, 0.3, 0.3, 0.3, 0.1);
             }

@@ -232,9 +232,19 @@ public final class DummyManager {
         if (!(src instanceof ServerPlayer p)) return;
         DAMAGE.merge(p.getUUID(), event.getNewDamage(), Float::sum);
         NAMES.put(p.getUUID(), p.getGameProfile().getName());
-        // 이름표가 없으면 평타다 — 바닐라 근접 공격은 LsDamage 를 거치지 않고, 아직
-        // 이름표를 안 붙인 스킬도 여기로 모인다(마총 외 유물은 대부분 아직 그렇다).
+        // 이름표는 두 곳에서 온다.
+        //   1) LsDamage — 우리 코드가 직접 넣는 피해(스킬 대부분)
+        //   2) 투사체에 실린 lsLabel — 화살은 바닐라 피해라 LsDamage 를 거치지 않는다.
+        //      안 읽으면 별빛 폭풍·유성 사격의 직격이 통째로 평타로 잡힌다.
+        // 둘 다 없으면 평타다 (근접 평타, 시리우스 별빛 화살, 법사·힐러의 별빛 탄).
         String label = LsDamage.currentLabel();
+        if (label == null) {
+            Entity direct = event.getSource().getDirectEntity();
+            if (direct != null) {
+                String tagged = direct.getPersistentData().getString("lsLabel");
+                if (!tagged.isEmpty()) label = tagged;
+            }
+        }
         BY_SKILL.merge(label == null ? UNLABELED : label, event.getNewDamage(), Float::sum);
     }
 

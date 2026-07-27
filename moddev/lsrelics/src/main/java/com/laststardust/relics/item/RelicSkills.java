@@ -92,7 +92,7 @@ public final class RelicSkills {
         shockRing(sl, end.x, end.y - 0.5, end.z, r, 40, ParticleTypes.END_ROD, 0.35);
         shockRing(sl, end.x, end.y - 0.5, end.z, r * 1.4, 46, ParticleTypes.ELECTRIC_SPARK, 0.5);
 
-        beamHurt(sl, player, eye, look, 11.0, r, dmg(stack, 14.0f), 0.3, false);
+        beamHurt(sl, player, eye, look, 11.0, r, dmg(stack, 14.0f), 0.3, false, "소멸");
 
         // 6초 쿨로 자주 쓰는 스킬이라 볼륨을 낮게 유지 (귀 아픔 방지)
         play(level, player, SoundEvents.WITHER_SHOOT, 0.45f, 1.5f);
@@ -146,6 +146,8 @@ public final class RelicSkills {
             arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
             arrow.getPersistentData().putFloat("lsExplode", dmg(stack, 6.6f));  // 폭발 피해
             arrow.getPersistentData().putFloat("lsExplodeR", 2.5f); // 폭발 반경
+            // 계측용 — 화살 직격은 바닐라 피해라 이름표를 화살에 실어 보낸다(DummyManager 가 읽는다)
+            arrow.getPersistentData().putString("lsLabel", "유성 사격");
             sl.sendParticles(ParticleTypes.END_ROD, arrow.getX(), arrow.getY(), arrow.getZ(), 6, 0.05, 0.05, 0.05, 0.02);
             sl.addFreshEntity(arrow);
         }
@@ -202,7 +204,7 @@ public final class RelicSkills {
         shockRing(sl, end.x, end.y - 0.6, end.z, r, 42, ParticleTypes.SCULK_CHARGE_POP, 0.3);
         shockRing(sl, end.x, end.y - 0.6, end.z, r * 1.5, 50, ParticleTypes.REVERSE_PORTAL, 0.55);
 
-        beamHurt(sl, player, eye, look, 6.0, r, dmg(stack, 9.6f), 0.6, true);
+        beamHurt(sl, player, eye, look, 6.0, r, dmg(stack, 9.6f), 0.6, true, "균열 붕괴");
 
         play(level, player, SoundEvents.SCULK_SHRIEKER_SHRIEK, 1.3f, 0.8f);
         play(level, player, SoundEvents.WARDEN_SONIC_BOOM, 0.9f, 1.2f);
@@ -229,7 +231,7 @@ public final class RelicSkills {
             double dist = to.length();
             if (dist > length) continue;
             if (dist > 0.01 && to.normalize().dot(flat) < cosHalf) continue;
-            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 7.68f));
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 7.68f), "대지 쪼개기");
             e.knockback(0.4, origin.x - e.getX(), origin.z - e.getZ());
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1, false, true));
             sl.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(),
@@ -296,7 +298,7 @@ public final class RelicSkills {
             }
             sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cx, cy + 1.0, cz, 40, r * 0.4, 0.6, r * 0.4, 0.3);
 
-            hurtAround(sl, player, cx, cy + 1, cz, r, dmg(stack, 6.6f), 0.2); // 딜 낮게·넉백 최소(몹 붙잡아두기)
+            hurtAround(sl, player, cx, cy + 1, cz, r, dmg(stack, 6.6f), 0.2, "수호의 파동"); // 딜 낮게·넉백 최소(몹 붙잡아두기)
             // 도발 — 8칸 내 적들이 4초간 시전자를 노림.
             // (쿨 8초라 8초로 두면 어그로가 영구 고정돼 다른 유물이 위협을 못 느낌)
             TauntManager.taunt(sl, player, 8.0, 80);
@@ -456,7 +458,7 @@ public final class RelicSkills {
         Vec3 end = eye.add(look.scale(reach));
 
         int hit = countBeamTargets(sl, player, eye, look, reach, 1.5);
-        beamHurt(sl, player, eye, look, reach, 1.5, dmg(stack, JUDGE_DMG), 0.2, false);
+        beamHurt(sl, player, eye, look, reach, 1.5, dmg(stack, JUDGE_DMG), 0.2, false, "심판의 빛");
 
         // 회복량은 적중 수와 무관하게 고정 — 여러 마리를 꿰뚫었다고 힐이 폭주하면 안 된다.
         if (hit > 0) {
@@ -638,7 +640,7 @@ public final class RelicSkills {
         player.setDeltaMovement(look.x * p, look.y * p + 0.1, look.z * p);
         player.hurtMarked = true;
         player.resetFallDistance();
-        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 20, dmg(stack, 8.01f));
+        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 20, dmg(stack, 8.01f), "질풍 돌진");
 
         // ── 연출: 앞으로 뻗는 질풍 ──
         Vec3 eye = player.getEyePosition();
@@ -696,7 +698,7 @@ public final class RelicSkills {
                 target.position().add(0, target.getBbHeight() * 0.5, 0));
             if (player instanceof ServerPlayer sp) sp.connection.teleport(dest.x, dest.y, dest.z, player.getYRot(), player.getXRot());
 
-            LsDamage.hit(target, relicSource(sl, player), dmg(stack, LEAP_DMG));
+            LsDamage.hit(target, relicSource(sl, player), dmg(stack, LEAP_DMG), "그림자 도약");
             sl.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(),
                 12, 0.3, 0.3, 0.3, 0.2);
         } else {
@@ -784,7 +786,7 @@ public final class RelicSkills {
         // 돌진 (수평 + 살짝 위로)
         player.setDeltaMovement(look.x * 1.7, 0.35, look.z * 1.7);
         player.hurtMarked = true; // 클라에 속도 동기화
-        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 16, dmg(stack, 11.0f));
+        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 16, dmg(stack, 11.0f), "이지스 돌진");
 
         // 시전 연출
         Vec3 eye = player.getEyePosition();
@@ -889,7 +891,7 @@ public final class RelicSkills {
             e.setDeltaMovement(pull.x, pull.y * 0.5 + 0.1, pull.z);
             e.hasImpulse = true;
             e.fallDistance = 0.0f;
-            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 10.5f));
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 10.5f), "중력 붕괴");
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2, false, true));
         }
         // 연출 — 안으로 빨려드는 소용돌이
@@ -1132,7 +1134,7 @@ public final class RelicSkills {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
         double reach = beamReach(sl, player, eye, look, 7.0);
-        beamHurt(sl, player, eye, look, reach, 1.2, dmg(stack, 10.68f), 0.4, false);
+        beamHurt(sl, player, eye, look, reach, 1.2, dmg(stack, 10.68f), 0.4, false, "꾰륒기");
 
         Vec3 end = eye.add(look.scale(reach));
         beamParticles(sl, eye, end, 0.25, ParticleTypes.CRIT, 0.0);
@@ -1163,7 +1165,7 @@ public final class RelicSkills {
             double along = rel.dot(look);
             if (along < 0 || along > reach) continue;
             if (rel.subtract(look.scale(along)).length() > 1.5) continue;
-            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 8.66f)); // 백어택이면 패시브 +20%가 자동으로 얹힘
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 8.66f), "급소 가르기"); // 백어택이면 패시브 +20%가 자동으로 얹힘
             if (player instanceof ServerPlayer sp) BleedManager.apply(sl, e, sp, dmgTick(stack, 1.856f), 60);
             sl.sendParticles(ParticleTypes.CRIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(), 10, 0.3, 0.3, 0.3, 0.15);
             hitAny = true;
@@ -1402,7 +1404,8 @@ public final class RelicSkills {
 
     // 빔(선분) 전체에 피해 — 캡슐 판정(선분과의 거리 <= radius). 점블랭크~원거리 모두 명중.
     private static void beamHurt(ServerLevel level, Player player, Vec3 eye, Vec3 look,
-                                 double reach, double radius, float dmg, double knockback, boolean markWeak) {
+                                 double reach, double radius, float dmg, double knockback, boolean markWeak,
+                                 String label) {
         reach = beamReach(level, player, eye, look, reach);   // 벽 뒤는 때리지 않는다
         Vec3 end = eye.add(look.scale(reach));
         AABB box = new AABB(eye.x, eye.y, eye.z, end.x, end.y, end.z).inflate(radius);
@@ -1410,7 +1413,7 @@ public final class RelicSkills {
                 en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
             Vec3 center = e.position().add(0, e.getBbHeight() * 0.5, 0);
             if (distToSegment(center, eye, end) <= radius + e.getBbWidth() * 0.5) {
-                com.laststardust.relics.LsDamage.hit(e, relicSource(level, player), dmg);
+                com.laststardust.relics.LsDamage.hit(e, relicSource(level, player), dmg, label);
                 if (knockback > 0) e.knockback(knockback, player.getX() - e.getX(), player.getZ() - e.getZ());
                 if (markWeak) e.getPersistentData().putLong("lsWeakUntil", level.getGameTime() + 100); // 약점 노출 5초
                 level.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
@@ -1420,12 +1423,12 @@ public final class RelicSkills {
     }
 
     private static void hurtAround(ServerLevel level, Player player, double x, double y, double z,
-                                   double radius, float dmg, double knockback) {
+                                   double radius, float dmg, double knockback, String label) {
         AABB box = new AABB(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius);
         for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
                 en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
             if (e.distanceToSqr(x, y, z) > radius * radius) continue;
-            com.laststardust.relics.LsDamage.hit(e, relicSource(level, player), dmg);
+            com.laststardust.relics.LsDamage.hit(e, relicSource(level, player), dmg, label);
             if (knockback > 0) e.knockback(knockback, player.getX() - e.getX(), player.getZ() - e.getZ());
             level.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
                 10, 0.3, 0.3, 0.3, 0.1);
