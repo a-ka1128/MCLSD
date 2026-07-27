@@ -1134,7 +1134,7 @@ public final class RelicSkills {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
         double reach = beamReach(sl, player, eye, look, 7.0);
-        beamHurt(sl, player, eye, look, reach, 1.2, dmg(stack, 10.68f), 0.4, false, "꾰륒기");
+        beamHurt(sl, player, eye, look, reach, 1.2, dmg(stack, 10.68f), 0.4, false, "꿰뚫기");
 
         Vec3 end = eye.add(look.scale(reach));
         beamParticles(sl, eye, end, 0.25, ParticleTypes.CRIT, 0.0);
