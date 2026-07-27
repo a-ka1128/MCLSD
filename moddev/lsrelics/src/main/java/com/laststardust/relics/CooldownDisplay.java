@@ -43,8 +43,11 @@ public final class CooldownDisplay {
         {"cdRift", "균열", 160, "R"}, {"cdStomp", "지축", 120, "V"}, {"cdSplit", "대지", 240, "C"}, {"cdTitan", "강림", 1200, "X"}
     };
     // ── 신규 4종 ──
+    // 솔라리스는 R(즉시 재장전)·C(과열 전환)가 ready() 를 안 거치므로 쿨을 아이템이 직접 준다
+    // (RelicActions.skillCooldownLeft). 여기 적힌 총 쿨은 표시·검증용이다.
     private static final Object[][] GUNNER_SKILLS = {
-        {"cdBuckshot", "산탄", 220, "V"}, {"cdFlare", "작열", 220, "C"}, {"cdEclipse", "일식", 1200, "X"}
+        {"quickEnd", "재장전", 400, "R"}, {"cdBuckshot", "산탄", 220, "V"},
+        {"rifleEnd", "과열", 720, "C"}, {"cdEclipse", "일식", 1200, "X"}
     };
     private static final Object[][] HEALER_SKILLS = {
         {"cdJudge", "심판", 160, "R"}, {"cdAngelStep", "발걸음", 160, "V"}, {"cdSanctuary", "성역", 400, "C"}, {"cdRevive", "소생", 1800, "X"}
@@ -143,18 +146,22 @@ public final class CooldownDisplay {
                 String status = ra.hudStatus(player, held);
                 if (status != null && !status.isEmpty()) sb.append(status).append(" §8┃ ");
             }
-            boolean anyOnCooldown = false;
             boolean first = true;
             for (Object[] s : skills) {
-                long left = RelicSkills.cooldownLeft(level, held, (String) s[0], (Integer) s[2]);
+                String key = (String) s[0];
+                String name = (String) s[1];
+                long left;
+                if (item instanceof com.laststardust.relics.item.RelicActions ra2) {
+                    long own = ra2.skillCooldownLeft(level, held, key);
+                    left = own >= 0 ? own : RelicSkills.cooldownLeft(level, held, key, (Integer) s[2]);
+                    name = ra2.skillLabel(held, key, name);
+                } else {
+                    left = RelicSkills.cooldownLeft(level, held, key, (Integer) s[2]);
+                }
                 if (!first) sb.append(" §8· ");
                 first = false;
-                if (left > 0) {
-                    anyOnCooldown = true;
-                    sb.append(String.format("§8%s §7%s §e%.1fs", s[3], s[1], left / 20.0));
-                } else {
-                    sb.append(String.format("§8%s §7%s §a준비", s[3], s[1]));
-                }
+                if (left > 0) sb.append(String.format("§8%s §7%s §e%.1fs", s[3], name, left / 20.0));
+                else          sb.append(String.format("§8%s §7%s §a준비", s[3], name));
             }
             // 유물을 든 동안은 항상 보여준다 — 어떤 스킬이 어느 키인지 외우지 않아도 되게.
             send(player, level, sb.toString());

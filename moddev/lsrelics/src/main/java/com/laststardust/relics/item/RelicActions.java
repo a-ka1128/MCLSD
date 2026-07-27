@@ -43,4 +43,15 @@ public interface RelicActions {
     // 그래서 **쿨다운 표시가 액션바의 유일한 주인**이고, 유물은 여기에 자기 상태를 얹기만 한다.
     // (솔라리스의 잔탄이 이 자리를 쓴다 — 탄약과 쿨다운을 동시에 봐야 하는 무기라서)
     default String hudStatus(ServerPlayer player, ItemStack stack) { return null; }
+
+    // ── 유물 전용 쿨다운 ──
+    // 대부분의 스킬 쿨은 RelicSkills.ready() 가 관리해서 CooldownDisplay 가 그대로 읽는다.
+    // 그런데 솔라리스의 즉시 재장전·과열 전환처럼 ready() 를 안 거치는 것들이 있다.
+    // 그런 항목은 유물이 직접 남은 틱을 돌려준다. -1 이면 "기본 처리에 맡긴다".
+    default long skillCooldownLeft(net.minecraft.server.level.ServerLevel level, ItemStack stack, String cdKey) {
+        return -1;
+    }
+
+    // 상태에 따라 스킬 이름이 바뀌는 경우(연사 중이면 궁극기가 탄막 집중으로 갈린다).
+    default String skillLabel(ItemStack stack, String cdKey, String def) { return def; }
 }

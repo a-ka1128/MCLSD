@@ -256,6 +256,37 @@ public class SolarMusket extends Item implements RelicActions {
         startReload(level, player, stack, t, now);
     }
 
+    // ── R·C 는 ready() 를 안 거친다 — 쿨을 직접 알려준다 ──
+    @Override
+    public long skillCooldownLeft(ServerLevel level, ItemStack stack, String cdKey) {
+        CompoundTag t = tag(stack);
+        long now = level.getGameTime();
+        if ("quickEnd".equals(cdKey)) {
+            long e = t.getLong("quickEnd");
+            return pending(e, now, QUICK_RELOAD_CD) ? e - now : 0;
+        }
+        if ("rifleEnd".equals(cdKey)) {
+            if (t.getBoolean("rifle")) {
+                // 쓰는 중 — 남은 **지속**을 돌려준다. 0 을 주면 "C 준비"로 보여
+                // 지금 쓰고 있는데 또 쓸 수 있는 것처럼 읽힌다. 이름은 "연사"로 갈린다.
+                long until = t.getLong("rifleUntil");
+                return until > now ? until - now : 1;
+            }
+            long e = t.getLong("rifleEnd");
+            return pending(e, now, RIFLE_CD) ? e - now : 0;
+        }
+        return -1;   // 나머지는 기본 처리
+    }
+
+    // 연사 중이면 궁극기가 탄막 집중으로 갈린다 — 이름도 따라가야 뭘 누르는지 안다.
+    @Override
+    public String skillLabel(ItemStack stack, String cdKey, String def) {
+        if (!tag(stack).getBoolean("rifle")) return def;
+        if ("cdEclipse".equals(cdKey)) return "탄막";
+        if ("rifleEnd".equals(cdKey)) return "연사";
+        return def;
+    }
+
     @Override
     public UseAnim getUseAnimation(ItemStack stack) {
         return UseAnim.SPYGLASS;
@@ -474,21 +505,15 @@ public class SolarMusket extends Item implements RelicActions {
             return String.format("§6☀ §c재장전 %.1fs", (rEnd - now) / 20.0);
         }
         int a = ammo(t);
-        // 즉시 재장전이 준비됐는지 — 이게 안 보이면 R 을 누를지 말지 판단할 수가 없다
-        long qEnd = t.getLong("quickEnd");
-        String quick = pending(qEnd, now, QUICK_RELOAD_CD)
-            ? String.format(" §8R %.0fs", (qEnd - now) / 20.0)
-            : " §aR";
-        // 연사 모드는 탄이 24발이라 6칸 게이지로는 못 그린다. 숫자로 보여준다.
+        // R·C 의 쿨은 CooldownDisplay 가 같은 줄 뒤쪽에 그린다(skillCooldownLeft).
+        // 여기서 또 쓰면 한 줄에 C 가 두 번 나온다 — 실제로 그랬다.
         if (t.getBoolean("rifle")) {
-            return "§c⚡ 연사 §e" + a + "§8/" + RIFLE_MAG + quick;
+            // 연사는 탄이 30발이라 6칸 게이지로는 못 그린다. 숫자로 보여준다.
+            // 남은 지속은 뒤쪽 "C 연사 8.0s" 가 보여준다 — 여기선 잔탄만
+            return "§c⚡ §e" + a + "§8/" + RIFLE_MAG;
         }
-        long cEnd = t.getLong("rifleEnd");
-        String cd = pending(cEnd, now, RIFLE_CD)
-            ? String.format(" §8C %.0fs", (cEnd - now) / 20.0)
-            : " §cC";
         String scope = isScoped(player, stack) ? " §b◎" : "";
-        return "§6☀ §7" + bar(a) + " §8" + a + "/" + MAG_SIZE + scope + quick + cd;
+        return "§6☀ §7" + bar(a) + " §8" + a + "/" + MAG_SIZE + scope;
     }
 
     private static String bar(int ammo) {
