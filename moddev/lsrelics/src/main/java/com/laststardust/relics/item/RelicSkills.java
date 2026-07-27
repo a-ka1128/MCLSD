@@ -342,7 +342,11 @@ public final class RelicSkills {
     // 계속 쏘는 것보다 1.44배 — 타이밍을 맞춘 보상이다.
     private static final double BARRAGE_RANGE = 16.0;
     private static final double BARRAGE_HALF_ANGLE = 25.0;
-    private static final float BARRAGE_PER_AMMO = 6.5f;
+    // 6.5 -> 5.0 (2026-07-27). 연사 중 남은 탄을 즉시 피해로 바꾸는 궁이라, 6.5 에서는
+    // 30발 = 585 가 한 번에 들어가 60초 실측의 19% 를 혼자 먹었다.
+    // 발당으로 보면 연사(3.4)의 1.47배 — 5.0 에서도 "쏘느니 누르는" 이득은 그대로다.
+    // 이 비율이 1.0 밑으로 내려가면 궁이 함정이 되므로 더 내릴 때는 연사와 같이 봐야 한다.
+    private static final float BARRAGE_PER_AMMO = 5.0f;
 
     public static boolean solarBarrage(ServerLevel sl, ServerPlayer player, ItemStack stack, int ammo) {
         if (!ready(sl, player, stack, "cdEclipse", "탄막 집중", 1200, 4)) return false;
