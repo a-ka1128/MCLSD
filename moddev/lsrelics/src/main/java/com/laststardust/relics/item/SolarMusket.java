@@ -61,7 +61,10 @@ public class SolarMusket extends Item implements RelicActions {
     public static final int RIFLE_CD = 360;        // 18초
     public static final int RIFLE_MAG = 24;        // 전환 시 이 탄창으로 교체
     public static final int RIFLE_FIRE_RATE = 5;   // 5틱 = 4발/초
-    private static final float RIFLE_DMG = 5.5f;   // 발당. 4발/초 x 5.5 x 3(5성) = 66 DPS
+    // 5.5 -> 6.6 (2026-07-27). 60초 실측 50.0 / 목표 54 -> +8% 가 필요했고, 그 몫을 전부
+    // 연사에 넣었다. 평타에 나눠 주면 "평타만 치는 무기"로 되돌아간다 — 그걸 고치려고
+    // 스킬을 바꾼 것이다.
+    private static final float RIFLE_DMG = 6.6f;   // 발당. 4발/초 x 6.6 x 3(5성) = 79 DPS (6초간)
     // 안 쏘고 버티면 연사 탄창을 무한정 들고 있게 된다 — 시간으로도 끝낸다.
     // 24발을 4발/초로 다 쏘면 6초라, 8초면 넉넉하다.
     public static final int RIFLE_DURATION = 160;  // 8초
