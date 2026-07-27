@@ -40,9 +40,16 @@ public final class BulletManager {
     private static final float PIERCE_FALLOFF = 0.6f;
 
     // ── 패시브 "저격" ──
-    // 발사 지점에서 멀리 맞을수록 아프다. 10칸당 +8%, 50칸에서 +40%로 상한.
+    // 발사 지점에서 멀리 맞을수록 아프다.
     // 추가 스킬 "산탄"이 정반대(가까울수록 세다)라 무기 하나가 거리축 양 끝을 담당하게 된다.
-    private static final double SNIPE_PER_BLOCK = 0.008; // 1칸당 0.8% = 10칸당 8%
+    //
+    // ── 상한 거리를 50칸 -> 30칸으로 당겼다 (2026-07-27) ──
+    // 예전엔 1칸당 0.8%, 50칸에서 +40% 였다. 그런데 공성은 성역 반경 24칸 안에서 벌어져서
+    // **실전에서 상한에 닿을 일이 사실상 없었다** — 20칸에서 겨우 +16%다. 있으나 마나였다.
+    // 30칸에서 +40% 가 되도록 기울기를 세운다. 구간이 짧아진 만큼 거리 한 칸의 값이 커져,
+    // "한 발짝 물러선다"는 선택이 실제로 딜로 돌아온다.
+    //   10칸 +13% · 20칸 +27% · 30칸 이상 +40%
+    private static final double SNIPE_PER_BLOCK = 0.0133; // 1칸당 1.33% = 30칸에서 상한
     private static final float SNIPE_CAP = 0.40f;
 
     public static float snipeBonus(double distance) {
