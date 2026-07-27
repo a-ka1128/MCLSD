@@ -28,9 +28,9 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 // 솔라리스 — 마총. 8종 중 유일하게 "탄창 리듬"이 있는 평타를 쓴다.
 //   · 좌클릭 홀드 = 태양탄 연사 (1초에 1발, 6발 탄창) · 우클릭 홀드 = 스코프
-//   · R = 수동 재장전 (기본 슬롯)  · V = 산탄 (이동, 2성)
+//   · R = 재장전 (기본 슬롯) — 20초마다 즉시, 쿨 중이면 2초  · V = 산탄 (이동, 2성)
 //   · C = 작열탄 (추가, 3성)       · X = 일식 (궁극, 4성)
-//   · 탄창을 비우면 자동으로 1.5초 재장전 — 그동안 무방비
+//   · 탄창을 비우면 자동으로 2초 재장전 — 그동안 무방비
 //   · 실효 DPS = 6발 x 13.0 x 각성배율 / 7.5초 (5성 기준 31.2, 저격 패시브 최대 +40%)
 //
 // 한 발이 무거운 대신 리듬이 끊긴다는 점이 이 무기의 정체성이라, 활·지팡이의
@@ -39,7 +39,15 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 public class SolarMusket extends Item implements RelicActions {
     public static final int MAG_SIZE = 6;
     public static final int FIRE_RATE = 20;     // 발사 간격(틱) — 1초에 1발
-    public static final int RELOAD_TICKS = 30;  // 재장전 1.5초
+    // 1.5초 -> 2.0초 (2026-07-27). 아래 '즉시 재장전'이 생기면서 일반 재장전은
+    // "타이밍을 놓쳤을 때의 대가"가 됐다. 대가가 있어야 R 을 언제 누르는지가 선택이 된다.
+    public static final int RELOAD_TICKS = 40;  // 재장전 2.0초
+
+    // ── 즉시 재장전 (R · 20초 쿨) ──
+    // R 한 방에 탄창이 찬다. 20초에 한 번뿐이라 "지금 쓸까, 다음 교전까지 아낄까"가 생긴다.
+    // 쿨 중에 눌러도 헛치지 않고 일반 2초 재장전으로 내려간다 — 급할 때 R 을 눌렀는데
+    // 아무 일도 안 일어나는 게 제일 나쁘다.
+    public static final int QUICK_RELOAD_CD = 400; // 20초
     // 15.0 -> 12.5 -> 11.5 -> 13.0
     //
     // ── 균등 하향을 그만두고 구조를 바꿨다 (2026-07-27) ──
@@ -98,20 +106,29 @@ public class SolarMusket extends Item implements RelicActions {
 
     // ── R = 수동 재장전 (기본 슬롯·1성) ──
     // 다른 유물의 R 자리가 솔라리스에겐 재장전이다. 탄창이 빌 때까지 기다리면 반드시
-    // 전투 한복판에서 1.5초를 무방비로 서게 되는데, 그 타이밍을 직접 고를 수 있게 해준다.
+    // 전투 한복판에서 2초를 무방비로 서게 되는데, 그 타이밍을 직접 고를 수 있게 해준다.
     // 엄폐 중이나 교전 사이에 미리 채워두는 것이 이 무기의 실력 차가 나는 지점.
+    //
+    // 20초마다 한 번은 **즉시** 채운다. 그래서 R 은 "언제 누르나"가 아니라
+    // "지금 즉시를 쓸까, 다음 교전까지 아낄까"의 선택이 된다.
     @Override
     public void basicSkill(ServerLevel level, ServerPlayer player, ItemStack stack) {
         long now = level.getGameTime();
         CompoundTag t = tag(stack);
-        if (pending(t.getLong("reloadEnd"), now, RELOAD_TICKS)) return; // 이미 재장전 중
-        if (ammo(t) >= MAG_SIZE) {
-            // 가득 참 — 헛 재장전으로 1.5초를 날리지 않게 막는다.
+        boolean reloading = pending(t.getLong("reloadEnd"), now, RELOAD_TICKS);
+        boolean quickReady = !pending(t.getLong("quickEnd"), now, QUICK_RELOAD_CD);
+
+        if (!reloading && ammo(t) >= MAG_SIZE) {
+            // 가득 참 — 헛 재장전으로 시간을 날리지 않게 막는다.
             // 잔탄은 액션바에 이미 보이므로 짧게 소리로만 알린다(액션바를 뺏지 않는다).
             level.playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_BASS.value(),
                 SoundSource.PLAYERS, 0.4f, 0.8f);
             return;
         }
+        // 즉시 재장전은 **진행 중인 일반 재장전도 끊는다.** "2초 기다리다 위험해져서 R 로 끊는다"가
+        // 이 스킬의 제일 좋은 쓰임이라, 재장전 중에 못 쓰게 하면 의미가 절반이 된다.
+        if (quickReady) { quickReload(level, player, stack, t, now); return; }
+        if (reloading) return;   // 쿨 중 + 이미 재장전 중이면 할 게 없다
         startReload(level, player, stack, t, now);
     }
 
@@ -180,6 +197,7 @@ public class SolarMusket extends Item implements RelicActions {
     //   ammo       남은 탄 (키가 없으면 가득 찬 것으로 본다)
     //   reloadEnd  재장전 완료 게임시간 (0 = 재장전 중 아님)
     //   nextShot   다음 발사 가능 게임시간
+    //   quickEnd   즉시 재장전 쿨 종료 게임시간 (0 = 준비됨)
 
     private static CompoundTag tag(ItemStack stack) {
         return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
@@ -246,6 +264,22 @@ public class SolarMusket extends Item implements RelicActions {
             SoundSource.PLAYERS, 0.5f, scoped ? 1.2f : 1.6f);
     }
 
+    // 즉시 재장전 — 탄창을 그 자리에서 채우고 20초 쿨을 건다.
+    // 재장전 중(reloadEnd)이었더라도 그걸 끊고 채운다. "2초 기다리다 R 로 끊는다"가
+    // 이 스킬의 제일 좋은 쓰임이라, 재장전 중에 못 쓰게 하면 의미가 절반이 된다.
+    private static void quickReload(ServerLevel level, ServerPlayer player, ItemStack stack, CompoundTag t, long now) {
+        t.putInt("ammo", MAG_SIZE);
+        t.putLong("reloadEnd", 0);
+        t.putLong("quickEnd", now + QUICK_RELOAD_CD);
+        save(stack, t);
+        // 일반 재장전과 확실히 다른 소리 — 눌렀을 때 뭐가 걸렸는지 귀로 구분돼야 한다
+        var pos = player.blockPosition();
+        level.playSound(null, pos, SoundEvents.CROSSBOW_LOADING_END.value(), SoundSource.PLAYERS, 1.0f, 1.6f);
+        level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.8f, 1.8f);
+        level.sendParticles(ParticleTypes.END_ROD,
+            player.getX(), player.getY() + player.getBbHeight() * 0.7, player.getZ(), 12, 0.3, 0.3, 0.3, 0.02);
+    }
+
     private static void startReload(ServerLevel level, ServerPlayer player, ItemStack stack, CompoundTag t, long now) {
         t.putInt("ammo", 0);
         t.putLong("reloadEnd", now + RELOAD_TICKS);
@@ -304,7 +338,12 @@ public class SolarMusket extends Item implements RelicActions {
         }
         int a = ammo(t);
         String scope = isScoped(player, stack) ? " §b◎" : "";
-        return "§6☀ §7" + bar(a) + " §8" + a + "/" + MAG_SIZE + scope;
+        // 즉시 재장전이 준비됐는지 — 이게 안 보이면 R 을 누를지 말지 판단할 수가 없다
+        long qEnd = t.getLong("quickEnd");
+        String quick = pending(qEnd, now, QUICK_RELOAD_CD)
+            ? String.format(" §8R %.0fs", (qEnd - now) / 20.0)
+            : " §aR";
+        return "§6☀ §7" + bar(a) + " §8" + a + "/" + MAG_SIZE + scope + quick;
     }
 
     private static String bar(int ammo) {
