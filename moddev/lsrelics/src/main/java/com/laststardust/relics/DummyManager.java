@@ -67,6 +67,24 @@ public final class DummyManager {
     private static final Map<String, Float> BY_SKILL = new HashMap<>();
     private static final String UNLABELED = "평타";
 
+    // 누가 어떤 유물로 쟀는지. 로그에는 스킬 이름만 남아서, 나중에 기록을 다시 볼 때
+    // 어느 유물의 측정이었는지 사람에게 물어봐야 했다. 그 왕복을 없앤다.
+    private static final Map<UUID, String> RELICS = new HashMap<>();
+
+    // 유물 이름은 게임 내 표기(한글)를 쓴다. getHoverName() 은 서버 언어로 풀려서
+    // 번역 키나 영문이 나올 수 있어, 필요한 8종만 직접 적는다.
+    private static String relicName(net.minecraft.world.item.Item item) {
+        if (item == LSRelics.GUNNER.get())   return "솔라리스";
+        if (item == LSRelics.HUNTER.get())   return "시리우스";
+        if (item == LSRelics.ASSASSIN.get()) return "스틱스";
+        if (item == LSRelics.LANCER.get())   return "게볼그";
+        if (item == LSRelics.PIONEER.get())  return "타이탄";
+        if (item == LSRelics.GUARDIAN.get()) return "이지스";
+        if (item == LSRelics.SAGE.get())     return "셀레스티아";
+        if (item == LSRelics.HEALER.get())   return "파나케이아";
+        return null;
+    }
+
     // ── 소환 ──
     public static int spawn(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
@@ -146,6 +164,7 @@ public final class DummyManager {
         DAMAGE.clear();
         NAMES.clear();
         BY_SKILL.clear();
+        RELICS.clear();
         for (LivingEntity d : DUMMIES) d.setHealth(d.getMaxHealth());
         startTick = tick;
         measuring = true;
@@ -196,10 +215,11 @@ public final class DummyManager {
         rows.sort(Comparator.<Map.Entry<UUID, Float>>comparingDouble(Map.Entry::getValue).reversed());
         for (Map.Entry<UUID, Float> e : rows) {
             String name = NAMES.getOrDefault(e.getKey(), "?");
+            String relic = RELICS.get(e.getKey());
             float dmg = e.getValue();
             out.add(Component.literal(String.format(
-                "§f%-12s §7%,.0f §8· §e%.1f DPS §8· %.0f%%",
-                name, dmg, dmg / secs, dmg * 100f / total)));
+                "§f%-12s §d%-6s §7%,.0f §8· §e%.1f DPS §8· %.0f%%",
+                name, relic == null ? "" : relic, dmg, dmg / secs, dmg * 100f / total)));
         }
         // ── 스킬별 배분 ──
         // 이름표가 하나뿐이면(=전부 평타) 줄만 늘어나므로 생략한다.
@@ -232,6 +252,12 @@ public final class DummyManager {
         if (!(src instanceof ServerPlayer p)) return;
         DAMAGE.merge(p.getUUID(), event.getNewDamage(), Float::sum);
         NAMES.put(p.getUUID(), p.getGameProfile().getName());
+        // 첫 타격 시점의 주손 유물로 고정한다. 마지막 것으로 덮으면, 측정이 끝나고 무기를
+        // 바꾸는 순간 남아 있던 지속 피해(출혈 등)가 엉뚱한 유물 이름을 남긴다.
+        if (!RELICS.containsKey(p.getUUID())) {
+            String relic = relicName(p.getMainHandItem().getItem());
+            if (relic != null) RELICS.put(p.getUUID(), relic);
+        }
         // 이름표는 두 곳에서 온다.
         //   1) LsDamage — 우리 코드가 직접 넣는 피해(스킬 대부분)
         //   2) 투사체에 실린 lsLabel — 화살은 바닐라 피해라 LsDamage 를 거치지 않는다.
