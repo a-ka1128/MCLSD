@@ -250,10 +250,16 @@ public class SolarMusket extends Item implements RelicActions {
         // 쿨·성급 검사가 안에 있다. 실패하면(쿨 중) 탄을 먹지 않고 돌아간다.
         if (!RelicSkills.solarBarrage(level, player, stack, ammo)) return;
 
+        // ── 여기서 태그를 **다시 읽어야 한다** ──
+        // ready() 는 stack 의 custom_data 에 cdEclipse 를 직접 쓴다. 위에서 떠둔 스냅샷 t 는
+        // 그 이전 상태라, 그대로 save 하면 방금 기록된 쿨이 통째로 지워진다
+        // — 탄막 집중을 써도 일식 쿨이 안 돌던 원인이 이것이었다.
+        CompoundTag after = tag(stack);
+
         // 대가: 남은 탄을 전부 먹고 연사가 끝난다
         long now = level.getGameTime();
-        endRifle(level, player, t);
-        startReload(level, player, stack, t, now);
+        endRifle(level, player, after);
+        startReload(level, player, stack, after, now);
     }
 
     // ── R·C 는 ready() 를 안 거친다 — 쿨을 직접 알려준다 ──
