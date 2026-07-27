@@ -143,10 +143,10 @@ public final class RelicSkills {
             Arrow arrow = com.laststardust.relics.LsArrows.create(sl, player, stack);
             arrow.setPos(eye.x, eye.y - 0.1, eye.z);
             arrow.shoot(dir.x, dir.y, dir.z, 3.2f, 0.4f);
-            arrow.setBaseDamage(1.32); // 명중 ~4.0
+            arrow.setBaseDamage(2.56); // 1.32 -> 2.56 (x1.94, 2026-07-27)
             if (sl.getRandom().nextFloat() < 0.6f) arrow.setCritArrow(true); // 화살 크리
             arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
-            arrow.getPersistentData().putFloat("lsExplode", dmg(stack, 6.6f));  // 폭발 피해
+            arrow.getPersistentData().putFloat("lsExplode", dmg(stack, 12.8f));  // 6.6 -> 12.8 (x1.94)
             arrow.getPersistentData().putFloat("lsExplodeR", 2.5f); // 폭발 반경
             // 계측용 — 화살 직격은 바닐라 피해라 이름표를 화살에 실어 보낸다(DummyManager 가 읽는다)
             arrow.getPersistentData().putString("lsLabel", "유성 사격");
@@ -206,7 +206,8 @@ public final class RelicSkills {
         shockRing(sl, end.x, end.y - 0.6, end.z, r, 42, ParticleTypes.SCULK_CHARGE_POP, 0.3);
         shockRing(sl, end.x, end.y - 0.6, end.z, r * 1.5, 50, ParticleTypes.REVERSE_PORTAL, 0.55);
 
-        beamHurt(sl, player, eye, look, 6.0, r, dmg(stack, 9.6f), 0.6, true, "균열 붕괴");
+        // 9.6 -> 13.34 (x1.39, 2026-07-27)
+        beamHurt(sl, player, eye, look, 6.0, r, dmg(stack, 13.34f), 0.6, true, "균열 붕괴");
 
         play(level, player, SoundEvents.SCULK_SHRIEKER_SHRIEK, 1.3f, 0.8f);
         play(level, player, SoundEvents.WARDEN_SONIC_BOOM, 0.9f, 1.2f);
@@ -233,7 +234,7 @@ public final class RelicSkills {
             double dist = to.length();
             if (dist > length) continue;
             if (dist > 0.01 && to.normalize().dot(flat) < cosHalf) continue;
-            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 7.68f), "대지 쪼개기");
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 10.68f), "대지 쪼개기"); // 7.68 -> 10.68 (x1.39)
             e.knockback(0.4, origin.x - e.getX(), origin.z - e.getZ());
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1, false, true));
             sl.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(),
@@ -241,7 +242,7 @@ public final class RelicSkills {
         }
         // 지속 균열 지대 (5초, 초당 2뎀) — 총합이 균열 붕괴와 비슷하게
         if (player instanceof ServerPlayer sp) {
-            FissureManager.start(sl, sp, origin, flat, length, halfAngle, dmgTick(stack, 1.92f), 100);
+            FissureManager.start(sl, sp, origin, flat, length, halfAngle, dmgTick(stack, 2.67f), 100); // 1.92 -> 2.67 (x1.39)
         }
 
         // ── 연출: 앞으로 뻗어나가는 균열 ──
@@ -300,7 +301,8 @@ public final class RelicSkills {
             }
             sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cx, cy + 1.0, cz, 40, r * 0.4, 0.6, r * 0.4, 0.3);
 
-            hurtAround(sl, player, cx, cy + 1, cz, r, dmg(stack, 6.6f), 0.2, "수호의 파동"); // 딜 낮게·넉백 최소(몹 붙잡아두기)
+            // 6.6 -> 12.4 (x1.88, 2026-07-27). 넉백은 그대로 최소 — 몹을 붙잡아두는 게 목적이다.
+            hurtAround(sl, player, cx, cy + 1, cz, r, dmg(stack, 12.4f), 0.2, "수호의 파동");
             // 도발 — 8칸 내 적들이 4초간 시전자를 노림.
             // (쿨 8초라 8초로 두면 어그로가 영구 고정돼 다른 유물이 위협을 못 느낌)
             TauntManager.taunt(sl, player, 8.0, 80);
@@ -448,8 +450,10 @@ public final class RelicSkills {
     //
     // 힐러의 최대 약점은 "아무도 안 다쳤을 때 할 일이 없다"는 것이다. 공격이 곧 회복이면
     // 항상 쓸모가 있고, 딜을 하는 동안에도 파티에 기여하게 된다.
-    private static final float JUDGE_DMG = 12.0f;
-    private static final float JUDGE_HEAL_RATIO = 0.8f;
+    private static final float JUDGE_DMG = 22.6f;   // 12.0 -> 22.6 (x1.88, 2026-07-27)
+    // 회복은 피해와 분리한다. 예전엔 JUDGE_DMG × 0.8 로 계산해서, 피해를 올리면
+    // 힐까지 같이 올라갔다 — 딜 조정이 조용히 힐 밸런스를 흔드는 구조였다.
+    private static final float JUDGE_HEAL = 9.6f;   // 기존 12.0 x 0.8 과 같은 값
 
     public static void judgmentLight(Level level, Player player, ItemStack stack) {
         if (!(level instanceof ServerLevel sl)) return;
@@ -466,7 +470,7 @@ public final class RelicSkills {
         if (hit > 0) {
             Player target = weakestAlly(sl, player, 16.0);
             if (target != null) {
-                float amount = JUDGE_DMG * JUDGE_HEAL_RATIO * healScale(stack);
+                float amount = JUDGE_HEAL * healScale(stack);
                 target.heal(amount);
                 com.laststardust.relics.ThreatManager.addHealThreat(sl, player, amount);
                 Vec3 to = target.position().add(0, target.getBbHeight() * 0.6, 0);
@@ -788,7 +792,8 @@ public final class RelicSkills {
         // 돌진 (수평 + 살짝 위로)
         player.setDeltaMovement(look.x * 1.7, 0.35, look.z * 1.7);
         player.hurtMarked = true; // 클라에 속도 동기화
-        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 16, dmg(stack, 11.0f), "이지스 돌진");
+        // 11.0 -> 20.7 (x1.88, 2026-07-27)
+        if (player instanceof ServerPlayer sp) ChargeManager.start(sl, sp, 16, dmg(stack, 20.7f), "이지스 돌진");
 
         // 시전 연출
         Vec3 eye = player.getEyePosition();
@@ -851,7 +856,8 @@ public final class RelicSkills {
         Vec3 center = aimPoint(level, player, 40.0);
         // 반경을 넓혀 "광역기"로 세운다 — 좁으면 결국 단일 표적에 몰려 단일 딜러가 된다.
         double r = 8.0;
-        ArrowStormManager.start(level, player, center, r, 60, dmgTick(stack, 4.4f)); // 반경8, 3초
+        // 4.4 -> 8.32 (x1.89, 2026-07-27). 쿨 45초짜리 궁극기가 60초 창에서 308(8%) 이었다.
+        ArrowStormManager.start(level, player, center, r, 60, dmgTick(stack, 8.32f)); // 반경8, 3초
 
         // ── 시전 연출: 조준 지점에서 하늘로 치솟는 별빛 기둥 + 다중 링 ──
         level.sendParticles(ParticleTypes.FLASH, center.x, center.y + 1, center.z, 3, 0.2, 0.2, 0.2, 0);

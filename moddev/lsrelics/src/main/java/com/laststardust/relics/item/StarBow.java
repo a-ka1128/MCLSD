@@ -24,7 +24,10 @@ public class StarBow extends BowItem implements RelicActions {
     private static final float CRIT_CHANCE = 0.6f; // 크리 확률 60% → 발당 평균 ~+30%
     private static final float ARROW_SPEED = 3.0f;
     private static final float ARROW_INACCURACY = 1.0f;
-    private static final double ARROW_DMG = 1.354; // 명중 ~3.7, 크리 포함 실효 DPS 12.0 (속사 중엔 2배)
+    // 1.354 -> 0.866 (x0.64, 2026-07-27). 스킬별 계측에서 평타가 87% 였다 —
+    // 궁극기(별빛 폭풍)가 8% 라 60초 쿨을 쓰고도 안 눌러서 손해가 거의 없었다.
+    // 평타 70% / 스킬 30% 가 되도록 내리고, 뺀 몫을 두 스킬로 옮긴다.
+    private static final double ARROW_DMG = 0.866;
 
     public StarBow(Properties properties) {
         super(properties);

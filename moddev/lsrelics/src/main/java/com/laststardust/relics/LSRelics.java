@@ -100,18 +100,21 @@ public class LSRelics {
     //
     // 유물은 첫 공세를 맨몸으로 버텨야 얻는다(ls_relic.js) — 받는 무기가 아니라 쟁취한 무기라
     // 평타를 다이아~네더라이트 검 구간에 둔다.
-    // 공격력 7.0813 × 공속 1.6 — 실측 6인 43.3 (목표 44). 방어력/방어강도는 guardianAttrs 참고.
+    // 공격력 7.0813 -> 6.09 (x0.86, 2026-07-27) × 공속 1.6. 방어력/방어강도는 guardianAttrs 참고.
+    // 스킬별 계측에서 평타 87% / 스킬 13% 였다. 탱커라 총량(51.4)은 그대로 두고,
+    // 평타를 살짝 내린 만큼을 스킬로 옮긴다 (스킬 x1.88 -> 25%).
     public static final DeferredItem<BulwarkBlade> GUARDIAN = ITEMS.register("guardian",
-        () -> new BulwarkBlade(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(guardianAttrs(6.0813, -2.4))));
+        () -> new BulwarkBlade(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(guardianAttrs(5.09, -2.4))));
 
     // 순수 근접 딜러 — 채굴 겸용을 뺀 대신 공격력이 가장 높다.
-    // 공격력 9.0514 × 공속 1.0 — 실측 6인 52.3 (목표 50). 바닐라 네더라이트 도끼와 같은 속도다.
+    // 공격력 9.0514 -> 7.965 (x0.88, 2026-07-27) × 공속 1.0. 바닐라 네더라이트 도끼와 같은 속도다.
+    // 스킬별 계측에서 평타 83% 로 상한(75%)을 넘었다. 평타를 내리고 스킬 셋을 x1.39 한다.
     public static final DeferredItem<RiftAxe> PIONEER = ITEMS.register("pioneer",
         () -> new RiftAxe(Tiers.NETHERITE, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
             // 공속 -2.6(1.4회/초) → -3.0(1.0회/초). 바닐라 네더라이트 도끼와 같은 속도다.
             // 도끼가 검보다 빠를 이유가 없는데 1.4회/초였고, 실측 68.8 DPS 의 상당 부분이
             // 여기서 나왔다. 한 방이 무거운 무기라는 정체성에도 느린 쪽이 맞다.
-            .attributes(weapon(8.0514, -3.0)).durability(2000)));
+            .attributes(weapon(6.965, -3.0)).durability(2000)));
 
     public static final DeferredItem<StargazerStaff> SAGE = ITEMS.register("sage",
         () -> new StargazerStaff(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
@@ -132,12 +135,17 @@ public class LSRelics {
 
     // 스틱스 — 그림자 쌍단검(에레보스의 가호). 주손+보조손 한 쌍으로 든다.
     // 쌍수(Better Combat)로 두 자루가 번갈아 베므로, 한 자루의 공격력을 낮게 잡아
-    // 각 자루 공격력 3.402 · 공속 2.4. 백어택 ×1.20 과 바닐라 크리 ×1.5 가 평타에만 곱해진다.
-    // 실측: 백어택만 54.2 / 백어택+크리 61~73 — 숙련도로 보상받는 무기다(RelicEventHandlers.onStyxStrike).
+    // 각 자루 공격력 3.402 -> 2.858 (x0.84, 2026-07-27). 공속 2.4.
+    // 백어택 ×1.20 과 바닐라 크리 ×1.5 가 평타에만 곱해진다.
+    //
+    // 스킬별 계측에서 백어택+크리 최대가 76.2 로 나왔다(평타 3,406 / 스킬 1,168).
+    // 바닥(백어택만) 50 · 천장 70 으로 조여달라는 요청 — 평타 기본값만 내리면 둘 다 들어온다.
+    // 크리 배수를 손댈 필요가 없다: 바닥이 50 이면 바닐라 크리를 다 받아도 천장이 65 다.
+    // 스킬은 그대로 둔다 — 평타 비중이 74% -> 61~70% 로 내려가 상한(80%) 안에 남는다.
     // ※ 실제 쌍수 DPS는 콤보 재생 속도에 달려 있어 인겜 실측 후 미세 조정이 필요하다.
     public static final DeferredItem<SoulDagger> ASSASSIN = ITEMS.register("assassin",
         () -> new SoulDagger(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-            .attributes(weapon(2.402, -1.6))));
+            .attributes(weapon(1.858, -1.6))));
 
     // 게볼그 — 창(쿠훌린의 가호). 근접 하이브리드, 긴 사거리.
     // 공격력 7.4167 × 공속 1.5 — 실측 6인 52.7 (목표 52).
