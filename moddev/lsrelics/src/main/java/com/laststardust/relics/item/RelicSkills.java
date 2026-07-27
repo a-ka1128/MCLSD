@@ -329,6 +329,71 @@ public final class RelicSkills {
     private static final double BUCK_RANGE = 8.0;
     private static final double BUCK_HALF_ANGLE = 30.0;
 
+    // ─────────────────────────────── 궁극(연사 모드): 솔라리스 "탄막 집중" ───────────────────────────────
+    // 남은 연사탄을 전부 태워 눈앞 원뿔에 쏟아붓는다. 탄 1발당 피해가 붙는다.
+    //
+    // ── 왜 일식과 따로 두는가 ──
+    // 쿨은 일식과 **공유한다**(cdEclipse). 궁극기 충전은 하나뿐이고 형태만 갈린다.
+    // 쿨이 따로면 "연사 켜고 궁 두 번"이 항상 정답이 되어 선택이 사라진다.
+    //   일식      = 60칸 한 줄 관통 (장거리)
+    //   탄막 집중 = 16칸 원뿔 광역 (근중거리)
+    // 역할이 갈리므로 "지금 어느 쪽이 필요한가"가 판단으로 남는다.
+    //
+    // ── 대가 ──
+    // 남은 탄을 전부 먹고 연사 모드가 끝난다(호출부 SolarMusket.ultimate 가 처리).
+    // 그래서 공짜 추가딜이 아니라 "지금 터뜨릴까, 계속 쏠까"의 선택이 된다.
+    // 재장전 직후(30발)에 쓰면 최대, 다 쏘고 쓰면 헛방이다.
+    //
+    // 발당 6.5 의 근거: 탄 1발을 연사로 쏘면 4.5 다. 즉시·광역으로 터뜨리는 값이
+    // 계속 쏘는 것보다 1.44배 — 타이밍을 맞춘 보상이다.
+    private static final double BARRAGE_RANGE = 16.0;
+    private static final double BARRAGE_HALF_ANGLE = 25.0;
+    private static final float BARRAGE_PER_AMMO = 6.5f;
+
+    public static boolean solarBarrage(ServerLevel sl, ServerPlayer player, ItemStack stack, int ammo) {
+        if (!ready(sl, player, stack, "cdEclipse", "탄막 집중", 1200, 4)) return false;
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getViewVector(1.0f);
+        float base = dmg(stack, BARRAGE_PER_AMMO * ammo);
+        double cosLimit = Math.cos(Math.toRadians(BARRAGE_HALF_ANGLE));
+
+        AABB box = new AABB(eye.x - BARRAGE_RANGE, eye.y - BARRAGE_RANGE, eye.z - BARRAGE_RANGE,
+                            eye.x + BARRAGE_RANGE, eye.y + BARRAGE_RANGE, eye.z + BARRAGE_RANGE);
+        int hit = 0;
+        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, box,
+                en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            Vec3 to = e.position().add(0, e.getBbHeight() * 0.5, 0).subtract(eye);
+            double dist = to.length();
+            if (dist > BARRAGE_RANGE || dist < 1.0E-4) continue;
+            if (to.normalize().dot(look) < cosLimit) continue;
+            // 산탄(-60%)보다 완만하게 — 이쪽은 "집중 사격"이라 거리를 덜 탄다
+            float falloff = (float) (1.0 - (dist / BARRAGE_RANGE) * 0.3);
+            LsDamage.hit(e, relicSource(sl, player), base * falloff);
+            sl.sendParticles(ParticleTypes.ENCHANTED_HIT, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
+                18, 0.35, 0.35, 0.35, 0.12);
+            hit++;
+        }
+
+        // ── 연출: 원뿔을 채우는 예광탄 다발 ──
+        for (int i = 0; i < 90; i++) {
+            double yaw = Math.toRadians((sl.getRandom().nextDouble() * 2 - 1) * BARRAGE_HALF_ANGLE);
+            Vec3 dir = rotateYaw(look, yaw)
+                .add(0, (sl.getRandom().nextDouble() - 0.5) * 0.42, 0).normalize();
+            double d = 1.0 + sl.getRandom().nextDouble() * (BARRAGE_RANGE - 1.0);
+            Vec3 at = eye.add(dir.scale(d));
+            sl.sendParticles(ParticleTypes.SMALL_FLAME, at.x, at.y, at.z, 1, 0.02, 0.02, 0.02, 0.0);
+            if (i % 3 == 0) sl.sendParticles(ParticleTypes.END_ROD, at.x, at.y, at.z, 1, 0.02, 0.02, 0.02, 0.01);
+        }
+        Vec3 muzzle = eye.add(look.scale(1.2));
+        sl.sendParticles(ParticleTypes.FLASH, muzzle.x, muzzle.y, muzzle.z, 3, 0, 0, 0, 0);
+        dustBurst(sl, muzzle, 0.8, 30, GOLD, 1.6f);
+        play(sl, player, SoundEvents.FIREWORK_ROCKET_BLAST, 1.4f, 0.7f);
+        play(sl, player, SoundEvents.BLAZE_SHOOT, 1.2f, 0.6f);
+        player.displayClientMessage(Component.literal(
+            "§6☀ §c탄막 집중 §7— 탄 " + ammo + "발 · 명중 " + hit), true);
+        return true;
+    }
+
     public static void buckshot(Level level, Player player, ItemStack stack) {
         if (!(level instanceof ServerLevel sl)) return;
         if (!ready(sl, player, stack, "cdBuckshot", "산탄", 220, 2)) return;

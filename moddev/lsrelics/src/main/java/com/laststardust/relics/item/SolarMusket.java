@@ -227,10 +227,33 @@ public class SolarMusket extends Item implements RelicActions {
             SoundSource.PLAYERS, 0.5f, 1.9f);
     }
 
-    // ── X = 일식 (궁극·4성) ──
+    // ── X = 궁극 (4성) — 모드에 따라 형태가 갈린다 ──
+    //   평소   일식      : 60칸 한 줄 관통 (장거리)
+    //   연사 중 탄막 집중 : 16칸 원뿔 광역 (근중거리) — 남은 탄을 전부 태우고 연사가 끝난다
+    // 쿨은 공유한다(cdEclipse). 따로 두면 "연사 켜고 궁 두 번"이 항상 정답이 되어
+    // 선택이 사라진다 — 하나의 충전을 어느 형태로 쓸지가 판단으로 남아야 한다.
     @Override
     public void ultimate(ServerLevel level, ServerPlayer player, ItemStack stack) {
-        RelicSkills.eclipse(level, player, stack);
+        CompoundTag t = tag(stack);
+        if (!t.getBoolean("rifle")) {
+            RelicSkills.eclipse(level, player, stack);
+            return;
+        }
+        int ammo = ammo(t);
+        if (ammo <= 0) {
+            // 빈 탄창으로 쓰면 위력이 0 인데 쿨만 날아간다 — 아예 막는다
+            player.displayClientMessage(Component.literal("§7탄창이 비어 있다 — 탄막을 쏟을 게 없다."), true);
+            level.playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_BASS.value(),
+                SoundSource.PLAYERS, 0.4f, 0.6f);
+            return;
+        }
+        // 쿨·성급 검사가 안에 있다. 실패하면(쿨 중) 탄을 먹지 않고 돌아간다.
+        if (!RelicSkills.solarBarrage(level, player, stack, ammo)) return;
+
+        // 대가: 남은 탄을 전부 먹고 연사가 끝난다
+        long now = level.getGameTime();
+        endRifle(level, player, t);
+        startReload(level, player, stack, t, now);
     }
 
     @Override
