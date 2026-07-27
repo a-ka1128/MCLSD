@@ -7,8 +7,6 @@ import com.laststardust.relics.LsDamage;
 import com.laststardust.relics.ChargeManager;
 import com.laststardust.relics.EclipseManager;
 import com.laststardust.relics.FissureManager;
-import com.laststardust.relics.FlameZoneManager;
-import com.laststardust.relics.FlareManager;
 import com.laststardust.relics.GravityWellManager;
 import com.laststardust.relics.BabylonManager;
 import com.laststardust.relics.JavelinManager;
@@ -20,7 +18,6 @@ import com.laststardust.relics.SupernovaManager;
 import com.laststardust.relics.TitanManager;
 import com.laststardust.relics.TauntManager;
 
-import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -39,7 +36,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -50,7 +46,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -58,7 +53,6 @@ import net.minecraft.world.phys.Vec3;
 
 import org.joml.Vector3f;
 
-import java.util.ArrayList;
 import java.util.List;
 
 // 유물 궁극기 공통 로직 + 스킬별 화려한 연출.
@@ -1117,32 +1111,6 @@ public final class RelicSkills {
         SoundScheduler.at(sl, c, SoundEvents.AMETHYST_BLOCK_RESONATE, 1.0f, 0.8f, 4);
     }
 
-    // ─────────────────────────────── 스킬: 솔라리 "작열탄" (추가·3성) ───────────────────────────────
-    // 쉬프트+우클릭. 조준 지점에 작열탄을 쏴 착탄 폭발 + 3초 불바다 지대. 쿨 11초.
-    // 태양탄(단일 관통)·스코프(단일 저격)·산탄(근접)에 없는 유일한 "원거리 광역/지대" 딜이다.
-    public static void solarFlare(Level level, Player player, ItemStack stack) {
-        if (!(level instanceof ServerLevel sl)) return;
-        if (!(player instanceof ServerPlayer sp)) return;
-        if (!ready(sl, player, stack, "cdFlare", "작열탄", 220, 3)) return;
-
-        // 즉발 광역이 아니라 **던지는** 소이탄이다 (FlareManager 가 비행·착탄을 맡는다).
-        // 예전엔 조준 지점에서 곧바로 터져 "내가 뭔가를 던졌다"는 감각이 없었다.
-        Vec3 eye = player.getEyePosition();
-        Vec3 look = player.getViewVector(1.0f);
-        // 눈이 아니라 오른손 언저리에서 나가야 던지는 것처럼 보인다 (투창과 같은 방식)
-        Vec3 right = look.cross(new Vec3(0, 1, 0)).normalize();
-        Vec3 hand = eye.add(look.scale(0.5)).add(right.scale(0.3)).add(0, -0.2, 0);
-        // 중력을 받으므로 살짝 위로 던져야 조준한 곳에 떨어진다
-        Vec3 dir = look.add(0, 0.16, 0).normalize();
-
-        FlareManager.throwFlare(sl, sp, hand, dir, dmg(stack, 9.2f), dmgTick(stack, 1.84f), 3.0);
-
-        // 던지는 순간 — 손끝 불티 + 투척음
-        dustBurst(sl, hand, 0.35, 14, GOLD, 1.2f);
-        sl.sendParticles(ParticleTypes.FLAME, hand.x, hand.y, hand.z, 8, 0.1, 0.1, 0.1, 0.02);
-        play(level, player, SoundEvents.FIRECHARGE_USE, 1.0f, 1.3f);
-        play(level, player, SoundEvents.SNOWBALL_THROW, 0.9f, 0.7f);
-    }
 
     // ─────────────────────────────── 스킬: 게볼그 "꿰뚫기" (추가·3성) ───────────────────────────────
     // 쉬프트+우클릭. 전방 7칸 직선을 관통하는 강력한 찌르기. 쿨 8초.

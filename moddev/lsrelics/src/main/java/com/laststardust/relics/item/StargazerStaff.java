@@ -2,10 +2,8 @@ package com.laststardust.relics.item;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 // 셀레스티아 — 마법 무기. 좌클릭 = 마법 평타(별빛 탄). LSNetwork 패킷 → leftAttack.
 //   · R = 소멸 (기본, 1성)        · V = 성간 도약 (이동, 2성)
 //   · C = 중력 붕괴 (추가, 3성)   · X = 초신성 (궁극, 4성)

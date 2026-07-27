@@ -74,10 +74,6 @@ public final class TownCatalog {
         return null;
     }
 
-    public static int indexOf(String key) {
-        for (int i = 0; i < ALL.size(); i++) if (ALL.get(i).key().equals(key)) return i;
-        return -1;
-    }
 
     // 제출 슬롯 개수. 한 레벨에 필요한 최대 수량이 64(공방1 참나무 판자)라 한 칸으로는 모자란다.
     public static final int DEPOSIT_SLOTS = 3;

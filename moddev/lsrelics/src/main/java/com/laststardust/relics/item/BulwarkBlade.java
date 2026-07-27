@@ -2,10 +2,8 @@ package com.laststardust.relics.item;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 // 에테르 이지스 (탱커)
 //  · 좌클릭 = 평타 (양손 콤보, Better Combat)
 //  · R = 수호의 파동 (기본, 1성)   · V = 이지스 돌진 (이동, 2성)

@@ -148,8 +148,6 @@ public final class DummyManager {
 
     public static boolean start() { return start(0); }
 
-    // 측정 시간을 미리 정했는가 (표시·자동 종료용)
-    public static int plannedSeconds() { return plannedTicks / 20; }
 
     public static boolean isMeasuring() { return measuring; }
 

@@ -1,6 +1,5 @@
 package com.laststardust.relics.client;
 
-import com.laststardust.relics.item.SolarMusket;
 
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.core.component.DataComponents;

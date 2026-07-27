@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 

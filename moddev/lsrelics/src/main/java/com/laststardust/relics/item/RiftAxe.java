@@ -5,12 +5,10 @@ import java.util.function.Consumer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Tier;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 // 타이탄 브레이커 — 순수 근접 무기(도끼). 채굴 겸용은 뺐고 그만큼 공격력이 높다.
 // 타이탄 브레이커 — 도끼. 좌클릭 = 강타(근접). 블록 껍질 벗기기는 바닐라 그대로 동작한다

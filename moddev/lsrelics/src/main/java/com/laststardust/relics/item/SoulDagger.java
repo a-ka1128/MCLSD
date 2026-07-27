@@ -2,10 +2,8 @@ package com.laststardust.relics.item;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 // 스틱스 — 그림자 단검(에레보스의 가호). 한 쌍(주손+보조손)으로 드는 쌍단검.
 //   · 좌클릭 = 평타 (Better Combat 쌍수 콤보, 좌우 번갈아 베기)
 //   · R = 급소 가르기 (기본, 1성)  · V = 그림자 도약 (이동, 2성)

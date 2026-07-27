@@ -1,6 +1,5 @@
 package com.laststardust.relics.item;
 
-import com.laststardust.relics.LSRelics;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;

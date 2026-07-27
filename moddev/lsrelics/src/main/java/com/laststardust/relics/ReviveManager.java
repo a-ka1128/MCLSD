@@ -18,7 +18,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -189,7 +188,6 @@ public final class ReviveManager {
     private static final Map<UUID, Reserved> PENDING = new HashMap<>();
 
     public static void reserve(UUID id, Vec3 where, long at) { PENDING.put(id, new Reserved(where, at)); }
-    public static boolean hasPending(UUID id) { return PENDING.containsKey(id); }
 
     @SubscribeEvent
     public static void onRespawn(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerRespawnEvent event) {
@@ -238,16 +236,4 @@ public final class ReviveManager {
         }
     }
 
-    // 파나케이아를 4성 이상으로 들고 있는 아군이 사거리 안에 있는가.
-    // (죽기 '전'에 알려주기 위한 것 — 사망 화면은 채팅·타이틀을 전부 가려서 죽은 뒤엔 못 알린다)
-    public static boolean healerNearby(ServerLevel level, Player who, double range) {
-        double r2 = range * range;
-        for (ServerPlayer p : level.players()) {
-            if (p == who || p.isDeadOrDying() || p.isSpectator()) continue;
-            if (p.distanceToSqr(who) > r2) continue;
-            if (p.getMainHandItem().getItem() != LSRelics.HEALER.get()) continue;
-            if (com.laststardust.relics.item.RelicSkills.star(p.getMainHandItem()) >= 4) return true;
-        }
-        return false;
-    }
 }

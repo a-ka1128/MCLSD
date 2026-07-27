@@ -1,9 +1,7 @@
 package com.laststardust.relics;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -116,18 +114,6 @@ public final class ThreatManager {
         return best;
     }
 
-    // 디버그용 — /threattable 같은 명령에서 쓸 수 있게 열어둔다.
-    public static List<String> dump(Mob mob) {
-        List<String> out = new ArrayList<>();
-        Table t = TABLES.get(mob.getUUID());
-        if (t == null) return out;
-        for (Map.Entry<UUID, Float> e : t.byPlayer.entrySet()) {
-            ServerPlayer p = mob.level().getServer().getPlayerList().getPlayer(e.getKey());
-            out.add((p == null ? e.getKey().toString() : p.getName().getString())
-                + " = " + Math.round(e.getValue()));
-        }
-        return out;
-    }
 
     // ── 피해 -> 위협도 ──
     //
