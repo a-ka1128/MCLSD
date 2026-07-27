@@ -108,4 +108,19 @@ function lsPlayerByName(server, name) {
   return found
 }
 
-console.log('[Last Stardust] 공용 유틸 로드됨 — 인벤토리 개수/회수 · 이름으로 플레이어 찾기')
+// ── 관리자 명령의 "대상 플레이어" 인자 ──
+// 접속자 이름을 탭 완성으로 띄우는 문자열 인자. ls_fate / ls_relic / ls_ascend 가 같이 쓴다.
+//
+// ※ EntityArgument 를 쓰면 탭 완성이 공짜지만 **접속자만** 잡는다. 가호·유물·각성은 전부
+//   <키>_<이름> 문자열로 저장돼 있어 오프라인 대상도 지정·해제할 수 있어야 한다.
+//   그래서 문자열 인자에 제안만 얹는다 — 탭에 안 떠도 직접 입력하면 동작한다.
+function lsTargetArg(event, Commands, Arguments, argName) {
+  return Commands.argument(argName || 'target', Arguments.STRING.create(event))
+    .suggests((ctx, b) => {
+      try { ctx.source.server.players.forEach(p => b.suggest(String(p.username))) }
+      catch (e) { lsWarn('ls_util:target-suggest', e) }
+      return b.buildFuture()
+    })
+}
+
+console.log('[Last Stardust] 공용 유틸 로드됨 — 인벤토리 개수/회수 · 이름으로 플레이어 찾기 · 대상 인자')

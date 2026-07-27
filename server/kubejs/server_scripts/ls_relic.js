@@ -137,6 +137,38 @@ ServerEvents.commandRegistry(event => {
         st.putBoolean('relic_altar_' + fate + '_set', true)
         ctx.source.sendSystemMessage(Text.of(`§a${RELICS[fate].name}§a 제단 등록: ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)} §7(발밑 lodestone에 배치)`))
         return 1
+      })))
+    // ── 유물 회수 (OP) ──
+    // /relic grant 는 본인 전용이라 남의 획득 상태를 되돌릴 방법이 없었다.
+    // /fate set 으로 직업을 바꿔주면 유물 플래그만 옛 직업에 남아 어긋난다.
+    //
+    // 플래그만 지우면 옛 직업 유물을 손에 든 채 새 유물까지 받게 된다 — 아이템도 함께 걷는다.
+    // 각성 성급(star_)은 건드리지 않는다. 그건 /ascend set 의 몫이다.
+    .then(Commands.literal('revoke').requires(s => s.hasPermission(2))
+      .then(lsTargetArg(event, Commands, Arguments).executes(ctx => {
+        const s = ctx.source.server
+        const target = Arguments.STRING.getResult(ctx, 'target')
+        const st = rlStore(s)
+        if (!st.getBoolean('relic_' + target)) {
+          ctx.source.sendSystemMessage(Text.of(`§7${target} 은(는) 아직 유물을 받지 않았습니다.`))
+          return 0
+        }
+        st.putBoolean('relic_' + target, false)
+
+        // 인벤에서 유물 8종을 전부 걷는다. 직업을 바꾼 뒤라면 저장된 가호와 손에 든 유물이
+        // 다를 수 있으므로, 가호로 하나만 집어내지 않고 전부 훑는다.
+        var taken = 0
+        var p = lsPlayerByName(s, target)
+        if (p) {
+          Object.keys(RELICS).forEach(k => {
+            try { taken += lsTakeItem(p, RELICS[k].id, 64) } catch (e) { lsWarn('ls_relic:revoke-take', e) }
+          })
+        }
+        ctx.source.sendSystemMessage(Text.of(
+          `§a${target} 의 유물 획득 해제 §7(아이템 ${taken}개 회수)${p ? '' : ' §c— 접속 중이 아니라 아이템은 못 걷었습니다'}`))
+        if (!p) ctx.source.sendSystemMessage(Text.of('§8   접속하면 다시 실행해 주세요 — 안 그러면 유물을 둘 들게 됩니다.'))
+        console.log(`[LS-RELIC] admin revoke ${target} (items ${taken})`)
+        return 1
       }))))
 })
 

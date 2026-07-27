@@ -246,15 +246,38 @@ ServerEvents.commandRegistry(event => {
       return 1
     }))
     .then(Commands.literal('set').requires(s => s.hasPermission(2))
+      // /ascend set <n> — 본인 (기존)
       .then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
         const s = ctx.source.server; const p = ctx.source.player
-        if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
+        if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만 §7(대상 지정: /ascend set <이름> <n>)')); return 0 }
         const n = Math.max(1, Math.min(AS_MAX, Arguments.INTEGER.getResult(ctx, 'n')))
         asStore(s).putInt('star_' + p.username, n)
         asStamp(s, p.username)
         ctx.source.sendSystemMessage(Text.of(`§a각성 §e${n}성§a으로 설정했다.`))
         return 1
-      }))))
+      })))
+    // /ascend set <이름> <n> — 대상 지정 (OP)
+    // 여태 본인 전용이라 남의 각성을 되돌릴 방법이 없었다. /fate set 으로 직업을 바꿔주면
+    // 성급만 그대로 남아 어긋난다.
+    //
+    // ※ 브리가디어는 형제 인자를 등록 순서대로 시도한다. 정수(n)를 먼저 등록해뒀으므로
+    //   "/ascend set 3" 은 본인용으로, "/ascend set 이름 3" 은 이쪽으로 갈린다.
+    .then(Commands.literal('set').requires(s => s.hasPermission(2))
+      .then(lsTargetArg(event, Commands, Arguments)
+        .then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
+          const s = ctx.source.server
+          const target = Arguments.STRING.getResult(ctx, 'target')
+          const n = Math.max(1, Math.min(AS_MAX, Arguments.INTEGER.getResult(ctx, 'n')))
+          asStore(s).putInt('star_' + target, n)
+          // 손에 든 유물 NBT 에 성급을 다시 새긴다 — 접속 중이어야 가능하다.
+          var p = lsPlayerByName(s, target)
+          if (p) asStamp(s, target)
+          ctx.source.sendSystemMessage(Text.of(
+            `§a${target} 의 각성 §e${n}성§a으로 설정${p ? '' : ' §7(접속 중이 아니라 유물에는 아직 안 새겨짐)'}`))
+          if (!p) ctx.source.sendSystemMessage(Text.of('§8   본인이 접속해서 §7/ascend sync§8 를 치면 반영됩니다.'))
+          console.log(`[LS-ASCEND] admin set ${target} -> ${n} (online=${!!p})`)
+          return 1
+        })))))
 })
 
 console.log('[Last Stardust] 유물 각성 로드됨 — /ascend')

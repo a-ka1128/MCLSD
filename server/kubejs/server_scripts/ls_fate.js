@@ -244,14 +244,8 @@ ServerEvents.commandRegistry(event => {
   const keyArg = () => Commands.argument('key', Arguments.STRING.create(event))
     .suggests((ctx, b) => { FATE_KEYS.forEach(k => b.suggest(k)); return b.buildFuture() })
 
-  // 대상 플레이어 — 접속자 이름을 탭 완성으로 띄운다.
-  // ※ EntityArgument 를 쓰지 않는 이유: 가호는 이름 문자열 키(fate_<name>)로 저장돼 있어
-  //   오프라인 대상도 지정·해제할 수 있어야 한다. EntityArgument 는 접속자만 잡는다.
-  const targetArg = () => Commands.argument('target', Arguments.STRING.create(event))
-    .suggests((ctx, b) => {
-      try { ctx.source.server.players.forEach(p => b.suggest(String(p.username))) } catch (e) { lsWarn('ls_fate:suggest', e) }
-      return b.buildFuture()
-    })
+  // 대상 플레이어 인자는 ls_util.js 의 공용 헬퍼를 쓴다 (ls_relic·ls_ascend 와 같은 것).
+  const targetArg = () => lsTargetArg(event, Commands, Arguments)
 
   event.register(Commands.literal('fate')
     // 선택 화면(lsrelics 모드의 /fateui)을 연다 — 유물 아이콘과 소개를 보고 고른다.
