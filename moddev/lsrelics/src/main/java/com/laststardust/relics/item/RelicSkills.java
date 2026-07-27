@@ -401,6 +401,7 @@ public final class RelicSkills {
             if (target != null) {
                 float amount = JUDGE_DMG * JUDGE_HEAL_RATIO * healScale(stack);
                 target.heal(amount);
+                com.laststardust.relics.ThreatManager.addHealThreat(sl, player, amount);
                 Vec3 to = target.position().add(0, target.getBbHeight() * 0.6, 0);
                 sl.sendParticles(ParticleTypes.HEART, to.x, to.y, to.z, 3, 0.3, 0.3, 0.3, 0.0);
                 sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, to.x, to.y, to.z, 10, 0.4, 0.5, 0.4, 0.0);

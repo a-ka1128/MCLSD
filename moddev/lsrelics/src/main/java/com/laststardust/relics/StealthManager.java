@@ -59,6 +59,8 @@ public final class StealthManager {
     }
 
     private static void dropAggro(ServerLevel level, ServerPlayer player) {
+        // 위협도 장부에서도 지운다 — 안 지우면 0.5초 뒤 ThreatManager 가 다시 붙여준다.
+        ThreatManager.wipe(player);
         AABB box = player.getBoundingBox().inflate(24.0);
         for (Mob mob : level.getEntitiesOfClass(Mob.class, box)) {
             if (mob.getTarget() == player) mob.setTarget(null);

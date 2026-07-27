@@ -102,6 +102,8 @@ public final class SanctuaryManager {
                     if (p.distanceToSqr(z.center) > z.radius * z.radius) continue;
                     if (p.getHealth() >= p.getMaxHealth()) continue;
                     p.heal(z.healPerSecond);
+                    // 성역은 깐 사람이 위협도를 진다(z.caster). 뿌리고 도망가는 걸 막는다.
+                    ThreatManager.addHealThreat(z.level, z.caster, z.healPerSecond);
                     z.level.sendParticles(ParticleTypes.HEART,
                         p.getX(), p.getY() + p.getBbHeight() + 0.3, p.getZ(), 1, 0.2, 0.1, 0.2, 0.0);
                 }

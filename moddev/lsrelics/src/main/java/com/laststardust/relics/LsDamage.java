@@ -24,11 +24,30 @@ import net.minecraft.world.entity.LivingEntity;
 public final class LsDamage {
     private LsDamage() {}
 
+    // ── "지금 들어가는 피해가 스킬인가" 표식 ──
+    //
+    // ThreatManager 가 이지스 평타에만 위협도 ×2 를 주려는데, 근접 유물은 스킬도 바닐라
+    // 피해원(playerAttack)을 그대로 쓴다 — DamageSource 로는 평타와 스킬을 구분할 수 없다.
+    // 대신 **스킬 피해는 전부 이 클래스를 거친다**(2026-07-27 통일). 그래서 hurt 호출을
+    // 감싸는 동안만 깃발을 세우고, 피해 이벤트가 그걸 읽는다.
+    //
+    // 서버 스레드에서 hurt() 는 동기로 끝나므로 static 하나로 충분하다. 다만 hurt 안에서
+    // 다른 피해가 연쇄로 발생할 수 있어(가시 갑옷 등) 되돌릴 때 이전 값을 복원한다.
+    private static boolean inSkill = false;
+
+    public static boolean inSkill() { return inSkill; }
+
     // 무적 프레임을 무시하고 때린다. 단발·저빈도 스킬용.
     public static boolean hit(LivingEntity target, DamageSource source, float amount) {
         if (target == null || !target.isAlive() || amount <= 0) return false;
         target.invulnerableTime = 0;
-        return target.hurt(source, amount);
+        boolean prev = inSkill;
+        inSkill = true;
+        try {
+            return target.hurt(source, amount);
+        } finally {
+            inSkill = prev;
+        }
     }
 
     // 다단히트용 — 표적별로 최소 간격을 둔다.
@@ -46,6 +65,12 @@ public final class LsDamage {
         if (last != 0 && gameTime - last < minInterval) return false;
         target.getPersistentData().putLong(tag, gameTime);
         target.invulnerableTime = 0;
-        return target.hurt(source, amount);
+        boolean prev = inSkill;
+        inSkill = true;
+        try {
+            return target.hurt(source, amount);
+        } finally {
+            inSkill = prev;
+        }
     }
 }

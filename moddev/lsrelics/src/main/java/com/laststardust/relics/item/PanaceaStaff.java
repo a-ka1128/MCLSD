@@ -118,7 +118,11 @@ public class PanaceaStaff extends Item implements RelicActions {
         // 부족한 만큼만 회복하고, 넘치는 몫은 보호막으로 돌린다 (패시브 ② 과잉 치유)
         float missing = Math.max(0, ally.getMaxHealth() - ally.getHealth());
         float healed = Math.min(missing, amount);
-        if (healed > 0) ally.heal(healed);
+        if (healed > 0) {
+            ally.heal(healed);
+            // 힐도 미움을 산다 — 힐러가 뒤에서 안전하기만 하면 역할 긴장이 없다.
+            com.laststardust.relics.ThreatManager.addHealThreat(level, caster, healed);
+        }
         float overflow = amount - healed;
         boolean shielded = false;
         if (overflow > 0) {

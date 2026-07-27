@@ -39,6 +39,8 @@ public final class TauntManager {
         List<Mob> mobs = new ArrayList<>();
         for (Mob mob : level.getEntitiesOfClass(Mob.class, box, m -> m instanceof Enemy && m.isAlive())) {
             mob.setTarget(player);
+            // 위협도 장부에도 얹는다 — 이게 없으면 도발이 끝나는 순간 어그로가 튄다.
+            ThreatManager.taunt(mob, player);
             mobs.add(mob);
             level.sendParticles(ParticleTypes.ANGRY_VILLAGER,
                 mob.getX(), mob.getEyeY() + 0.6, mob.getZ(), 5, 0.25, 0.25, 0.25, 0.0);
