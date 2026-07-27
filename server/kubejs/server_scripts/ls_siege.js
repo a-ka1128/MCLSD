@@ -275,11 +275,30 @@ function sgDirName(angDeg) {
   return DIR8_KO[Math.round(a / 45) % 8]
 }
 
+// ── 인원 계수 ──
+// 여태 웨이브 규모가 인원수를 전혀 안 봤다. 6명이 1명과 같은 12마리를 상대했으니
+// 사람이 모일수록 쉬워졌다(6인 파티 화력은 솔로의 약 5.6배다 — 실측 304 vs 54).
+//
+// 그렇다고 5.6배를 그대로 곱하면 66마리다. 모드 몹(Cataclysm)이 무거워 서버가 못 버틴다.
+// 그래서 수(數)로는 절반만 따라가고, 나머지 절반은 위협도·몹 스케일링(질)이 맡는다.
+//   위협도 15 기준: 1명 12 · 2명 18 · 4명 30 · 6명 40 (6명은 PARTY_HARD_CAP 에 걸린다)
+// 첫 판 뒤에 조절하기 쉽도록 상수 하나로 뺐다.
+const PARTY_PER_EXTRA = 0.5   // 추가 인원 1명당 +50%
+const PARTY_HARD_CAP = 40     // 서버 보호 — 이 이상은 안 뽑는다
+
+// 전투에 설 수 있는 인원 (관전자 제외)
+function partyCount(server) {
+  var n = 0
+  try { server.players.forEach(p => { if (!p.isSpectator()) n++ }) } catch (e) { lsWarn('ls_siege:party', e) }
+  return Math.max(1, n)
+}
+
 // 위협도 → 한 웨이브 몹 목록 (단계별 진화, grand=대공세 규모)
-function buildWave(threat, grand) {
+function buildWave(threat, grand, players) {
   const mobs = []
-  const cap = grand ? 16 : 12
-  const total = Math.min(cap, (grand ? 5 : 3) + threat)
+  const mul = 1 + PARTY_PER_EXTRA * Math.max(0, (players || 1) - 1)
+  const cap = Math.min(PARTY_HARD_CAP, Math.round((grand ? 16 : 12) * mul))
+  const total = Math.min(cap, Math.round(((grand ? 5 : 3) + threat) * mul))
   const tier = threatTier(threat)
   for (let i = 0; i < total; i++) {
     if (tier >= 4 && i % 6 === 0) mobs.push('cataclysm:ignited_berserker')
@@ -300,7 +319,9 @@ function spawnWave(server, waveNo) {
   const threat = effThreat(server)
   const grand = sfGetB(server, 'ls_siege_grand')
   const c = sancPos(server)
-  const wave = buildWave(threat, grand)
+  // 인원은 웨이브가 나올 때마다 다시 센다 — 도중에 들어오거나 나가는 사람이 반영된다
+  const party = partyCount(server)
+  const wave = buildWave(threat, grand, party)
   const n = wave.length
   // 단일 방향 공성: 이번 공성의 진격 방향(±35° 부채꼴)에서만 스폰
   const baseDeg = sfGetI(server, 'ls_siege_ang')
@@ -339,7 +360,7 @@ function spawnWave(server, waveNo) {
     playAll(server, 'minecraft:event.raid.horn', 0.7, 1.0)
     say(server, `§6▶ ${waveNo}번째 물결! §7적 ${n}기`)
   }
-  console.log(`[LS-SIEGE] wave ${waveNo} spawned count=${n} threat=${threat} grand=${grand}`)
+  console.log(`[LS-SIEGE] wave ${waveNo} spawned count=${n} threat=${threat} grand=${grand} party=${party}`)
 }
 
 function startSiege(server, auto, forceGrand) {
@@ -1016,6 +1037,16 @@ ServerEvents.commandRegistry(event => {
         ctx.source.sendSystemMessage(Text.of(`§c공성 진행 중${sfGetB(s, 'ls_siege_grand') ? ' §4[대공세]' : ''} §7· 물결 ${sfGetI(s, 'ls_siege_wave_no')} · 남은 적 ${sfGetI(s, 'ls_siege_remaining')}기 · 남은 물결 ${sfGetI(s, 'ls_siege_waves')}`))
       else
         ctx.source.sendSystemMessage(Text.of(`§7공성 없음 · §6${d}일차 §7· 위협도 ${getThreat(s)} · 노드 ${nodeCount(s)} · 대공세 ${grandTxt} · 금고 ${getTreasury(s)}`))
+      // 인원 계수가 실제로 얼마나 붙는지 — 안 보이면 조절할 근거가 없다
+      var pc = partyCount(s)
+      var et = effThreat(s)
+      ctx.source.sendSystemMessage(Text.of(
+        `§8인원 §7${pc}명§8 → 웨이브 §7${buildWave(et, false, pc).length}마리§8 (1명이면 ${buildWave(et, false, 1).length}) · 대공세 §7${buildWave(et, true, pc).length}마리`))
+      // 첫 공성은 위협도가 강제로 깎인다. 이게 안 보이면 "대공세인데 왜 약하지"가 된다
+      if (isFirstSiege(s)) {
+        ctx.source.sendSystemMessage(Text.of(
+          `§e※ 첫 공성 미완료 — 위협도가 §7${FIRST_SIEGE_THREAT_CAP}§e로 깎여 적용됩니다 (설정값 ${getThreat(s)} 무시).`))
+      }
       return 1
     }))
     .then(Commands.literal('end').requires(s => s.hasPermission(2)).executes(ctx => {
