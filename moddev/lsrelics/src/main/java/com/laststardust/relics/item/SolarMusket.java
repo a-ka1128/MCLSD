@@ -62,6 +62,9 @@ public class SolarMusket extends Item implements RelicActions {
     public static final int RIFLE_MAG = 24;        // 전환 시 이 탄창으로 교체
     public static final int RIFLE_FIRE_RATE = 5;   // 5틱 = 4발/초
     private static final float RIFLE_DMG = 5.5f;   // 발당. 4발/초 x 5.5 x 3(5성) = 66 DPS
+    // 안 쏘고 버티면 연사 탄창을 무한정 들고 있게 된다 — 시간으로도 끝낸다.
+    // 24발을 4발/초로 다 쏘면 6초라, 8초면 넉넉하다.
+    public static final int RIFLE_DURATION = 160;  // 8초
 
     // 15.0 -> 12.5 -> 11.5 -> 13.0
     //
@@ -116,9 +119,21 @@ public class SolarMusket extends Item implements RelicActions {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        // 연사 중에도 우클릭은 살아 있다. 다만 **배율만** 준다 — 피해·발사율·탄 소모는
-        // 그대로다(leftAttack 의 scoped 판정이 rifle 을 우선한다).
-        // 라이플에 저격 스코프까지 얹으면 한 무기가 모든 거리를 다 먹는다.
+        CompoundTag t = tag(stack);
+        if (t.getBoolean("rifle")) {
+            // ── 연사 중 배율은 "아이템 사용"이 아니라 토글이다 ──
+            // startUsingItem 을 쓰면 바닐라가 이동 입력을 0.2배로 깎는다(저격 스코프는 그게
+            // 대가지만, 라이플에서 발이 묶이면 근접전 무기가 못 된다).
+            // 그래서 상태만 뒤집고 아이템 사용은 시작하지 않는다 — 감속이 붙을 자리가 없다.
+            if (!level.isClientSide) {
+                boolean on = !t.getBoolean("rifleZoom");
+                t.putBoolean("rifleZoom", on);
+                save(stack, t);
+                level.playSound(null, player.blockPosition(), SoundEvents.SPYGLASS_USE,
+                    SoundSource.PLAYERS, 0.5f, on ? 1.5f : 1.1f);
+            }
+            return InteractionResultHolder.fail(stack);
+        }
         player.startUsingItem(hand);
         level.playSound(null, player.blockPosition(), SoundEvents.SPYGLASS_USE, SoundSource.PLAYERS, 0.6f, 1.2f);
         return InteractionResultHolder.consume(stack);
@@ -182,8 +197,10 @@ public class SolarMusket extends Item implements RelicActions {
         t.putInt("ammo", RIFLE_MAG);
         t.putLong("reloadEnd", 0);        // 재장전 중이었으면 끊고 바로 전환된다
         t.putLong("rifleEnd", now + RIFLE_CD);
+        t.putLong("rifleUntil", now + RIFLE_DURATION);
+        t.putBoolean("rifleZoom", false);
         save(stack, t);
-        player.stopUsingItem();           // 스코프 중이었으면 내린다 (연사 중엔 스코프 금지)
+        player.stopUsingItem();           // 저격 스코프 중이었으면 내린다
 
         var pos = player.blockPosition();
         level.playSound(null, pos, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.7f, 1.6f);
@@ -196,6 +213,9 @@ public class SolarMusket extends Item implements RelicActions {
     // 연사 모드 해제 (탄창 소진). 해제 후엔 평소대로 자동 재장전이 걸린다.
     private static void endRifle(ServerLevel level, ServerPlayer player, CompoundTag t) {
         t.putBoolean("rifle", false);
+        t.putBoolean("rifleZoom", false);
+        t.putLong("rifleUntil", 0);
+        t.putInt("ammo", 0);   // 과열된 탄창은 통째로 버린다 — 남은 연사탄이 일반탄으로 둔갑하지 않게
         level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND,
             SoundSource.PLAYERS, 0.5f, 1.9f);
     }
@@ -311,6 +331,11 @@ public class SolarMusket extends Item implements RelicActions {
         t.putInt("ammo", ammo);
         t.putLong("nextShot", now + rate);
         if (ammo <= 0) {
+            // 마지막 탄을 쏜 순간 연사를 먼저 끝낸다.
+            // 이걸 안 하면 rifle 이 켜진 채로 재장전에 들어가고, 재장전이 끝나면
+            // **연사 모드 + 일반 탄창 6발**이 되어 그 뒤로 영영 안 풀린다.
+            // (위쪽 `rifle && ammo <= 0` 검사는 재장전 대기 때문에 영영 도달하지 못한다)
+            if (rifle) endRifle(level, player, t);
             startReload(level, player, stack, t, now);
         } else {
             save(stack, t);
@@ -370,6 +395,19 @@ public class SolarMusket extends Item implements RelicActions {
 
         long now = level.getGameTime();
         CompoundTag t = tag(stack);
+
+        // ── 연사 지속시간 만료 ──
+        // 다 쏘면 leftAttack 에서 끝나지만, 쏘지 않고 버티면 거기까지 못 간다.
+        // 그러면 연사 탄창을 무한정 들고 다니게 되므로 시간으로도 끝낸다.
+        if (t.getBoolean("rifle")) {
+            long until = t.getLong("rifleUntil");
+            if (until != 0 && now >= until) {
+                endRifle(level, player, t);
+                startReload(level, player, stack, t, now);   // 빈 탄창이 되므로 바로 재장전
+                return;
+            }
+        }
+
         long rEnd = t.getLong("reloadEnd");
         boolean reloading = pending(rEnd, now, RELOAD_TICKS);
 
