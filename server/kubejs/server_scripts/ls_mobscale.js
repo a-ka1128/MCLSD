@@ -97,9 +97,17 @@ ServerEvents.commandRegistry(event => {
       const cfg = msCfg(); const t = msTier(s)
       ctx.source.sendSystemMessage(Text.of(
         `§6일반 몹 스케일링 §7— 티어 §e${t}§7 (관문 ${LS.progress(s)}/4)${msForced(s) ? ' §c[강제]' : ''}`))
+      // 티어 0 = 배율이 통째로 꺼진 상태다. 예전엔 "×1.0"만 보여서 "왜 안 세지지"를
+      // 알 수 없었다 — 꺼졌다는 사실을 명시한다.
+      if (t <= 0) {
+        ctx.source.sendSystemMessage(Text.of('§c⚠ 티어 0 — 스케일링이 꺼져 있습니다. §7관문을 하나도 안 깼기 때문입니다.'))
+        ctx.source.sendSystemMessage(Text.of('§8   테스트하려면 §7/mobscale set 1~4'))
+      }
       ctx.source.sendSystemMessage(Text.of(
         `§7체력 §e×${cfg.hp[t]}§7 · 공격력 §e×${cfg.dmg[t]}§7 §8(공격력 상한: 원본+${cfg.dmgCapAdd})`))
-      ctx.source.sendSystemMessage(Text.of('§8보스 제외(ls_bossdiff가 담당) · 비적대 몹 제외 · 새로 스폰되는 몹부터 적용'))
+      ctx.source.sendSystemMessage(Text.of('§8보스 제외(ls_bossdiff가 담당) · 비적대 몹 제외'))
+      // 이미 살아 있는 몹은 절대 안 바뀐다 — 공성 도중에 티어를 바꿔도 그 웨이브엔 반영되지 않는다.
+      ctx.source.sendSystemMessage(Text.of('§c※ 새로 스폰되는 몹부터 적용됩니다 — 이미 나와 있는 몹은 바뀌지 않습니다.'))
       ctx.source.sendSystemMessage(Text.of('§8/mobscale set <0-4> · auto'))
       return 1
     })
