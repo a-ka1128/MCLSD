@@ -35,7 +35,12 @@ public class StarBow extends BowItem implements RelicActions {
     //   · 8종 중 유일하게 평타가 빗나갈 수 있다 (실제 투사체, 명중 판정)
     //   · 속사(12초 쿨)가 연사 속도를 2배로 만드는데 가동률이 판마다 다르다
     // 그래서 한 판에 맞추면 다음 판에 또 어긋난다. 두 판 평균(2,219)을 기준으로 잡는다.
-    private static final double ARROW_DMG = 0.94;
+    //
+    // 세 판을 재고 나서 안 것: - 별빛 폭풍도 평타처럼 빗나간다 - .
+    // 하늘에서 화살이 떨어지는 스킬이라 표적을 놓친다. 단위당 폭풍 피해가
+    // 60.1 / 59.7 / 44.5 로 흔들렸다 — 이 유물만 평타·궁극기 둘 다 편차를 탄다.
+    // 세 판 평균으로 역산해 전 항목 x1.055 (0.94 -> 0.99).
+    private static final double ARROW_DMG = 0.99;
 
     public StarBow(Properties properties) {
         super(properties);

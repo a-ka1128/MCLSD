@@ -105,18 +105,22 @@ public class LSRelics {
     // 평타를 x0.907, 스킬을 x1.30 해서 스킬 비중만 30% 로 올린다.
     // ※ 첫 조정의 응답이 정확했다 — 무기 6.09/7.0813 = x0.860 에 실측 평타가 x0.865 로 따라왔다.
     //   스틱스에서 보였던 고정값 희석은 이 무기엔 사실상 없다.
+    // 세 번째 조정 x1.027 — 두 판이 48.8 / 48.7 로 거의 같았다. 8유물 중 편차가 가장 작아서
+    // 목표(50) 와의 2.6% 차이는 노이즈가 아니라 실제 갭으로 본다.
     public static final DeferredItem<BulwarkBlade> GUARDIAN = ITEMS.register("guardian",
-        () -> new BulwarkBlade(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(guardianAttrs(4.524, -2.4))));
+        () -> new BulwarkBlade(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(guardianAttrs(4.673, -2.4))));
 
     // 순수 근접 딜러 — 채굴 겸용을 뺀 대신 공격력이 가장 높다.
-    // 공격력 9.0514 -> 7.965 (x0.88, 2026-07-27) × 공속 1.0. 바닐라 네더라이트 도끼와 같은 속도다.
+    // 공격력 9.0514 -> 7.965 -> 8.292 (2026-07-27) × 공속 1.0. 바닐라 네더라이트 도끼와 같은 속도다.
+    // 마지막 x1.041 은 두 판 평균(53.3 / 50.4 -> 51.9) 기준이다. 근접이라 타격 타이밍에
+    // 따라 4% 정도 흔들려서, 한 판이 아니라 평균에 맞춘다.
     // 스킬별 계측에서 평타 83% 로 상한(75%)을 넘었다. 평타를 내리고 스킬 셋을 x1.39 한다.
     public static final DeferredItem<RiftAxe> PIONEER = ITEMS.register("pioneer",
         () -> new RiftAxe(Tiers.NETHERITE, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
             // 공속 -2.6(1.4회/초) → -3.0(1.0회/초). 바닐라 네더라이트 도끼와 같은 속도다.
             // 도끼가 검보다 빠를 이유가 없는데 1.4회/초였고, 실측 68.8 DPS 의 상당 부분이
             // 여기서 나왔다. 한 방이 무거운 무기라는 정체성에도 느린 쪽이 맞다.
-            .attributes(weapon(6.965, -3.0)).durability(2000)));
+            .attributes(weapon(7.292, -3.0)).durability(2000)));
 
     public static final DeferredItem<StargazerStaff> SAGE = ITEMS.register("sage",
         () -> new StargazerStaff(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
