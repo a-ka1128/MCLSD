@@ -113,7 +113,20 @@ public class SolarMusket extends Item implements RelicActions {
     // 탄을 2발 먹는다 — 안 그러면 재장전 횟수까지 절반이 되어 스코프가 공짜 이득이 된다.
     public static final int SCOPE_CHARGE = 10;    // 진입 0.5초 — 그 전엔 노스코프 수치
     public static final int SCOPE_FIRE_RATE = 40; // 2초에 1발
-    public static final int SCOPE_AMMO_COST = 2;
+    // 2 -> 1 (2026-07-28). 스코프의 대가를 줄이기로 했다.
+    // ※ 이걸 바꾸면 발사율이 같이 바뀐다 — 재장전 횟수가 절반이 되기 때문이다.
+    //     2발: 3발 쏘고 2초 재장전 = 3발/8초  = 0.375발/초
+    //     1발: 6발 쏘고 2초 재장전 = 6발/14초 = 0.4286발/초  (+14%)
+    //   그래서 평타와의 동등 조건이 x2 에서 x1.75 로 바뀐다 (SCOPE_DMG 주석 참고).
+    public static final int SCOPE_AMMO_COST = 1;
+
+    // ── 스코프 이동 감속을 -80% 에서 -50% 로 ──
+    // 바닐라는 아이템 사용 중 이동 입력을 x0.2 로 깎는다(Player.aiStep). 그 값 자체는
+    // 못 바꾸므로, 이동속도 특성을 x2.5 걸어 상쇄한다 — 0.2 x 2.5 = 0.5 로 순 -50% 다.
+    // ADD_MULTIPLIED_TOTAL 1.5 = x2.5. 활의 hunter_speed 와 같은 층이라 자연스럽게 합산된다.
+    private static final net.minecraft.resources.ResourceLocation SCOPE_SPEED_ID =
+        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(LSRelics.MODID, "scope_speed");
+    private static final double SCOPE_SPEED_BONUS = 1.5; // x2.5
     // 35.0 -> 29.0 -> 26.68 -> 19.5 -> 31.2 -> 24.0 (2026-07-27)
     //
     // ── 스코프가 주력이 되어 있었다 ──
@@ -126,6 +139,11 @@ public class SolarMusket extends Item implements RelicActions {
     //   스코프 31.2x3 = 93.6 x 0.375발/초(탄 2발) = 35.1
     // 값이 같으면 사거리·명중이 좋은 쪽만 쓴다. 스코프에 단점이 없어진다.
     //
+    // ── 대가를 줄였으니 피해도 따라 내린다 (2026-07-28) ──
+    // 탄 2발 -> 1발, 이동 감속 -80% -> -50% 로 스코프의 대가를 줄이기로 했다.
+    // 탄 소모가 반이 되면 재장전도 반이라 발사율이 0.375 -> 0.4286 로 오른다(+14%).
+    // 그래서 동등 조건이 x2 -> x1.75 가 된다: 27.6 -> 24.15.
+    //
     // ── 스코프를 상황용으로 내린 건 잘못된 판단이었다 (2026-07-27, 되돌림) ──
     // "값이 같으면 스코프에 단점이 없으니 내려야 한다"고 봤는데, 스코프에는 이미 단점이 셋 있다:
     //   · 탄을 2발 먹는다 — 재장전 횟수가 두 배다
@@ -134,13 +152,15 @@ public class SolarMusket extends Item implements RelicActions {
     // 그 대가를 다 치르는데 DPS 까지 25% 낮으면 쓸 이유가 없다. 실제로 24.0 으로 내린 뒤에도
     // 계속 스코프를 쓰는 실측이 나왔고(52% / 평타 4%), 그건 곧 손해를 보며 플레이한다는 뜻이다.
     //
-    // 이제 둘을 같은 DPS 로 묶는다. 스코프가 절반 속도라 발당 2배면 정확히 같아진다:
-    //   평타   13.8x3 = 41.4 x 0.75발/초  = 31.0
-    //   스코프 27.6x3 = 82.8 x 0.375발/초 = 31.0
-    // 선택은 DPS 가 아니라 상황이 정한다 — 거리·이동 필요 여부·탄 여유.
+    // 이제 둘을 같은 DPS 로 묶는다:
+    //   평타   13.80x3 = 41.4 x 0.75발/초   = 31.0
+    //   스코프 24.15x3 = 72.5 x 0.4286발/초 = 31.0
+    // 선택은 DPS 가 아니라 상황이 정한다 — 거리·이동 필요 여부.
     //
-    // - SCOPE_DMG = BULLET_DMG x 2 를 깨지 말 것 - 한쪽만 옮기면 다른 쪽이 조용히 죽는다.
-    private static final float SCOPE_DMG = 27.6f;   // 24.0 -> 24.5 -> 27.6 (= BULLET_DMG x 2)
+    // - SCOPE_DMG = BULLET_DMG x 1.75 를 깨지 말 것 - 한쪽만 옮기면 다른 쪽이 조용히 죽는다.
+    //   배수 1.75 의 출처는 발사율 비(0.75 / 0.4286)다. SCOPE_FIRE_RATE 나 SCOPE_AMMO_COST 를
+    //   건드리면 이 배수부터 다시 계산해야 한다.
+    private static final float SCOPE_DMG = 24.15f;  // 24.0 -> 24.5 -> 27.6 -> 24.15 (= BULLET_DMG x 1.75)
     private static final int SCOPE_BULLET_LIFE = 30;
     private static final int USE_DURATION = 72000; // 망원경과 동일 — 사실상 무제한 홀드
 
@@ -358,6 +378,22 @@ public class SolarMusket extends Item implements RelicActions {
         level.playSound(null, pos, sound, SoundSource.PLAYERS, 1.0f, pitch * 0.94f);
     }
 
+    // 스코프 중 이동 감속 완화. 바닐라의 x0.2 입력 감쇄를 이동속도 x2.5 로 상쇄해 순 -50% 로 만든다.
+    // 임시(transient) 수정자라 서버 재시작·사망 시 저장되지 않는다 — 스코프를 놓거나 무기를
+    // 바꾸면 다음 틱에 걷히지만, 남더라도 로그아웃 한 번이면 사라진다.
+    private static void applyScopeSpeed(ServerPlayer player, boolean scoped) {
+        var attr = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        if (attr == null) return;
+        if (scoped == attr.hasModifier(SCOPE_SPEED_ID)) return;   // 이미 원하는 상태
+        if (scoped) {
+            attr.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                SCOPE_SPEED_ID, SCOPE_SPEED_BONUS,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        } else {
+            attr.removeModifier(SCOPE_SPEED_ID);
+        }
+    }
+
     // 스코프가 완전히 자리 잡았는가 (진입 0.5초 이후).
     // 클라이언트(줌)와 서버(피해) 양쪽에서 같은 판정을 쓴다.
     public static boolean isScoped(LivingEntity entity, ItemStack stack) {
@@ -491,11 +527,17 @@ public class SolarMusket extends Item implements RelicActions {
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         ItemStack stack = player.getMainHandItem();
-        if (stack.getItem() != LSRelics.GUNNER.get()) return;
+        if (stack.getItem() != LSRelics.GUNNER.get()) {
+            applyScopeSpeed(player, false);   // 총을 놓으면 보정도 같이 걷는다
+            return;
+        }
         if (!(player.level() instanceof ServerLevel level)) return;
 
         long now = level.getGameTime();
         CompoundTag t = tag(stack);
+
+        // 스코프 감속 완화 — 스코프를 놓거나 무기를 바꾸면 다음 틱에 걷힌다.
+        applyScopeSpeed(player, player.isUsingItem() && player.getUseItem() == stack);
 
         // ── 연사 지속시간 만료 ──
         // 다 쏘면 leftAttack 에서 끝나지만, 쏘지 않고 버티면 거기까지 못 간다.
