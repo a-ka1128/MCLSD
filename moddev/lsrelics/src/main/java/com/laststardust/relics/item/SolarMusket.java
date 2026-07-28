@@ -76,7 +76,7 @@ public class SolarMusket extends Item implements RelicActions {
     //
     // 평타의 1.5배로 내린다. 세 스킬이 쿨 순서대로 줄을 서게 하는 값이다.
     //   산탄(11초) +289 · 연사(36초) +482 · 탄막(60초) +441(한 방)
-    private static final float RIFLE_DMG = 3.47f;   // 3.4 -> 3.47 (x1.02). 6발/초 x 3.47 x 3(5성) = 62 DPS
+    private static final float RIFLE_DMG = 3.47f;   // 3.4 -> 3.47. 6발/초 x 3.47 x 3(5성) = 62 DPS
     // 지속시간 — 탄이 떨어져도 연사는 안 끝난다(중간에 2초 재장전하고 계속 쏜다).
     // 30발을 6발/초로 5초에 비우고, 2초 재장전, 다시 5초 = 12초에 딱 두 탄창이다.
     public static final int RIFLE_DURATION = 240;  // 12초
@@ -102,7 +102,11 @@ public class SolarMusket extends Item implements RelicActions {
     //    선택지라, 한쪽만 움직이면 다른 쪽이 조용히 죽는다 — 실제로 13.0 -> 10.0 때
     //    스코프를 안 따라 내려서 평타가 아예 안 쓰이는 상태가 됐고, 계측을 스킬별로
     //    쪼개기 전까지 아무도 몰랐다.
-    private static final float BULLET_DMG = 16.3f;  // x1.02 (54.9 -> 56, 2026-07-27)
+    //
+    // ── 지금은 스코프와 같은 DPS 로 묶여 있다 (2026-07-27) ──
+    // 규칙: SCOPE_DMG = BULLET_DMG x 2. 스코프가 절반 속도(2초에 1발)라 발당 2배면 같아진다.
+    // 한쪽만 바꾸면 이 관계가 깨지므로 반드시 둘을 함께 옮긴다.
+    private static final float BULLET_DMG = 13.8f;  // 16.0 -> 16.3 -> 13.8 (2026-07-27)
     private static final int BULLET_LIFE = 30;  // 틱 (속도 3.0 → 사거리 약 90칸)
 
     // ── 스코프 (기본 스킬 · 1성 · 우클릭 홀드) ──
@@ -122,12 +126,21 @@ public class SolarMusket extends Item implements RelicActions {
     //   스코프 31.2x3 = 93.6 x 0.375발/초(탄 2발) = 35.1
     // 값이 같으면 사거리·명중이 좋은 쪽만 쓴다. 스코프에 단점이 없어진다.
     //
-    // 원래 설계는 아래처럼 평타가 확실히 위였다. 13.0 -> 10.0 으로 내리면서 스코프를
-    // 그대로 둔 탓에 관계가 무너졌고, 그 상태로 둘 다 x1.6 을 해서 그대로 옮겨왔다.
-    //   평타   16.0x3 = 48.0 x 0.75 = 36.0   <- 주력
-    //   스코프 24.0x3 = 72.0 x 0.375 = 27.0  <- 상황용(장거리·관통·탄 효율)
-    // 스코프를 계속 쓰면 55.5, 평타로 바꾸면 53.1 — 어느 쪽이든 목표 54 근처다.
-    private static final float SCOPE_DMG = 24.5f;   // x1.02
+    // ── 스코프를 상황용으로 내린 건 잘못된 판단이었다 (2026-07-27, 되돌림) ──
+    // "값이 같으면 스코프에 단점이 없으니 내려야 한다"고 봤는데, 스코프에는 이미 단점이 셋 있다:
+    //   · 탄을 2발 먹는다 — 재장전 횟수가 두 배다
+    //   · 진입에 0.5초 (SCOPE_CHARGE) — 그 전엔 노스코프 수치로 나간다
+    //   · 홀드 중 이동속도 -80% (바닐라 아이템 사용) — 근접전에서 발이 묶인다
+    // 그 대가를 다 치르는데 DPS 까지 25% 낮으면 쓸 이유가 없다. 실제로 24.0 으로 내린 뒤에도
+    // 계속 스코프를 쓰는 실측이 나왔고(52% / 평타 4%), 그건 곧 손해를 보며 플레이한다는 뜻이다.
+    //
+    // 이제 둘을 같은 DPS 로 묶는다. 스코프가 절반 속도라 발당 2배면 정확히 같아진다:
+    //   평타   13.8x3 = 41.4 x 0.75발/초  = 31.0
+    //   스코프 27.6x3 = 82.8 x 0.375발/초 = 31.0
+    // 선택은 DPS 가 아니라 상황이 정한다 — 거리·이동 필요 여부·탄 여유.
+    //
+    // - SCOPE_DMG = BULLET_DMG x 2 를 깨지 말 것 - 한쪽만 옮기면 다른 쪽이 조용히 죽는다.
+    private static final float SCOPE_DMG = 27.6f;   // 24.0 -> 24.5 -> 27.6 (= BULLET_DMG x 2)
     private static final int SCOPE_BULLET_LIFE = 30;
     private static final int USE_DURATION = 72000; // 망원경과 동일 — 사실상 무제한 홀드
 

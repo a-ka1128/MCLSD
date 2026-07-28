@@ -352,7 +352,7 @@ public final class RelicSkills {
     // 30발 = 585 가 한 번에 들어가 60초 실측의 19% 를 혼자 먹었다.
     // 발당으로 보면 연사(3.4)의 1.47배 — 5.0 에서도 "쏘느니 누르는" 이득은 그대로다.
     // 이 비율이 1.0 밑으로 내려가면 궁이 함정이 되므로 더 내릴 때는 연사와 같이 봐야 한다.
-    private static final float BARRAGE_PER_AMMO = 5.1f;  // x1.02 (2026-07-27)
+    private static final float BARRAGE_PER_AMMO = 5.1f;  // 5.0 -> 5.1 (2026-07-27)
 
     public static boolean solarBarrage(ServerLevel sl, ServerPlayer player, ItemStack stack, int ammo) {
         if (!ready(sl, player, stack, "cdEclipse", "탄막 집중", 1200, 4)) return false;
@@ -403,7 +403,7 @@ public final class RelicSkills {
         if (!ready(sl, player, stack, "cdBuckshot", "산탄", 220, 2)) return;
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
-        float base = dmg(stack, 16.9f);  // 16.56 -> 16.9 (x1.02, 2026-07-27)
+        float base = dmg(stack, 16.9f);  // 16.56 -> 16.9 (2026-07-27)
         double cosLimit = Math.cos(Math.toRadians(BUCK_HALF_ANGLE));
 
         AABB box = new AABB(eye.x - BUCK_RANGE, eye.y - BUCK_RANGE, eye.z - BUCK_RANGE,
@@ -781,7 +781,7 @@ public final class RelicSkills {
         //
         // ※ 저격 패시브(거리 보정)는 이 스킬에 안 붙는다. EclipseManager 는 BulletManager 를
         //    지나지 않아서다. 60칸짜리 광선인데 거리 이득이 없는 건 따로 볼 문제로 남아 있다.
-        EclipseManager.start(level, player, dmg(stack, 74.3f), 40); // 72.86 -> 74.3 (x1.02)
+        EclipseManager.start(level, player, dmg(stack, 74.3f), 40); // 72.86 -> 74.3
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3, false, false));
         Vec3 eye = player.getEyePosition();
         dustBurst(level, eye, 1.0, 40, GOLD, 1.6f);
