@@ -103,9 +103,9 @@ public class SolarMusket extends Item implements RelicActions {
     //    스코프를 안 따라 내려서 평타가 아예 안 쓰이는 상태가 됐고, 계측을 스킬별로
     //    쪼개기 전까지 아무도 몰랐다.
     //
-    // ── 지금은 스코프와 같은 DPS 로 묶여 있다 (2026-07-27) ──
-    // 규칙: SCOPE_DMG = BULLET_DMG x 2. 스코프가 절반 속도(2초에 1발)라 발당 2배면 같아진다.
-    // 한쪽만 바꾸면 이 관계가 깨지므로 반드시 둘을 함께 옮긴다.
+    // ── 지금은 스코프와 같은 DPS 로 묶여 있다 (2026-07-28) ──
+    // 규칙: SCOPE_DMG = BULLET_DMG x 1.88 (실측 발사율 비). 한쪽만 바꾸면 관계가 깨지므로
+    // 반드시 둘을 함께 옮긴다. 배수의 근거는 SCOPE_DMG 주석에 있다.
     private static final float BULLET_DMG = 13.8f;  // 16.0 -> 16.3 -> 13.8 (2026-07-27)
     private static final int BULLET_LIFE = 30;  // 틱 (속도 3.0 → 사거리 약 90칸)
 
@@ -153,14 +153,21 @@ public class SolarMusket extends Item implements RelicActions {
     // 계속 스코프를 쓰는 실측이 나왔고(52% / 평타 4%), 그건 곧 손해를 보며 플레이한다는 뜻이다.
     //
     // 이제 둘을 같은 DPS 로 묶는다:
-    //   평타   13.80x3 = 41.4 x 0.75발/초   = 31.0
-    //   스코프 24.15x3 = 72.5 x 0.4286발/초 = 31.0
+    //   평타   13.80x3 = 41.4 x 0.737발/초 = 30.5
+    //   스코프 25.95x3 = 77.9 x 0.392발/초 = 30.5
     // 선택은 DPS 가 아니라 상황이 정한다 — 거리·이동 필요 여부.
     //
-    // - SCOPE_DMG = BULLET_DMG x 1.75 를 깨지 말 것 - 한쪽만 옮기면 다른 쪽이 조용히 죽는다.
-    //   배수 1.75 의 출처는 발사율 비(0.75 / 0.4286)다. SCOPE_FIRE_RATE 나 SCOPE_AMMO_COST 를
-    //   건드리면 이 배수부터 다시 계산해야 한다.
-    private static final float SCOPE_DMG = 24.15f;  // 24.0 -> 24.5 -> 27.6 -> 24.15 (= BULLET_DMG x 1.75)
+    // ── 배수는 계산하지 말고 실측한다 (2026-07-28) ──
+    // 처음엔 탄창 주기로 발사율을 계산해 x1.75 를 썼는데, 대조 측정에서 스코프만 7% 낮게 나왔다.
+    //   같은 스킬 구성으로 2판: 스코프만 1,703(28.4 DPS) / 평타만 1,831(30.5 DPS)
+    //   역산한 실제 발사율 — 평타 0.737 (예측 0.75, 맞음) · 스코프 0.392 (예측 0.4286, 틀림)
+    // 빠진 것은 진입 0.5초(SCOPE_CHARGE)다. 재장전할 때마다 스코프가 풀려서 탄창당 한 번씩
+    // 다시 무는데, 그게 발사율의 8.5% 였다. 종이 위 주기 계산으로는 안 잡히는 값이다.
+    //
+    // - SCOPE_DMG = BULLET_DMG x 1.88 을 깨지 말 것 - 한쪽만 옮기면 다른 쪽이 조용히 죽는다.
+    //   배수의 출처는 실측 발사율 비(0.737 / 0.392)다. SCOPE_FIRE_RATE·SCOPE_AMMO_COST·
+    //   SCOPE_CHARGE·RELOAD_TICKS 중 무엇이든 건드리면 - 다시 재서 - 배수를 잡아야 한다.
+    private static final float SCOPE_DMG = 25.95f;  // 24.0 -> 24.5 -> 27.6 -> 24.15 -> 25.95 (= BULLET_DMG x 1.88)
     private static final int SCOPE_BULLET_LIFE = 30;
     private static final int USE_DURATION = 72000; // 망원경과 동일 — 사실상 무제한 홀드
 
