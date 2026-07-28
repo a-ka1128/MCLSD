@@ -48,6 +48,25 @@ public final class DummyManager {
 
     private static final List<LivingEntity> DUMMIES = new ArrayList<>();
 
+    // 엔티티에 저장되는 표식. 재시작을 넘어 살아남는 유일한 판별 근거다.
+    private static final String DUMMY_TAG = "lsDummy";
+
+    // 월드를 훑으려면 서버 참조가 필요한데, 명령어 쪽에는 없다. 틱 이벤트에서 받아 둔다.
+    private static MinecraftServer server;
+
+    // 월드에 있는 표식 달린 더미를 리스트로 다시 모은다.
+    // 명령어에서만 부르므로(초당이 아니라 사람이 칠 때) 전 엔티티 순회 비용은 문제되지 않는다.
+    private static void rescan() {
+        if (server == null) return;
+        for (ServerLevel lv : server.getAllLevels()) {
+            for (Entity e : lv.getAllEntities()) {
+                if (!(e instanceof LivingEntity le)) continue;
+                if (!e.getPersistentData().getBoolean(DUMMY_TAG)) continue;
+                if (!DUMMIES.contains(le)) DUMMIES.add(le);
+            }
+        }
+    }
+
     // 더미의 방어도 — 0이면 "순수 화력"을, 보스의 실제 방어도를 넣으면 "체감 화력"을 잰다.
     // 바닐라 감쇄식은 최대 80%까지 깎으므로, 방어도를 무시한 측정값으로 보스 체력을 잡으면 크게 빗나간다.
     private static double dummyArmor = 0.0;
@@ -106,6 +125,12 @@ public final class DummyManager {
         dummy.setHealth((float) DUMMY_HP);
         applyArmor(dummy);
 
+        // ── 엔티티 자체에 표식을 박는다 ──
+        // DUMMIES 는 메모리 리스트라 서버를 껐다 켜면 비지만, 더미는 setPersistenceRequired 라
+        // 월드에 남는다. 그러면 리스트로만 판별할 때 그 더미가 통째로 투명해진다 —
+        // /dummy clear 가 안 먹고, 때려도 측정에 안 잡히고, 방어도 설정도 안 먹었다.
+        // persistentData 는 엔티티와 함께 저장되므로 재시작 후에도 살아 있다.
+        dummy.getPersistentData().putBoolean(DUMMY_TAG, true);
         level.addFreshEntity(dummy);
         DUMMIES.add(dummy);
         return DUMMIES.size();
@@ -130,6 +155,7 @@ public final class DummyManager {
     }
 
     public static int clear() {
+        rescan();   // 재시작으로 리스트가 비었어도 월드에 남은 더미를 잡아낸다
         int n = 0;
         for (LivingEntity d : DUMMIES) {
             if (d != null && d.isAlive()) { d.discard(); n++; }
@@ -277,6 +303,7 @@ public final class DummyManager {
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         tick++;
+        server = event.getServer();   // rescan() 이 쓸 유일한 서버 참조
         if (DUMMIES.isEmpty()) return;
         prune();
         // 더미가 죽어서 측정이 끊기지 않게 체력을 다시 채운다
@@ -344,18 +371,19 @@ public final class DummyManager {
         return out;
     }
 
+    // 표식만 본다 — 리스트를 뒤지면 재시작 후 남아 있는 더미의 피해가 통째로 누락된다.
     private static boolean isDummy(LivingEntity e) {
-        for (LivingEntity d : DUMMIES) {
-            if (d == e) return true;
-        }
-        return false;
+        return e.getPersistentData().getBoolean(DUMMY_TAG);
     }
 
+    // 죽은 참조를 걷어내고, 월드에 남아 있는 더미를 다시 주워 온다.
+    // 재시작 후에는 리스트가 비어 있으므로 이 rescan 이 유일한 복구 경로다.
     private static void prune() {
         Iterator<LivingEntity> it = DUMMIES.iterator();
         while (it.hasNext()) {
             LivingEntity d = it.next();
             if (d == null || d.isRemoved() || !d.isAlive()) it.remove();
         }
+        rescan();
     }
 }

@@ -143,10 +143,10 @@ public final class RelicSkills {
             Arrow arrow = com.laststardust.relics.LsArrows.create(sl, player, stack);
             arrow.setPos(eye.x, eye.y - 0.1, eye.z);
             arrow.shoot(dir.x, dir.y, dir.z, 3.2f, 0.4f);
-            arrow.setBaseDamage(2.70); // 1.32 -> 2.56 -> 2.70 (2026-07-27)
+            arrow.setBaseDamage(2.91); // 1.32 -> 2.56 -> 2.70 -> 2.91
             if (sl.getRandom().nextFloat() < 0.6f) arrow.setCritArrow(true); // 화살 크리
             arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
-            arrow.getPersistentData().putFloat("lsExplode", dmg(stack, 13.5f));  // 6.6 -> 12.8 -> 13.5
+            arrow.getPersistentData().putFloat("lsExplode", dmg(stack, 14.54f)); // 6.6 -> 12.8 -> 13.5 -> 14.54
             arrow.getPersistentData().putFloat("lsExplodeR", 2.5f); // 폭발 반경
             // 계측용 — 화살 직격은 바닐라 피해라 이름표를 화살에 실어 보낸다(DummyManager 가 읽는다)
             arrow.getPersistentData().putString("lsLabel", "유성 사격");
@@ -867,7 +867,7 @@ public final class RelicSkills {
         // 4.4 -> 8.32 -> 11.65 (2026-07-27). 8% 였던 것이 8.32 에서 16% 가 됐고,
         // 궁극기를 더 올려달라는 요청에 따라 x1.40 을 더 건다 (60초 창 500 -> 700, 21%).
         // 속사(평타 강화)를 가진 유물이라 평타 상한은 70% -> 75% 로 완화됐다.
-        ArrowStormManager.start(level, player, center, r, 60, dmgTick(stack, 12.3f)); // 11.65 -> 12.3 (x1.055)
+        ArrowStormManager.start(level, player, center, r, 60, dmgTick(stack, 13.25f)); // 12.3 -> 13.25 (x1.077)
 
         // ── 시전 연출: 조준 지점에서 하늘로 치솟는 별빛 기둥 + 다중 링 ──
         level.sendParticles(ParticleTypes.FLASH, center.x, center.y + 1, center.z, 3, 0.2, 0.2, 0.2, 0);
