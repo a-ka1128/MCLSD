@@ -2,7 +2,7 @@
 // 매일 새벽 3건 자동 롤(사냥/납품/정예). 완료 시 공동 금고 + 개인 기여도 적립.
 // 할 게 없는 날을 없앤다 — Vault Hunters의 Bounty Table 패턴.
 // 저장: bt_day · bt<n> (인코딩 "type|target|need|reward") · bt<n>_have · bt<n>_done
-// 기여도는 ls_town.js와 같은 키(town_c_<name>/town_cnames)에 적립 = 하나의 명예 보드.
+// 기여도의 주인은 모드다(LS.addContribution → TownData). 마을 화면의 명예 보드가 그 장부다.
 
 function btStore(server) { return server.overworld().persistentData }
 function btGetI(server, k) { return btStore(server).getInt(k) }
@@ -11,12 +11,10 @@ function btGetS(server, k) { return String(btStore(server).getString(k) || '') }
 function btSetS(server, k, v) { btStore(server).putString(k, v) }
 function btSay(server, text) { server.players.forEach(p => p.tell(Text.of(text))) }
 function btPlay(server, s, v, p) { server.runCommandSilent(`execute as @a at @s run playsound ${s} master @s ~ ~ ~ ${v} ${p}`) }
-function btAddContribution(server, name, pts) { // ls_town과 동일 키 사용
-  const p = btStore(server)
-  LS.addContribution(server, name, pts)   // 기여도는 모드가 소유 (마을 화면의 명예 보드와 같은 장부)
-  const csv = String(p.getString('town_cnames') || '')
-  const names = csv ? csv.split(',') : []
-  if (names.indexOf(name) < 0) { names.push(name); p.putString('town_cnames', names.join(',')) }
+// ※ 2026-07-30: persistentData 의 town_cnames 에 이름을 같이 남기던 코드를 지웠다.
+//   ls_stats.js 가 그 목록을 읽던 유일한 곳이었는데 이제 모드 장부를 직접 읽는다 — 아무도 안 보는 키였다.
+function btAddContribution(server, name, pts) {
+  LS.addContribution(server, name, pts)
 }
 
 const BT_COUNT = 3

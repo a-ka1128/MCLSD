@@ -22,12 +22,18 @@ function stTop(server, cat) {
   stNames(server).forEach(n => { const v = stGet(server, cat, n); if (v > bv) { bv = v; best = n } })
   return best ? { name: best, v: bv } : null
 }
-function stTopContrib(server) { // ls_town 기여도(town_c_) 1위
-  const csv = String(stStore(server).getString('town_cnames') || '')
-  const names = csv ? csv.split(',') : []
-  let best = null, bv = -1
-  names.forEach(n => { const v = stStore(server).getInt('town_c_' + n); if (v > bv) { bv = v; best = n } })
-  return best ? { name: best, v: bv } : null
+// 기여도 1위. 장부의 주인은 모드(TownData)다 — LS 바인딩으로 읽는다.
+//
+// ※ 2026-07-30 수정: 예전에는 persistentData 의 town_c_<name> 을 읽었는데, 그 키를 채우던
+//   ls_town.js 가 모드로 이관되며 .disabled 됐다(ARCHITECTURE.md). 쓰는 쪽만 사라지고 읽는 쪽이
+//   남아서 전원 0점으로 읽혔고, bv 가 -1 에서 시작하니 - CSV 첫 사람이 항상 1위 - 였다.
+//   조용히 틀린 값을 내보내는 종류의 고장이라 아무도 눈치채지 못했다.
+function stTopContrib(server) {
+  try {
+    const name = String(LS.topContributorName(server) || '')
+    if (!name) return null
+    return { name: name, v: LS.topContributorPoints(server) }
+  } catch (err) { lsWarn('ls_stats:topContrib', err); return null }
 }
 
 // ── 상시 추적 ──

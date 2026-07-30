@@ -49,7 +49,10 @@ public final class BabylonManager {
             this.level = level; this.caster = caster; this.perSpear = perSpear;
             this.ticksLeft = ticks; this.total = ticks; this.seed = ticks * 2654435761L;
         }
-        // Math.random()이 워크플로 환경에서 막혀 있어도 안전하도록 자체 난수
+        // 인스턴스마다 시드를 들고 도는 LCG — 전역 RNG 를 안 건드려서 창이 뜨는 자리가
+        // 이 시전 안에서만 결정된다(같은 시전은 같은 궤적).
+        // ※ 예전 주석은 "Math.random() 이 워크플로 환경에서 막혀서"라고 적어놨는데 틀렸다.
+        //   그건 마크 모드의 제약이 아니다 — 근거가 틀리면 다음 사람이 잘못된 이유로 흉내 낸다.
         double rnd() { seed = seed * 6364136223846793005L + 1442695040888963407L; return ((seed >>> 11) & 0xFFFFFFFFFFFFFL) / (double) (1L << 52); }
     }
 
