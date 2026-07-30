@@ -47,6 +47,11 @@ public final class BossFightTracker {
 
         // 페이즈가 올라간 직후 1회. 연출만 하고 실제 시전은 다음 주기에 온다.
         default void onPhaseChange(ServerLevel level, Fight f, List<ServerPlayer> near) {}
+
+        // 교전 중 매 틱. 우리 주기와 무관하게 - 보스 자신의 상태 - 를 읽어 그려야 할 때 쓴다
+        // (이그니스의 반격 자세처럼). 여기서 무거운 일을 하면 그대로 틱 비용이 되니
+        // 상태 한두 개 읽고 파티클 그리는 정도로만 쓴다.
+        default void onTick(ServerLevel level, Fight f, List<ServerPlayer> near) {}
     }
 
     private final ResourceLocation bossId;
@@ -105,6 +110,7 @@ public final class BossFightTracker {
                 continue;
             }
             f.idle = 0;
+            handler.onTick(level, f, near);
 
             // 페이즈 전환은 시전 주기와 무관하게 즉시 본다 — 체력이 넘어간 순간에 알려야
             // "무엇 때문에 달라졌는지"가 이어진다.

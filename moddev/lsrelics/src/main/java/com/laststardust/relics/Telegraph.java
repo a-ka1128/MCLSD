@@ -53,7 +53,11 @@ public final class Telegraph {
         // 위 셋은 «곧 온다»는 예고고, 이건 «지금 열려 있다»는 상태다. 그래서 cast() 가 아니라
         // band() 로 그린다 — 예고 시간도 판정도 없고, 열려 있는 동안 호출한 쪽이 매 틱 부른다.
         // 어휘를 한 파일에 모아 두는 게 목적이라 여기 둔다. 색 하나가 두 뜻을 가지면 안 된다.
-        OPENING(new Vector3f(0.25f, 1.00f, 0.35f), "지금 쳐라");
+        OPENING(new Vector3f(0.25f, 1.00f, 0.35f), "지금 쳐라"),
+        // 초록의 짝. 초록이 «지금 쳐라»면 파랑은 «치지 마라»다.
+        // 앞의 넷은 - 어디에 설 것인가 - 를 말하고, 이 둘만 - 언제 때릴 것인가 - 를 말한다.
+        // 그래서 바닥이 아니라 보스 몸을 감싸는 형태(aura)로 그린다 — 자리 이동으로 오독되면 안 된다.
+        HOLD   (new Vector3f(0.30f, 0.55f, 1.00f), "멈춰라");
 
         final Vector3f color;
         final String label;
@@ -97,6 +101,7 @@ public final class Telegraph {
             case DANGER:  return "§c";
             case STACK:   return "§e";
             case OPENING: return "§a";
+            case HOLD:    return "§9";
             default:      return "§d";
         }
     }
@@ -131,12 +136,32 @@ public final class Telegraph {
         }
     }
 
+    // ── 몸을 감싸는 표시 ──
+    // band() 가 «바닥의 어디»를 말한다면 이쪽은 «저 몸에 무슨 일이 있다»를 말한다.
+    // 링을 높이 방향으로 쌓아 기둥을 만든다 — 바닥에만 그리면 «저 자리를 피해라»로 오독된다.
+    public static void aura(ServerLevel level, Vec3 base, Kind kind, double radius, double height, int rings) {
+        ParticleOptions dust = new DustParticleOptions(kind.color, 1.2f);
+        int steps = 14;
+        for (int r = 0; r < rings; r++) {
+            double y = base.y + height * ((double) r / Math.max(1, rings - 1));
+            for (int i = 0; i < steps; i++) {
+                double a = Math.PI * 2 * i / steps + r * 0.22;   // 층마다 살짝 비틀어 나선처럼 보이게
+                level.sendParticles(dust, base.x + Math.cos(a) * radius, y, base.z + Math.sin(a) * radius,
+                    1, 0, 0, 0, 0);
+            }
+        }
+    }
+
     // 상태가 - 바뀐 순간 - 만 알린다. 매 틱 부르면 소리가 겹쳐 소음이 된다.
     // 열릴 때는 올라가는 음, 닫힐 때는 내려가는 음 — 화면을 안 보고 있어도 창을 안다.
     public static void announce(ServerLevel level, Vec3 center, double radius, Kind kind, boolean opening) {
-        level.playSound(null, center.x, center.y, center.z,
-            opening ? SoundEvents.NOTE_BLOCK_CHIME.value() : SoundEvents.NOTE_BLOCK_BASS.value(),
-            SoundSource.HOSTILE, 1.0f, opening ? 1.8f : 0.8f);
+        // 소리도 어휘의 일부다 — 색마다 다른 소리를 줘야 화면을 안 보고도 무엇이 켜졌는지 안다.
+        // 초록은 맑은 종(열렸다), 파랑은 쇳소리(막혔다). 닫힘은 둘 다 낮은 음.
+        var snd = !opening ? SoundEvents.NOTE_BLOCK_BASS.value()
+                : kind == Kind.HOLD ? SoundEvents.ANVIL_LAND
+                : SoundEvents.NOTE_BLOCK_CHIME.value();
+        level.playSound(null, center.x, center.y, center.z, snd, SoundSource.HOSTILE,
+            1.0f, !opening ? 0.8f : (kind == Kind.HOLD ? 1.4f : 1.8f));
         if (!opening) return;   // 닫힘은 소리로 충분하다. 글자까지 띄우면 «놓쳤다»만 강조된다.
         for (ServerPlayer p : level.players()) {
             if (p.position().distanceToSqr(center) <= radius * radius) {

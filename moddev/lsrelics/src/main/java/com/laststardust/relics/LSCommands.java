@@ -194,6 +194,77 @@ public final class LSCommands {
                         return 1;
                     }))
                 // ── T3 건틀렛 「분쇄 파문」 (보라 = 흩어져라) ──
+                .then(Commands.literal("monstrosity")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!MonstrosityGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — L_Ender's Cataclysm 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a네더라이트 괴물 소환 §7— 교전 후 §e" + (MonstrosityGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 심판. §8(/lsgimmick monstrosity now 로 즉시)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!MonstrosityGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 네더라이트 괴물이 없다. 먼저 /lsgimmick monstrosity summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§6◆ 네더라이트 괴물 §6「용암의 심판」 §8— 두 박자: §d흩어져라§8 → "
+                            + (MonstrosityGimmick.BEAT / 20.0) + "초 뒤 §e뭉쳐라"), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§8  주기 " + (MonstrosityGimmick.INTERVAL_P1 / 20) + "초 → 2페이즈("
+                            + (int) (MonstrosityGimmick.PHASE2_HP * 100) + "%) "
+                            + (MonstrosityGimmick.INTERVAL_P2 / 20) + "초 + 보스 발밑 빨강 = 세 어휘 동시"), false);
+                        for (Component line : MonstrosityGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
+                .then(Commands.literal("lich")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!LichGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — Bosses of Mass Destruction 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a리치 소환 §7— 교전 후 §e" + (LichGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 삼킴. §8(/lsgimmick lich now 로 즉시)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!LichGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 리치가 없다. 먼저 /lsgimmick lich summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§6◆ 리치 §9「별을 삼키는 자」 §8— " + (LichGimmick.SWALLOW_TICKS / 20)
+                            + "초 무적(§9파랑§8), §e노란 자리§8에 절반 이상이 "
+                            + (LichGimmick.HOLD_NEEDED / 20) + "초 모이면 해제"), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§8  못 막으면 최대 체력 " + (int) (LichGimmick.HEAL_FRAC * 100)
+                            + "% 회복 · 주기 " + (LichGimmick.INTERVAL_P1 / 20) + "초 → 2페이즈("
+                            + (int) (LichGimmick.PHASE2_HP * 100) + "%) " + (LichGimmick.INTERVAL_P2 / 20) + "초"), false);
+                        for (Component line : LichGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
                 .then(Commands.literal("gauntlet")
                     .then(Commands.literal("summon").executes(ctx -> {
                         ServerPlayer p = ctx.getSource().getPlayer();
@@ -241,11 +312,13 @@ public final class LSCommands {
                         ctx.getSource().sendSuccess(() -> line, false);
                     }
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§7T1 §c빨강§7 강철거인 · T2 §e노랑§7 이그니스 · T3 §d보라§7 건틀렛 §8| §a초록§7 지금 쳐라(취약 창)"), false);
+                        "§7T1 §c빨강§7 · T2 §e노랑§7 · T3 §d보라§7(+2P 조합) · T4 §6조합 시험§7 · 최종 §9파랑"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7언제 때릴 것인가 §8— §a초록§7 지금 쳐라(강철거인 취약 창) · §9파랑§7 멈춰라(이그니스 반격)"), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§8/lsgimmick summon · now · window · test <danger|stack|spread> · clear"), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§8/lsgimmick ignis <summon|now> · /lsgimmick gauntlet <summon|now>"), false);
+                        "§8/lsgimmick ignis · gauntlet · monstrosity · lich  <summon|now>"), false);
                     return 1;
                 }));
 
