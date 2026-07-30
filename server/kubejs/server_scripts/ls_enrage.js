@@ -47,6 +47,8 @@ ServerEvents.tick(event => {
   if (server.tickCount % 40 !== 0) return
 
   const now = server.tickCount
+  // 이번 훑기에서 살아 있다고 확인된 보스. 아래 정리 단계가 이걸 쓴다.
+  const seen = {}
 
   // ── 교전 중인 보스 찾기 ──
   // ※ 중첩 블록 안에서는 const/let 을 쓰지 않는다 — Rhino 가 매 실행마다
@@ -57,6 +59,7 @@ ServerEvents.tick(event => {
       var enId = String(e.type)
       if (!enIsBoss(enId)) return
       var enU = String(e.getUuid())
+      seen[enU] = true
 
       if (!EN_ACTIVE[enU]) {
         EN_ACTIVE[enU] = { start: now, stacks: 0, name: enId }
@@ -86,20 +89,71 @@ ServerEvents.tick(event => {
   })
 
   // ── 죽었거나 사라진 보스 정리 ──
-  Object.keys(EN_ACTIVE).forEach(u => {
-    var found = false
-    try {
-      server.overworld().getEntities().forEach(e => {
-        if (e && e.isAlive && e.isAlive() && String(e.getUuid()) === u) found = true
-      })
-    } catch (err) { lsWarn('ls_enrage:prune', err) }
-    if (!found) delete EN_ACTIVE[u]
-  })
+  // 위 훑기가 만든 seen 을 쓴다. 예전엔 장부의 보스마다 - 월드 전체를 다시 훑었다 - :
+  // 추적 4기면 2초마다 엔티티 전수 조사가 5번(위 1 + 아래 4) 돌았다. 이제 1번이다.
+  Object.keys(EN_ACTIVE).forEach(u => { if (!seen[u]) delete EN_ACTIVE[u] })
 })
 
+// 격노를 통째로 걷는다. 모디파이어는 엔티티에 붙어 있어서 장부만 비우면
+// - 공격력이 오른 채 그대로 남는다 - . 붙인 것을 먼저 떼고 나서 장부를 비운다.
+function enClear(server) {
+  var enN = 0
+  try {
+    server.overworld().getEntities().forEach(e => {
+      try {
+        if (!e || !e.getUuid) return
+        if (!EN_ACTIVE[String(e.getUuid())]) return
+        server.runCommandSilent(`attribute ${e.getUuid()} minecraft:generic.attack_damage modifier remove ${EN_MOD}`)
+        enN++
+      } catch (err) { lsWarn('ls_enrage:clear-one', err) }
+    })
+  } catch (err) { lsWarn('ls_enrage:clear', err) }
+  Object.keys(EN_ACTIVE).forEach(u => { delete EN_ACTIVE[u] })
+  return enN
+}
+
 ServerEvents.commandRegistry(event => {
-  const { commands: Commands } = event
+  const { commands: Commands, arguments: Arguments } = event
   event.register(Commands.literal('enrage')
+    // ── 되돌리는 길 ──
+    // 여태 status 뿐이었다. 8분 넘긴 전투에서 파티가 «다시 하자»를 하거나, 어딘가
+    // 잘못되어 격노가 폭주하면 - 서버를 재시작하는 것 말고 방법이 없었다 - .
+    // DawnCraft 교훈(docs/TODO.md D-3): 상태를 만드는 모든 것에 되돌리는 길을 둔다.
+    .then(Commands.literal('clear').requires(s => s.hasPermission(2)).executes(ctx => {
+      const n = enClear(ctx.source.server)
+      ctx.source.sendSystemMessage(Text.of(`§a격노 해제 §7— 보스 ${n}기에서 공격력 보정을 걷었다.`))
+      return 1
+    }))
+    // ── 시험하는 길 ──
+    // 유예가 8분이라, 격노가 제대로 걸리는지 보려면 8분짜리 전투를 해야 했다.
+    // 그래서 이 시스템은 만들어진 뒤로 한 번도 눈으로 확인된 적이 없다(SELF-CHECK 4-1).
+    // 여기서 단계를 직접 얹으면 30초 안에 확인된다.
+    .then(Commands.literal('now').requires(s => s.hasPermission(2))
+      .then(Commands.argument('stacks', Arguments.INTEGER.create(event)).executes(ctx => {
+        const s = ctx.source.server
+        const want = Math.max(1, Math.min(EN_MAX_STACK, Arguments.INTEGER.getResult(ctx, 'stacks')))
+        var enHit = 0
+        try {
+          s.overworld().getEntities().forEach(e => {
+            try {
+              if (!e || !e.isAlive || !e.isAlive()) return
+              if (!enIsBoss(String(e.type))) return
+              var enU2 = String(e.getUuid())
+              if (!EN_ACTIVE[enU2]) EN_ACTIVE[enU2] = { start: s.tickCount, stacks: 0, name: String(e.type) }
+              EN_ACTIVE[enU2].stacks = want
+              // 시작 시각도 같이 되돌린다 — 안 하면 다음 틱이 «경과 시간에 맞는 단계»를
+              // 다시 계산해 방금 얹은 값을 덮는다.
+              EN_ACTIVE[enU2].start = s.tickCount - EN_GRACE_TICKS - (want - 1) * EN_STEP_TICKS
+              enApply(s, e, want)
+              enHit++
+            } catch (err) { lsWarn('ls_enrage:now-one', err) }
+          })
+        } catch (err) { lsWarn('ls_enrage:now', err) }
+        ctx.source.sendSystemMessage(Text.of(
+          `§6격노 §e${want}단계§6 강제 §7— 보스 ${enHit}기 · 공격력 §c+${Math.round(want * EN_STEP_PCT * 100)}%`))
+        if (enHit === 0) ctx.source.sendSystemMessage(Text.of('§8오버월드에 살아 있는 보스가 없다.'))
+        return 1
+      })))
     .then(Commands.literal('status').executes(ctx => {
       const keys = Object.keys(EN_ACTIVE)
       if (keys.length === 0) { ctx.source.sendSystemMessage(Text.of('§7교전 중인 보스가 없습니다.')); return 1 }
@@ -110,6 +164,7 @@ ServerEvents.commandRegistry(event => {
         var enPct2 = Math.round(enSt2.stacks * EN_STEP_PCT * 100)
         ctx.source.sendSystemMessage(Text.of(`§7  ${enSt2.name} §8· §f${enSec}초 §8· §c+${enPct2}%`))
       })
+      ctx.source.sendSystemMessage(Text.of('§8/enrage now <단계> · clear'))
       return 1
     })))
 })
