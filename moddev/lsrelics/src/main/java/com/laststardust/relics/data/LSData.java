@@ -27,6 +27,7 @@ public class LSData extends SavedData {
 
     private final TownData town = new TownData();
     private final HeroData hero = new HeroData();
+    private final SiegeData siege = new SiegeData();
 
     // 성역 좌표 — 여러 시스템이 공유하는 가장 넓게 퍼진 상태다.
     // (공성·관문·구출·통계·귀환석이 전부 이걸 본다)
@@ -40,6 +41,12 @@ public class LSData extends SavedData {
     // 가호·유물·각성 — 사람에 붙는 성장 상태 (이관 3단계).
     public HeroData hero() {
         return hero;
+    }
+
+    // 공성 — 위협도·성벽·노드·최종장 (이관 4단계).
+    // 위협도는 성역 좌표만큼 넓게 퍼져 있다: 희망 게이지·호데고스 대사·몹 스케일링이 전부 이걸 본다.
+    public SiegeData siege() {
+        return siege;
     }
 
     // 관문 진행도 0~4 — 클리어한 봉인 수.
@@ -81,6 +88,7 @@ public class LSData extends SavedData {
         LSData data = new LSData();
         data.town.load(tag.getCompound("town"), registries);
         data.hero.load(tag.getCompound("hero"), registries);
+        data.siege.load(tag.getCompound("siege"), registries);
         CompoundTag s = tag.getCompound("sanctuary");
         data.sancSet = s.getBoolean("set");
         data.sancX = s.getInt("x");
@@ -94,6 +102,7 @@ public class LSData extends SavedData {
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("town", town.save(registries));
         tag.put("hero", hero.save(registries));
+        tag.put("siege", siege.save(registries));
         CompoundTag s = new CompoundTag();
         s.putBoolean("set", sancSet);
         s.putInt("x", sancX);

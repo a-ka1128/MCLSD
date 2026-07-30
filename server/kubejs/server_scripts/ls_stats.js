@@ -125,7 +125,9 @@ ServerEvents.tick(event => {
   const server = event.server
   const p = stStore(server)
   // 피날레 승리 → 15초 후 자동 폐막식 (1회)
-  if (p.getInt('ls_finale') === 100 && !p.getBoolean('cer_auto_done')) {
+  // 최종장 단계는 모드(LSData.siege)가 소유한다 (이관 4단계, 2026-07-31).
+  // 옛 키를 계속 읽으면 늘 0 이라 **최종 보스를 잡아도 폐막식이 영영 안 열린다.**
+  if (LS.finale(server) === 100 && !p.getBoolean('cer_auto_done')) {
     var cd = p.getInt('cer_auto_cd')
     if (cd === 0) p.putInt('cer_auto_cd', 15)
     else if (cd === 1) { p.putBoolean('cer_auto_done', true); p.putInt('cer_auto_cd', 0); cerStart(server) }

@@ -119,7 +119,9 @@ ServerEvents.tick(event => {
   var hoV = 0, hoT = 0, hoTr = 0
   try {
     hoV = hoValue(server)
-    hoT = hoStore(server).getInt('ls_threat')
+    // 위협도는 2026-07-31 부로 모드(LSData.siege)가 소유한다. 여기서 옛 키를 계속 읽으면
+    // **늘 0 이 나오고 사이드바의 «위협»이 영원히 0 으로 뜬다** — 오류도 로그도 없이.
+    hoT = LS.threat(server)
     hoTr = hoTier(hoV)
   } catch (e) { lsWarn('ls_hope:tick', e); return }
 

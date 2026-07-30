@@ -49,8 +49,12 @@ KubeJS 는 붙이기 빨랐지만, 하루 동안 **문법 검사로는 안 잡�
 
 ### 은퇴
 
-`ls_town.js.disabled` · `ls_income.js.disabled` · `ls_treasury.js.disabled`
-— 모드로 이관 완료. 비교·복구용으로만 남겨둠.
+`ls_town.js.disabled` · `ls_income.js.disabled` · `ls_treasury.js.disabled` (411줄)
+— **2026-07-31 삭제.** 모드 이관이 끝나고 마을 화면이 실제로 도는 걸 확인한 뒤라
+비교용으로서의 값이 끝났다. 남겨두는 쪽이 오히려 위험하다 — 확장자만 되돌리면
+**금고 장부가 두 벌이 되고**, 그건 이 이관이 없애려던 바로 그 상태다.
+
+되살리려면: `git show bd925b3:server/kubejs/server_scripts/ls_town.js.disabled`
 
 ---
 
@@ -112,8 +116,15 @@ LS.reviveRule(player)                // 부활 직후 무적 창 + 별빛 쇠약
 | 1 | **성역 좌표** (`ls_sanc_*`) | ✅ **완료** — `LSData.sanctuary()`. 스크립트는 `LS.sanctuaryX/Y/Z` 로 읽는다 |
 | 2 | **진행도** (`rf_progress`) | ✅ **완료** — `LSData.progress()`. 상한(0~4)도 그쪽이 건다 |
 | 3 | **가호·유물·각성** (`fate_*`·`relic_*`·`star_*`) | ✅ **완료 (2026-07-31)** — `LSData.hero()`. 상한(1~5)·중복 직업 판정도 그쪽이 건다 |
-| 4 | **공성** (`ls_siege` 1100+줄) | ⬜ **다음.** 최대 덩어리이자 간판 시스템 |
-| 5 | 나머지 (`bounty`·`casino`·`rescue`·`beacon`·`bossdiff`·`title`) | ⬜ 서로 거의 독립 |
+| 4 | **공성** (`ls_siege` 1200+줄) | ✅ **완료 (2026-07-31)** — `LSData.siege()`. 키 26개 + **바깥에서 읽던 6곳** |
+| 5 | 나머지 (`bounty`·`casino`·`rescue`·`beacon`·`bossdiff`·`title`) | ⬜ **다음.** 서로 거의 독립 |
+
+> **4단계에서 진짜 일은 자바가 아니라 읽는 쪽이었다.** 키 26개 중 다섯이 파일 경계를 넘어가는데,
+> 그쪽은 `ls_siege.js` 의 접근 함수를 부르지 않고 각자 persistentData 를 직접 읽고 있었다.
+> 쓰는 쪽만 옮겼으면 **희망 게이지가 늘 최대 · 호데고스 영원히 침묵 · 성벽 붕괴 대사 없음 ·
+> 최종 보스를 잡아도 폐막식 없음** 이 되고 아무 오류도 안 났다.
+> 여섯 번째는 스캐너가 잡았다 — `ls_rift.js` 가 `ls_finale_armed` 를 **쓰는** 쪽이었고,
+> 그대로 뒀으면 마지막 봉인을 풀어도 「가장 긴 밤」이 영영 안 열렸다.
 
 > **매 단계 끝에 `python tools/scan_dead_kubejs.py` 를 돌린다.**
 > 이관은 «쓰는 쪽을 옮겼다»로 안 끝난다 — 읽는 쪽을 같이 안 옮기면 조용히 기본값을 읽는다.

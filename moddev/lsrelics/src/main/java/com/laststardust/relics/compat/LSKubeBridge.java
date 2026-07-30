@@ -1,6 +1,7 @@
 package com.laststardust.relics.compat;
 
 import com.laststardust.relics.data.LSData;
+import com.laststardust.relics.data.SiegeData;
 import com.laststardust.relics.data.TownCatalog;
 import com.laststardust.relics.town.TownGui;
 
@@ -201,6 +202,298 @@ public class LSKubeBridge implements KubeJSPlugin {
         // 이관이 실제로 됐는지 한 줄로 본다 (/lsdata).
         public String heroSummary(MinecraftServer server) {
             return server == null ? "" : LSData.get(server).hero().summary();
+        }
+
+        // ── 공성 (이관 4단계) ──
+        // 키 26개. 이름을 하나하나 메서드로 낸다 — 문자열 키 하나로 받는 통로
+        // (`LS.siegeI(server, 'ls_threat')` 같은 것)를 두면 이관해서 얻는 게 없다.
+        // 그 형태는 오타가 여전히 «예외 없이 0» 이고, 그게 애초에 여기로 옮기는 이유다.
+        //
+        // ※ **읽는 쪽 다섯이 다른 파일에 있다** — `ls_hope`(위협) · `ls_voice`(위협·성벽·진행·첫격퇴) ·
+        //   `ls_stats`(최종장). 그쪽도 이 통로로 바꿨다. 쓰는 쪽만 옮기면 저 다섯이 조용히 0 을 읽는다.
+        private SiegeData sg(MinecraftServer server) {
+            return LSData.get(server).siege();
+        }
+
+        private void sgDirty(MinecraftServer server) {
+            LSData.get(server).dirty();
+        }
+
+        public int threat(MinecraftServer server) {
+            return server == null ? 0 : sg(server).threat();
+        }
+
+        public void setThreat(MinecraftServer server, int v) {
+            if (server == null) return;
+            sg(server).setThreat(v);
+            sgDirty(server);
+        }
+
+        // 노드는 CSV 한 줄로 주고받는다(스크립트가 이미 그 형식이다).
+        public String nodeCsv(MinecraftServer server) {
+            return server == null ? "" : sg(server).nodeCsv();
+        }
+
+        public void setNodeCsv(MinecraftServer server, String csv) {
+            if (server == null) return;
+            sg(server).setNodeCsv(csv);
+            sgDirty(server);
+        }
+
+        public int nodeCount(MinecraftServer server) {
+            return server == null ? 0 : sg(server).nodeCount();
+        }
+
+        // ── 성벽 ──
+        // `wallInit` 을 따로 내는 이유: hp 0 이 «미설정»인지 «부서짐»인지 스크립트가 가려야 한다.
+        public boolean wallInit(MinecraftServer server) {
+            return server != null && sg(server).wallInit();
+        }
+
+        public int wallHpRaw(MinecraftServer server) {
+            return server == null ? 0 : sg(server).wallHpRaw();
+        }
+
+        // 천장은 호출부가 준다 — 최대 HP 가 `3000 + 방벽Lv×1000` 이고 3000 은 스크립트 상수다.
+        public void setWallHp(MinecraftServer server, int hp, int max) {
+            if (server == null) return;
+            sg(server).setWallHp(hp, max);
+            sgDirty(server);
+        }
+
+        public int wallRadius(MinecraftServer server) {
+            return server == null ? 0 : sg(server).wallRadius();
+        }
+
+        public void setWallRadius(MinecraftServer server, int r) {
+            if (server == null) return;
+            sg(server).setWallRadius(r);
+            sgDirty(server);
+        }
+
+        public int wallWarn(MinecraftServer server) {
+            return server == null ? 0 : sg(server).wallWarn();
+        }
+
+        public void setWallWarn(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setWallWarn(n);
+            sgDirty(server);
+        }
+
+        public boolean wallLastStand(MinecraftServer server) {
+            return server != null && sg(server).wallLastStand();
+        }
+
+        public void setWallLastStand(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setWallLastStand(v);
+            sgDirty(server);
+        }
+
+        public int wallStandUntil(MinecraftServer server) {
+            return server == null ? 0 : sg(server).wallStandUntil();
+        }
+
+        public void setWallStandUntil(MinecraftServer server, int t) {
+            if (server == null) return;
+            sg(server).setWallStandUntil(t);
+            sgDirty(server);
+        }
+
+        // ── 최종장 ──
+        public int finale(MinecraftServer server) {
+            return server == null ? 0 : sg(server).finale();
+        }
+
+        public void setFinale(MinecraftServer server, int v) {
+            if (server == null) return;
+            sg(server).setFinale(v);
+            sgDirty(server);
+        }
+
+        public boolean finaleArmed(MinecraftServer server) {
+            return server != null && sg(server).finaleArmed();
+        }
+
+        public void setFinaleArmed(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setFinaleArmed(v);
+            sgDirty(server);
+        }
+
+        public boolean finaleNightOk(MinecraftServer server) {
+            return server != null && sg(server).finaleNightOk();
+        }
+
+        public void setFinaleNightOk(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setFinaleNightOk(v);
+            sgDirty(server);
+        }
+
+        public boolean trueSpawned(MinecraftServer server) {
+            return server != null && sg(server).trueSpawned();
+        }
+
+        public void setTrueSpawned(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setTrueSpawned(v);
+            sgDirty(server);
+        }
+
+        public boolean trueFormOff(MinecraftServer server) {
+            return server != null && sg(server).trueFormOff();
+        }
+
+        public void setTrueFormOff(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setTrueFormOff(v);
+            sgDirty(server);
+        }
+
+        public boolean dawnbreak(MinecraftServer server) {
+            return server != null && sg(server).dawnbreak();
+        }
+
+        public void setDawnbreak(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setDawnbreak(v);
+            sgDirty(server);
+        }
+
+        // ── 진행 중인 공세 ──
+        public boolean siegeActive(MinecraftServer server) {
+            return server != null && sg(server).siegeActive();
+        }
+
+        public void setSiegeActive(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setSiegeActive(v);
+            sgDirty(server);
+        }
+
+        public boolean siegeGrand(MinecraftServer server) {
+            return server != null && sg(server).siegeGrand();
+        }
+
+        public void setSiegeGrand(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setSiegeGrand(v);
+            sgDirty(server);
+        }
+
+        public int siegeWaves(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeWaves();
+        }
+
+        public void setSiegeWaves(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setSiegeWaves(n);
+            sgDirty(server);
+        }
+
+        public int siegeWaveNo(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeWaveNo();
+        }
+
+        public void setSiegeWaveNo(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setSiegeWaveNo(n);
+            sgDirty(server);
+        }
+
+        public int siegeRemaining(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeRemaining();
+        }
+
+        public void setSiegeRemaining(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setSiegeRemaining(n);
+            sgDirty(server);
+        }
+
+        public int siegeReward(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeReward();
+        }
+
+        public void setSiegeReward(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setSiegeReward(n);
+            sgDirty(server);
+        }
+
+        public int siegeAngle(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeAngle();
+        }
+
+        public void setSiegeAngle(MinecraftServer server, int deg) {
+            if (server == null) return;
+            sg(server).setSiegeAngle(deg);
+            sgDirty(server);
+        }
+
+        // 공세를 끝낼 때 되돌려야 하는 네 값을 한 번에 — 스크립트에 이 네 줄이 두 군데 있었다.
+        public void endSiege(MinecraftServer server) {
+            if (server == null) return;
+            sg(server).endSiege();
+            sgDirty(server);
+        }
+
+        // ── 하루 · 예고 ──
+        public int dreadStep(MinecraftServer server) {
+            return server == null ? 0 : sg(server).dreadStep();
+        }
+
+        public void setDreadStep(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setDreadStep(n);
+            sgDirty(server);
+        }
+
+        public int annTier(MinecraftServer server) {
+            return server == null ? 0 : sg(server).annTier();
+        }
+
+        public void setAnnTier(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setAnnTier(n);
+            sgDirty(server);
+        }
+
+        public int siegeDay(MinecraftServer server) {
+            return server == null ? 0 : sg(server).day();
+        }
+
+        public void setSiegeDay(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setDay(n);
+            sgDirty(server);
+        }
+
+        public boolean wasNight(MinecraftServer server) {
+            return server != null && sg(server).wasNight();
+        }
+
+        public void setWasNight(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setWasNight(v);
+            sgDirty(server);
+        }
+
+        // ── 이력 ──
+        public boolean firstSiegeDone(MinecraftServer server) {
+            return server != null && sg(server).firstSiegeDone();
+        }
+
+        public void setFirstSiegeDone(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setFirstSiegeDone(v);
+            sgDirty(server);
+        }
+
+        public String siegeSummary(MinecraftServer server) {
+            return server == null ? "" : sg(server).summary();
         }
 
         private int altar(MinecraftServer server, String fateKey, int axis) {

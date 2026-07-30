@@ -4,8 +4,7 @@
 // 제단이 예고된다. 그 좌표로 원정 → 접근하면 제단이 출현 → 제물대 우클릭으로 보스 소환 → 처치.
 // 처치 시 월드티어 상승 + 금고 보상 + 다음 봉인 개방. 마지막(T4) 클리어 → 피날레 자동 무장.
 // ※ 자연 생성 구조물 보스(TF/Aether 등)는 그대로 탐험 보상으로 남는다 — 이건 "진행 게이트"만 담당.
-// 저장(오버월드 persistentData, ls_siege/ls_town과 공유): ls_finale_armed
-// ※ 성역 좌표와 금고는 모드(LSData)가 소유한다 — 브릿지 `LS` 로 읽고 쓴다. 여기에 사본은 없다.
+// ※ 성역 좌표·금고·최종장 무장은 모드(LSData)가 소유한다 — 브릿지 `LS` 로 읽고 쓴다. 사본은 없다.
 //   전용: rf_active/rf_pending/rf_engaged · rf_tier · rf_ax/rf_ay/rf_az
 //   ※ 클리어 수(진행도)는 모드(LSData)가 소유 — `LS.progress()` / `LS.setProgress()`
 
@@ -198,7 +197,11 @@ function completeTier(server) {
   const done = idx + 1
   if (done >= MAX_TIER) {
     // 마지막 게이트 → 피날레 무장 (남은 균열 노드를 파괴하면 '가장 긴 밤' 개막)
-    rfSetB(server, 'ls_finale_armed', true)
+    // 최종장 무장은 모드(LSData.siege)가 소유한다 (이관 4단계, 2026-07-31).
+    // 여기가 옛 키에 계속 쓰면 `ls_siege.js` 는 모드를 보므로 **무장이 조용히 무시되고**,
+    // 마지막 노드를 부숴도 「가장 긴 밤」이 영영 안 열린다. 오류도 로그도 안 난다.
+    // (`tools/scan_dead_kubejs.py` B절이 「쓰는데 읽는 곳이 없다」로 잡아줬다.)
+    LS.setFinaleArmed(server, true)
     server.players.forEach(p => { try { ttGrant(server, p.username, 'rift_conqueror') } catch (e) { lsWarn('ls_rift:200', e) } }) // 칭호 (ls_title.js)
     rsay(server, '§5✧ 모든 균열 봉인이 풀렸다. §7이제 남은 §d균열 노드§7를 파괴하면 — §c어둠의 심장§7이 강림한다.')
     rsay(server, '§8   (성역에 집결하라. 가장 긴 밤이 다가온다.)')

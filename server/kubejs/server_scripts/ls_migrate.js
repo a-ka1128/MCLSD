@@ -1,4 +1,10 @@
-// Last Stardust — 옛 persistentData → 모드 장부 한 번 옮기기 (이관 3단계)
+// Last Stardust — 옛 persistentData → 모드 장부 한 번 옮기기 (이관 3·4단계)
+//
+// ── 두 단계, 두 플래그 ──
+// 3단계(가호·유물·각성)와 4단계(공성)는 **플래그를 따로 쓴다.** 지금 도는 월드는 이미
+// 3단계 플래그가 켜져 있어서, 같은 플래그를 재활용하면 4단계가 「이미 했음」으로 건너뛰어진다.
+// 그러면 위협도·성벽·최종장 진행이 전부 0 에서 시작하고 **아무 오류도 나지 않는다.**
+// 이관에서 제일 무서운 실패는 늘 이 모양이다 — 조용하고, 기본값이라서 그럴듯하다.
 //
 // `ls_fate`·`ls_relic`·`ls_ascend` 가 오늘부로 모드 장부(HeroData)를 본다. 그런데 이미 돌던
 // 월드에는 옛 키(`fate_<이름>` · `relic_<이름>` · `star_<이름>` · `relic_altar_<가호>_*`)에
@@ -19,13 +25,48 @@
 // (지우기 전에 `/lsdata` 로 장부에 값이 있는지 먼저 볼 것)
 //
 // ── 스캐너가 이 파일을 지적하는 건 정상이다 ──
-// `tools/scan_dead_kubejs.py` B절이 `fate_`·`relic_`·`star_`·`relic_altar_` 를
-// 「읽는데 쓰는 곳이 없다」로 잡는다. **맞는 말이고, 그게 이관이 끝났다는 증거다.**
+// `tools/scan_dead_kubejs.py` B절이 `fate_`·`relic_`·`star_`·`relic_altar_` 와
+// 공성 키들을 「읽는데 쓰는 곳이 없다」로 잡는다. **맞는 말이고, 그게 이관이 끝났다는 증거다.**
 // 쓰는 쪽은 전부 모드로 갔고 읽는 쪽은 여기 하나만 남았다.
 // 그 경고를 없애려고 이 읽기를 지우면 옛 월드의 데이터를 옮길 방법이 사라진다.
 
 const MG_FLAG = 'ls_hero_migrated'
+const MG_SIEGE_FLAG = 'ls_siege_migrated'
 const MG_FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer']
+
+// ── 공성 키 (이관 4단계) ──
+// 3단계와 **플래그를 따로 둔다.** 지금 도는 월드는 이미 `ls_hero_migrated` 가 켜져 있어서,
+// 같은 플래그를 쓰면 공성 옮기기가 「이미 했음」으로 건너뛰어진다 — 그러면 위협도·성벽·
+// 최종장 진행이 전부 0 으로 시작하고, **아무 오류 없이** 그렇게 된다.
+//
+// [옛 키, 종류, 세터 이름] — 세터는 LS 바인딩의 메서드다.
+// 성벽 HP 는 여기 없다. 천장 인자가 필요하고 «미설정/부서짐» 구분이 걸려 있어 따로 다룬다.
+const MG_SIEGE = [
+  ['ls_threat',            'i', 'setThreat'],
+  ['ls_nodes_names',       's', 'setNodeCsv'],
+  ['wall_r',               'i', 'setWallRadius'],
+  ['wall_warn',            'i', 'setWallWarn'],
+  ['wall_last_stand',      'b', 'setWallLastStand'],
+  ['wall_stand_until',     'i', 'setWallStandUntil'],
+  ['ls_finale',            'i', 'setFinale'],
+  ['ls_finale_armed',      'b', 'setFinaleArmed'],
+  ['ls_fn_ok',             'b', 'setFinaleNightOk'],
+  ['ls_true_spawned',      'b', 'setTrueSpawned'],
+  ['ls_trueform_off',      'b', 'setTrueFormOff'],
+  ['ls_dawnbreak',         'b', 'setDawnbreak'],
+  ['ls_siege_active',      'b', 'setSiegeActive'],
+  ['ls_siege_grand',       'b', 'setSiegeGrand'],
+  ['ls_siege_waves',       'i', 'setSiegeWaves'],
+  ['ls_siege_wave_no',     'i', 'setSiegeWaveNo'],
+  ['ls_siege_remaining',   'i', 'setSiegeRemaining'],
+  ['ls_siege_reward',      'i', 'setSiegeReward'],
+  ['ls_siege_ang',         'i', 'setSiegeAngle'],
+  ['ls_dread_step',        'i', 'setDreadStep'],
+  ['ls_ann_tier',          'i', 'setAnnTier'],
+  ['ls_day',               'i', 'setSiegeDay'],
+  ['ls_night',             'b', 'setWasNight'],
+  ['ls_first_siege_done',  'b', 'setFirstSiegeDone']
+]
 
 function mgStore(server) { return server.overworld().persistentData }
 
@@ -97,18 +138,66 @@ function mgRun(server, force) {
   return moved
 }
 
+// ── 공성 (이관 4단계) ──
+// 0/false 는 옮기지 않는다. 새 월드의 기본값과 구분이 안 되는 값이라, 옮겨도 결과가 같고
+// 「N개 옮김」 숫자만 부풀어 «실제로 뭔가 있었나»를 못 읽게 된다.
+function mgRunSiege(server, force) {
+  const st = mgStore(server)
+  if (!force && st.getBoolean(MG_SIEGE_FLAG)) return null
+
+  var n = 0
+  MG_SIEGE.forEach(row => {
+    try {
+      var mgK = row[0], mgT = row[1], mgFn = row[2]
+      if (mgT === 'i') {
+        var iv = st.getInt(mgK)
+        if (iv === 0) return
+        LS[mgFn](server, iv)
+      } else if (mgT === 'b') {
+        if (!st.getBoolean(mgK)) return
+        LS[mgFn](server, true)
+      } else {
+        var sv = String(st.getString(mgK) || '')
+        if (!sv) return
+        LS[mgFn](server, sv)
+      }
+      n++
+    } catch (e) { lsWarn('ls_migrate:siege:' + row[0], e) }
+  })
+
+  // 성벽 HP — `wall_init` 이 꺼져 있으면 «아직 한 번도 안 정해짐»이라 그대로 둔다.
+  // 옮기면 새 월드의 성벽이 처음부터 부서진 상태가 된다.
+  // 천장은 값 자신을 준다 — 여기서 자를 이유가 없고(이미 저장될 때 잘렸다),
+  // 방벽 레벨을 읽으려면 `ls_siege.js` 의 함수에 기대야 해서 파일 간 결합이 생긴다.
+  try {
+    if (st.getBoolean('wall_init')) {
+      var wv = st.getInt('wall_hp')
+      LS.setWallHp(server, wv, Math.max(wv, 1))
+      n++
+    }
+  } catch (e) { lsWarn('ls_migrate:siege:wall_hp', e) }
+
+  st.putBoolean(MG_SIEGE_FLAG, true)
+  return n
+}
+
 ServerEvents.loaded(event => {
   const server = event.server
   if (!server) return
   var mgR = null
-  try { mgR = mgRun(server, false) } catch (e) { lsWarn('ls_migrate:run', e); return }
-  if (!mgR) return
-  // 아무것도 없으면(새 월드) 조용히 넘어간다 — 옮길 게 없는 건 사고가 아니다.
-  if (mgR.fate + mgR.relic + mgR.star + mgR.altar === 0) {
-    console.log('[LS-MIGRATE] 옛 키 없음 — 새 월드로 본다')
-    return
+  try { mgR = mgRun(server, false) } catch (e) { lsWarn('ls_migrate:run', e) }
+  if (mgR) {
+    // 아무것도 없으면(새 월드) 조용히 넘어간다 — 옮길 게 없는 건 사고가 아니다.
+    if (mgR.fate + mgR.relic + mgR.star + mgR.altar === 0) console.log('[LS-MIGRATE] 성장 — 옛 키 없음 (새 월드로 본다)')
+    else console.log(`[LS-MIGRATE] 성장 → 모드 장부 — 가호 ${mgR.fate} · 유물 ${mgR.relic} · 각성 ${mgR.star} · 제단 ${mgR.altar}`)
   }
-  console.log(`[LS-MIGRATE] 모드 장부로 옮김 — 가호 ${mgR.fate} · 유물 ${mgR.relic} · 각성 ${mgR.star} · 제단 ${mgR.altar}`)
+
+  var mgS = null
+  try { mgS = mgRunSiege(server, false) } catch (e) { lsWarn('ls_migrate:siege', e) }
+  if (mgS !== null) {
+    if (mgS === 0) console.log('[LS-MIGRATE] 공성 — 옛 키 없음 (새 월드로 본다)')
+    else console.log(`[LS-MIGRATE] 공성 → 모드 장부 — 값 ${mgS}개 · ${LS.siegeSummary(server)}`)
+  }
 })
 
 ServerEvents.commandRegistry(event => {
@@ -119,22 +208,28 @@ ServerEvents.commandRegistry(event => {
       const s = ctx.source.server
       ctx.source.sendSystemMessage(Text.of('§6═══ 모드 장부 §6═══'))
       ctx.source.sendSystemMessage(Text.of(`§7성장 §8— ${LS.heroSummary(s)}`))
+      ctx.source.sendSystemMessage(Text.of(`§7공성 §8— ${LS.siegeSummary(s)}`))
       ctx.source.sendSystemMessage(Text.of(
         `§7성역 §8— ${LS.hasSanctuary(s) ? LS.sanctuaryX(s) + ', ' + LS.sanctuaryY(s) + ', ' + LS.sanctuaryZ(s) : '미지정'}`
         + ` §8· 관문 §7${LS.progress(s)}/4§8 · 금고 §7${LS.treasury(s)}`))
+      // 두 옮기기를 따로 표시한다 — 하나만 됐을 때 그걸 알아볼 수 있어야 한다.
       ctx.source.sendSystemMessage(Text.of(
-        `§8옛 키 옮기기: ${mgStore(s).getBoolean(MG_FLAG) ? '§7완료' : '§c아직'}`))
+        `§8옛 키 옮기기 — 성장 ${mgStore(s).getBoolean(MG_FLAG) ? '§7완료' : '§c아직'}`
+        + `§8 · 공성 ${mgStore(s).getBoolean(MG_SIEGE_FLAG) ? '§7완료' : '§c아직'}`))
       return 1
     })
     // 다시 옮긴다. 멱등이라 여러 번 돌려도 결과가 같다 — 옛 키가 아직 남아 있는 한.
     .then(Commands.literal('remigrate').requires(s => s.hasPermission(2)).executes(ctx => {
       const s = ctx.source.server
-      var r = null
+      var r = null, rs = null
       try { r = mgRun(s, true) } catch (e) { lsWarn('ls_migrate:cmd', e) }
-      if (!r) { ctx.source.sendSystemMessage(Text.of('§c실패 — 로그 확인')); return 0 }
-      ctx.source.sendSystemMessage(Text.of(
-        `§a다시 옮김 §7— 가호 ${r.fate} · 유물 ${r.relic} · 각성 ${r.star} · 제단 ${r.altar}`))
+      try { rs = mgRunSiege(s, true) } catch (e) { lsWarn('ls_migrate:cmd:siege', e) }
+      if (r === null && rs === null) { ctx.source.sendSystemMessage(Text.of('§c실패 — 로그 확인')); return 0 }
+      if (r) ctx.source.sendSystemMessage(Text.of(
+        `§a성장 다시 옮김 §7— 가호 ${r.fate} · 유물 ${r.relic} · 각성 ${r.star} · 제단 ${r.altar}`))
+      if (rs !== null) ctx.source.sendSystemMessage(Text.of(`§a공성 다시 옮김 §7— 값 ${rs}개`))
       ctx.source.sendSystemMessage(Text.of(`§8지금 장부: ${LS.heroSummary(s)}`))
+      ctx.source.sendSystemMessage(Text.of(`§8            ${LS.siegeSummary(s)}`))
       return 1
     })))
 })

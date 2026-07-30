@@ -97,9 +97,8 @@ public class HeroData {
         altar.put(fateKey, new BlockPos(x, y, z));
     }
 
-    public void clearAltar(String fateKey) {
-        altar.remove(fateKey);
-    }
+    // ※ clearAltar 는 2026-07-31 삭제했다 — 부르는 곳이 없었다. 제단은 옮기지 않고 «다시 놓는»
+    //   물건이라 setAltar 하나로 끝난다. 지우는 경로가 필요해지면 그때 만든다.
 
     // ── 저장 ──
     // TreeMap 으로 한 번 감싸 이름 순으로 쓴다. 저장 파일을 사람이 열어볼 때
