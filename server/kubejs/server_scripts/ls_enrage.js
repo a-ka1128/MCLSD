@@ -50,6 +50,14 @@ ServerEvents.tick(event => {
   // 이번 훑기에서 살아 있다고 확인된 보스. 아래 정리 단계가 이걸 쓴다.
   const seen = {}
 
+  // ── 알림은 보스마다가 아니라 «이번 훑기에 한 번» ──
+  // 문구가 「보스 공격력 +N%」라는 전역 서술인데 개체 루프 안에서 방송하고 있었다.
+  // 2026-07-31 시험 로그에 같은 줄이 한 초에 다섯 번 찍혔다 — 시험 소환한 다섯 기가
+  // 나란히 유예를 넘긴 것이다. 실전에서도 공성 마지막 웨이브·T4 처럼 보스가 겹치면 그대로 겹친다.
+  // 그래서 루프는 «있었다»만 적고, 방송은 루프가 끝난 뒤 한 번 한다.
+  var enBegan = false   // 처음 격노에 든 보스가 있었나
+  var enLoud = 0        // 4단계 배수를 새로 넘은 것 중 가장 높은 단계
+
   // ── 교전 중인 보스 찾기 ──
   // ※ 중첩 블록 안에서는 const/let 을 쓰지 않는다 — Rhino 가 매 실행마다
   //    redeclaration 으로 터진다(tools/scan_try_decls.py 가 검출). var + 고유 접두사.
@@ -75,18 +83,28 @@ ServerEvents.tick(event => {
       enSt.stacks = enWant
       enApply(server, e, enWant)
 
-      var enPct = Math.round(enWant * EN_STEP_PCT * 100)
-      if (enWant === 1) {
-        server.runCommandSilent('title @a subtitle {"text":"보스가 격앙되기 시작한다","color":"gold"}')
-        server.runCommandSilent('title @a times 5 40 10')
-        server.runCommandSilent('title @a title {"text":""}')
-        server.tell(Text.of(`§6⚠ 격노 §7— 시간이 길어지고 있습니다. 보스 공격력 §c+${enPct}%§7 (30초마다 누적)`))
-      } else if (enWant % 4 === 0) {
-        // 매 단계 알리면 소음이 된다. 4단계(2분)마다만.
-        server.tell(Text.of(`§c⚠ 격노 누적 §7— 보스 공격력 §c+${enPct}%`))
-      }
+      if (enWant === 1) enBegan = true
+      // 매 단계 알리면 소음이 된다. 4단계(2분)마다만.
+      else if (enWant % 4 === 0 && enWant > enLoud) enLoud = enWant
     } catch (err) { lsWarn('ls_enrage:scan', err) }
   })
+
+  // 둘 다 걸릴 수 있다(한 기는 막 들어오고 다른 기는 8단계를 넘김). 그때는 두 줄이 맞다 —
+  // 서로 다른 사실이고, 합치면 «시작인지 누적인지» 가 사라진다.
+  if (enBegan) {
+    try {
+      server.runCommandSilent('title @a subtitle {"text":"보스가 격앙되기 시작한다","color":"gold"}')
+      server.runCommandSilent('title @a times 5 40 10')
+      server.runCommandSilent('title @a title {"text":""}')
+      server.tell(Text.of(
+        `§6⚠ 격노 §7— 시간이 길어지고 있습니다. 보스 공격력 §c+${Math.round(EN_STEP_PCT * 100)}%§7 (30초마다 누적)`))
+    } catch (err) { lsWarn('ls_enrage:began', err) }
+  }
+  if (enLoud > 0) {
+    try {
+      server.tell(Text.of(`§c⚠ 격노 누적 §7— 보스 공격력 §c+${Math.round(enLoud * EN_STEP_PCT * 100)}%`))
+    } catch (err) { lsWarn('ls_enrage:loud', err) }
+  }
 
   // ── 죽었거나 사라진 보스 정리 ──
   // 위 훑기가 만든 seen 을 쓴다. 예전엔 장부의 보스마다 - 월드 전체를 다시 훑었다 - :
