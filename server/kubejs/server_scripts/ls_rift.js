@@ -157,6 +157,79 @@ function revealIfNear(server) {
   console.log(`[LS-RIFT] altar revealed tier=${activeTierIdx(server)} at ${ax},${ay},${az}`)
 }
 
+// ════════════════════════════════════════════════════════════
+//  전멸 천장 — 「별의 유예」
+// ════════════════════════════════════════════════════════════
+// 같은 관문에서 세 번 전멸하면, 그 관문에 한해 저항 I 를 얹는다.
+//
+// ── 왜 필요한가 ──
+// 관문은 진행 게이트다. 막히면 유물 각성도, 세계 등급도, 최종장도 전부 멈춘다.
+// 여덟 명이 시간을 맞춰 모이는 서버에서 「이번 주도 못 깼다」가 세 번 겹치면
+// 그 다음 주에는 네 명만 온다. 실력 문제가 아니라 **일정 문제로 죽는 콘텐츠**가 된다.
+//
+// ── 왜 저항인가 (그리고 왜 공격력이 아닌가) ──
+// 보스 체력 목표는 「4명·60초」에서 역산한 값이다(`ls_config.js`). 주는 피해를 올리면
+// 그 계산이 통째로 무효가 되고, 다음에 측정할 때 무엇이 원인인지 못 가린다.
+// **받는 피해만 줄이면 체력 목표는 그대로 유효하다** — 싸움이 길어질 뿐 짧아지지 않는다.
+//
+// 그리고 속성 모디파이어가 아니라 바닐라 저항 효과를 쓴다. `attack_damage` 류의 속성은
+// **근접 평타만** 본다 — 원거리 4종과 8유물의 스킬은 피해를 직접 계산해서 전부 빠져나간다.
+// 이 함정으로 「별빛 쇠약」이 한 번 조용히 반쪽으로 돌았다(TODO A절 부활 규칙 항목).
+//
+// ── 왜 한 계단인가 ──
+// 3회부터 저항 I, 그 뒤로는 안 올린다. 전멸마다 세지면 「일부러 지는 게 이득」이 되고,
+// 그건 천장이 아니라 사다리다. 천장은 바닥을 깔아주는 것이지 길을 만들어주는 게 아니다.
+const RF_PITY_AT = 3          // 이만큼 전멸하면 발동
+const RF_PITY_MIN = 20 * 60 * 20   // 저항 지속 20분 — 한 판을 덮을 만큼
+
+function rfWipes(server, idx) { return rfGetI(server, 'rf_wipe_' + idx) }
+function rfSetWipes(server, idx, n) { rfSetI(server, 'rf_wipe_' + idx, n) }
+
+// 전멸 감지. `ls_voice.js` 에도 같은 판정이 있지만 부르지 않는다 —
+// 그 파일은 **다른 스크립트를 수정하지 않고 상태만 감시한다**는 설계라, 반대로
+// 여기서 그쪽 함수를 부르면 그 성질이 깨진다(그 파일을 지워도 게임은 돌아야 한다).
+// 조건도 다르다: 저쪽은 언제 죽든, 여기는 «관문 보스와 교전 중일 때»만 센다.
+EntityEvents.death(event => {
+  const e = event.entity
+  if (!e || String(e.type) !== 'minecraft:player') return
+  const server = e.server
+  if (!server) return
+  if (!isActive(server) || !rfGetB(server, 'rf_engaged')) return
+  // 죽은 사람은 리스폰 전까지 체력 0 으로 목록에 남는다. 사망 시점엔 아직 체력이
+  // 남아 보일 수 있어 10틱 뒤에 센다.
+  server.scheduleInTicks(10, () => {
+    try {
+      if (!isActive(server) || !rfGetB(server, 'rf_engaged')) return
+      var rwList = server.players
+      if (!rwList.length) return
+      var rwAlive = 0
+      rwList.forEach(p => { if (Number(p.health) > 0) rwAlive++ })
+      if (rwAlive > 0) return
+
+      var rwIdx = activeTierIdx(server)
+      var rwN = rfWipes(server, rwIdx) + 1
+      rfSetWipes(server, rwIdx, rwN)
+      console.log(`[LS-RIFT] wipe tier=${rwIdx} count=${rwN}`)
+      if (rwN < RF_PITY_AT) {
+        rsay(server, `§8   (${TIERS[rwIdx].name} — ${rwN}번째 밤)`)
+      } else if (rwN === RF_PITY_AT) {
+        // 발동은 다음 소환 때다. 여기서 걸면 시체 앞에 버프가 뜨는 꼴이 된다.
+        rsay(server, '§b✧ 별의 유예 §7— 남은 별빛이 너희를 조금 더 오래 붙든다.')
+        rsay(server, `§8   (다음 §7${TIERS[rwIdx].name}§8 도전부터 저항이 함께 간다)`)
+      }
+    } catch (err) { lsWarn('ls_rift:wipe', err) }
+  })
+})
+
+// 소환 시 적용. 관문을 깨면 `completeTier` 가 장부를 지우므로 다음 관문에는 안 따라간다.
+function rfApplyPity(server, idx) {
+  if (rfWipes(server, idx) < RF_PITY_AT) return
+  try {
+    server.runCommandSilent(`effect give @a minecraft:resistance ${Math.floor(RF_PITY_MIN / 20)} 0 true`)
+    rsay(server, `§b✧ 별의 유예가 함께한다 §7— 받는 피해 감소 (전멸 ${rfWipes(server, idx)}회)`)
+  } catch (err) { lsWarn('ls_rift:pity', err) }
+}
+
 // ── 보스 소환 (제물대 우클릭) ──
 function summonAltarBoss(server) {
   if (!isActive(server) || rfGetB(server, 'rf_pending') || rfGetB(server, 'rf_engaged')) return false
@@ -170,6 +243,7 @@ function summonAltarBoss(server) {
   rplay(server, 'minecraft:entity.wither.spawn', 1, 0.6)
   rplay(server, 'minecraft:entity.ender_dragon.growl', 0.6, 0.6)
   rsay(server, `§4⚔ ${t.bossName} 강림! §7${t.name} 봉인의 수호자를 쓰러뜨려라.`)
+  rfApplyPity(server, idx)
   console.log(`[LS-RIFT] boss summoned tier=${idx} ${t.boss}`)
   return true
 }
@@ -185,6 +259,10 @@ function completeTier(server) {
   rfSetB(server, 'rf_active', false)
   rfSetB(server, 'rf_engaged', false)
   rfSetB(server, 'rf_pending', false)
+  // 천장은 관문마다 따로다. 깬 관문의 장부를 지우고 저항도 걷는다 —
+  // 안 걷으면 유예가 그 다음 관문까지 따라가서, 세 번 막힌 대가로 네 번째가 쉬워진다.
+  rfSetWipes(server, idx, 0)
+  try { server.runCommandSilent('effect clear @a minecraft:resistance') } catch (e) { lsWarn('ls_rift:pityClear', e) }
   setProgress(server, idx + 1)
   // 보상: 월드티어 상승 + 공동 금고
   setWorldTier(server, t.tier)
@@ -317,8 +395,34 @@ ServerEvents.commandRegistry(event => {
       const s = ctx.source.server
       setProgress(s, 0); rfSetB(s, 'rf_active', false); rfSetB(s, 'rf_pending', false); rfSetB(s, 'rf_engaged', false)
       rfSetI(s, 'rf_tier', 0)
-      ctx.source.sendSystemMessage(Text.of('§7균열 원정 진행도 초기화')); return 1
+      // 천장 장부도 같이 비운다. 안 그러면 초기화한 서버가 「이미 세 번 진 상태」로 시작한다.
+      for (var rrI = 0; rrI < MAX_TIER; rrI++) rfSetWipes(s, rrI, 0)
+      try { s.runCommandSilent('effect clear @a minecraft:resistance') } catch (e) { lsWarn('ls_rift:resetPity', e) }
+      ctx.source.sendSystemMessage(Text.of('§7균열 원정 진행도 초기화 §8(전멸 천장 포함)')); return 1
     }))
+    // ── 전멸 천장 보기/고치기 ──
+    // 「모든 플래그에 set/reset」(TODO D절 3번 교훈). 값을 못 보면 유예가 왜 걸렸는지,
+    // 왜 안 걸렸는지 물어볼 데가 없다.
+    .then(Commands.literal('pity').requires(s => s.hasPermission(2))
+      .executes(ctx => {
+        const s = ctx.source.server
+        ctx.source.sendSystemMessage(Text.of(`§6전멸 천장 §7— ${RF_PITY_AT}회부터 저항 I`))
+        for (var rpI = 0; rpI < MAX_TIER; rpI++) {
+          var rpN = rfWipes(s, rpI)
+          ctx.source.sendSystemMessage(Text.of(
+            `§8  ${TIERS[rpI].name} §7${rpN}회${rpN >= RF_PITY_AT ? ' §b← 유예 대기' : ''}`))
+        }
+        return 1
+      })
+      .then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
+        const s = ctx.source.server
+        if (!isActive(s)) { ctx.source.sendSystemMessage(Text.of('§c개봉된 제단이 없습니다 — 어느 관문인지 정할 수 없습니다.')); return 0 }
+        const rpIdx = activeTierIdx(s)
+        rfSetWipes(s, rpIdx, Math.max(0, Arguments.INTEGER.getResult(ctx, 'n')))
+        ctx.source.sendSystemMessage(Text.of(
+          `§a${TIERS[rpIdx].name} 전멸 §7${rfWipes(s, rpIdx)}회 §8(다음 소환부터 반영)`))
+        return 1
+      })))
     .then(Commands.literal('setprogress').requires(s => s.hasPermission(2)).then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
       const s = ctx.source.server
       const n = Math.max(0, Math.min(MAX_TIER, Arguments.INTEGER.getResult(ctx, 'n')))

@@ -8,23 +8,42 @@ function rlSay(server, text) { server.players.forEach(p => p.tell(Text.of(text))
 function rlCmd(server, s) { server.runCommandSilent(s) }
 
 // ── 유물 정의 (가호 키 기준) — id는 커스텀 모드 아이템 ──
+//
+// ── `lore` 와 `echo` 는 다른 사람이 쓴 글이다 ──
+// `lore` 는 유물에 새겨진 명문(銘文)이다 — 별이 사람에게 하는 말이고, 그래서 웅장하다.
+// `echo` 는 **이 무기를 마지막으로 쥐었던 사람**이 남긴 한 줄이다 (STORY 부록B 떡밥3,
+// 「옛 별지기들」). 사람의 말이라 짧고, 문어체가 아니고, 자랑이 없다.
+//
+// 여덟 줄 중 어느 하나도 «우리는 실패했다»고 말하지 않는다. 그건 여덟을 다 읽은 사람이
+// 스스로 알아채야 하는 것이지 알려줄 것이 아니다. 한 줄씩 보면 옛 지혜로 읽히고,
+// 모아 보면 아무도 돌아오지 못한 세대의 기록이 된다.
+// 스틱스와 게볼그의 두 줄만 조금 더 나간다 — 그 둘이 «일부는 타락해 관문의 수문장이
+// 되었다»로 이어지는 자리다. 정체 공개는 T3~T4 이고, 여기서는 심기만 한다.
 const RELICS = {
   guardian: { id: 'lsrelics:guardian', name: '§b에테르 이지스', title: 'guardian_relic', kind: '방패+무기 (좌클릭 공격 · 우클릭 막기 · 웅크림+우클릭 수호의 파동)',
-    lore: '천공의 마지막 빛으로 벼려낸 방패 — 성벽이 무너지는 날, 그대가 곧 성벽이 되리라.' },
+    lore: '천공의 마지막 빛으로 벼려낸 방패 — 성벽이 무너지는 날, 그대가 곧 성벽이 되리라.',
+    echo: '내 뒤에 일곱이 있었다. 마지막엔 아무도 없었다.' },
   hunter: { id: 'lsrelics:hunter', name: '§a시리우스', title: 'hunter_relic', kind: '활 (우클릭 발사 · 웅크림+우클릭 유성 화살)',
-    lore: '가장 밝은 별이 그 손에 내렸으니, 어둠이 삼킨 세상에서도 표적을 놓치지 마라.' },
+    lore: '가장 밝은 별이 그 손에 내렸으니, 어둠이 삼킨 세상에서도 표적을 놓치지 마라.',
+    echo: '화살은 아직 남았는데, 겨눌 것이 너무 커졌다.' },
   sage: { id: 'lsrelics:sage', name: '§d셀레스티아', title: 'sage_relic', kind: '마법 무기 (우클릭 소멸)',
-    lore: '별이 지기 전의 모든 지혜가 이 지팡이에 잠들었노라 — 꺼져가는 하늘을 대신해 길을 밝혀라.' },
+    lore: '별이 지기 전의 모든 지혜가 이 지팡이에 잠들었노라 — 꺼져가는 하늘을 대신해 길을 밝혀라.',
+    echo: '나는 끝을 계산했다. 답이 맞았던 게 가장 견디기 힘들다.' },
   pioneer: { id: 'lsrelics:pioneer', name: '§6타이탄 브레이커', title: 'pioneer_relic', kind: '도끼 (좌클릭 강타 · 우클릭 균열 붕괴 · 쉬프트+우클릭 대지 쪼개기 · 쉬프트+좌클릭 타이탄 강림)',
-    lore: '폐허를 갈라 길을 연 손이여 — 종말이 세운 그 무엇도 이 도끼 앞에 무너지리라.' },
+    lore: '폐허를 갈라 길을 연 손이여 — 종말이 세운 그 무엇도 이 도끼 앞에 무너지리라.',
+    echo: '길은 냈다. 그 길로 아무도 돌아오지 않았을 뿐이다.' },
   gunner: { id: 'lsrelics:gunner', name: '§e솔라리스', title: 'gunner_relic', kind: '화기 (좌클릭 사격 · 우클릭 스코프 줌 · 더블쉬프트 산탄 · 쉬프트+우클릭 작열탄 · 쉬프트+좌클릭 일식)',
-    lore: '꺼지지 않는 태양의 불씨를 총구에 봉인했으니 — 밤이 세상을 삼켜도, 네 방아쇠 끝에서 새벽이 터진다.' },
+    lore: '꺼지지 않는 태양의 불씨를 총구에 봉인했으니 — 밤이 세상을 삼켜도, 네 방아쇠 끝에서 새벽이 터진다.',
+    echo: '여섯 발이었다. 일곱 번째가 필요했다.' },
   healer: { id: 'lsrelics:healer', name: '§f파나케이아', title: 'healer_relic', kind: '치유 지팡이 (좌클릭 평타 · 우클릭 심판의 빛 · 더블쉬프트 천사의 발걸음 · 쉬프트+우클릭 성역 · 쉬프트+좌클릭 소생)',
-    lore: '별이 스러지기 전 마지막 온기를 담은 지팡이 — 쓰러진 자의 이름을 부르면, 별이 그를 다시 일으키리라.' },
+    lore: '별이 스러지기 전 마지막 온기를 담은 지팡이 — 쓰러진 자의 이름을 부르면, 별이 그를 다시 일으키리라.',
+    echo: '이름을 부르면 일어난다고 했다. 그날은 내 목소리가 나오지 않았다.' },
   assassin: { id: 'lsrelics:assassin', name: '§5스틱스', title: 'assassin_relic', kind: '쌍단검 (좌클릭 좌우 연격 · 우클릭 급소 가르기 · 더블쉬프트 그림자 도약 · 쉬프트+우클릭 망각의 안개 · 쉬프트+좌클릭 무저갱)',
-    lore: '태초의 어둠에서 벼려낸 한 쌍의 칼 — 빛이 닿지 못하는 곳에서, 너는 이미 그 뒤에 서 있다.' },
+    lore: '태초의 어둠에서 벼려낸 한 쌍의 칼 — 빛이 닿지 못하는 곳에서, 너는 이미 그 뒤에 서 있다.',
+    echo: '어둠에 숨는 법은 배웠다. 나오는 법은 아무도 안 가르쳐 줬다.' },
   lancer: { id: 'lsrelics:lancer', name: '§c게볼그', title: 'lancer_relic', kind: '창 (좌클릭 찌르기·베기 · 우클릭 투창(차징) · 더블쉬프트 질풍 돌진 · 쉬프트+우클릭 꿰뚫기 · 쉬프트+좌클릭 백 개의 창)',
-    lore: '운명을 꿰뚫는 단 하나의 창 — 던져도 네 손으로 돌아오나니, 겨눈 표적은 결코 달아나지 못한다.' }
+    lore: '운명을 꿰뚫는 단 하나의 창 — 던져도 네 손으로 돌아오나니, 겨눈 표적은 결코 달아나지 못한다.',
+    echo: '던지면 돌아온다. 나는 그러지 못했다.' }
 }
 
 const RL_ESS = 'kubejs:rift_essence'
@@ -66,6 +85,14 @@ function rlGrant(server, player, force) {
   rlCmd(server, `execute as ${uname} at @s run particle minecraft:end_rod ~ ~1 ~ 0.4 0.6 0.4 0.05 60`)
   rlSay(server, `§b✦ ${uname}§7이(가) 유물 §r${r.name}§7을(를) 손에 넣었습니다!`)
   rlSay(server, `§8   "${r.lore}"`)
+  // 3초 뒤 한 박자 늦게. 명문과 붙여 내보내면 두 줄이 같은 사람의 글로 읽히고,
+  // 그러면 «누가 썼나»라는 질문 자체가 안 생긴다. 사이를 두어야 다른 목소리가 된다.
+  server.scheduleInTicks(60, () => {
+    try {
+      rlSay(server, `§8§o   "${r.echo}"`)
+      rlSay(server, '§8      — 이 무기를 마지막으로 쥐었던 자')
+    } catch (e) { lsWarn('ls_relic:echo', e) }
+  })
   console.log(`[LS-RELIC] ${uname} claimed ${fate} (${r.id})`)
   return 1
 }
@@ -111,6 +138,10 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of(`§8   ${r.kind}`))
       if (got) {
         ctx.source.sendSystemMessage(Text.of('§a✔ 획득 완료'))
+        // 가진 사람만 볼 수 있다. 아직 못 받은 사람에게는 그냥 멋진 문장이지만,
+        // 매일 쥐는 무기에 붙어 있으면 언젠가 «이게 누구 말이지»가 된다.
+        ctx.source.sendSystemMessage(Text.of(`§8§o   "${r.echo}"`))
+        ctx.source.sendSystemMessage(Text.of('§8      — 이 무기를 마지막으로 쥐었던 자'))
       } else {
         var have = lsCountItem(p, RL_ESS)
         ctx.source.sendSystemMessage(Text.of(`§7미획득 — §d균열 정수 ${RL_COST}개§7를 제단에 바쳐야 깨어난다. §8(보유 ${have})`))

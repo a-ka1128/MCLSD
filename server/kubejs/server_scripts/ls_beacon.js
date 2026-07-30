@@ -12,6 +12,16 @@ function pbNames(server) { const s = String(pbStore(server).getString('pb_names'
 
 const PB_COST = 150       // 등록 비용 (공동 금고 Ducat)
 const PB_RADIUS = 24      // 정화 반경
+
+// ── 봉화끼리 최소 거리 ──
+// 봉화 2기당 위협도 하한이 1 내려간다(`ls_siege.js threatFloor`). 그 설계 의도는
+// **영토 수복이 세상을 진정시킨다** 인데, 여태 위치 조건이 하나도 없었다 —
+// 성역 앞마당에 여덟 기를 나란히 세워도 위협 하한이 4 내려갔다. 그건 수복이 아니라
+// 금고를 위협도로 바꾸는 환전이다.
+//
+// 반경(24)의 4배로 잡았다. 정화 범위가 서로 닿지 않을 만큼은 떨어지되, 하루치 원정으로
+// 닿는 거리여야 한다 — 너무 멀면 봉화가 「가능하지만 아무도 안 하는」 시스템이 된다.
+const PB_MIN_DIST = 96
 // ── 정화 대상은 태그 하나가 유일한 출처다 ──
 //   kubejs/data/last_stardust/tags/entity_type/purge.json  (#last_stardust:purge)
 // 흔한 어둠의 잡몹만 넣는다. 공성 몹은 - 안 넣는다 - — 공성은 정면으로 막아야 한다.
@@ -89,6 +99,26 @@ function pbRegister(server, player, name) {
     }
   } catch (err) { lsWarn('ls_beacon:34', err) }
   if (!found) { player.tell(Text.of('§c근처에 신호기(beacon)가 없습니다. §7신호기를 먼저 세우고 그 위에서 등록하세요.')); return 0 }
+
+  // ── 이미 밝힌 땅 옆에는 못 세운다 ──
+  // 비용 검사보다 **먼저** 본다. 뒤에 두면 금고를 깎고 나서 거절하게 된다.
+  // ※ 블록 안에서는 var — Rhino 재선언 함정 (docs/TODO.md 함정 #1)
+  var pbNear = '', pbNearD = 0
+  try {
+    names.forEach(other => {
+      if (pbNear) return
+      var ox = pbStore(server).getInt('pb_' + other + '_x')
+      var oz = pbStore(server).getInt('pb_' + other + '_z')
+      var d = Math.sqrt((px - ox) * (px - ox) + (pz - oz) * (pz - oz))
+      if (d < PB_MIN_DIST) { pbNear = other; pbNearD = Math.round(d) }
+    })
+  } catch (err) { lsWarn('ls_beacon:dist', err) }
+  if (pbNear) {
+    player.tell(Text.of(`§c너무 가깝습니다 §7— §f${pbNear}§7 봉화에서 ${pbNearD}m (최소 ${PB_MIN_DIST}m)`))
+    player.tell(Text.of('§8   봉화는 이미 밝힌 땅이 아니라 §7아직 어두운 곳§8에 세운다.'))
+    return 0
+  }
+
   const tre = LS.treasury(server)
   if (tre < PB_COST) { player.tell(Text.of(`§c등록 비용 부족: 공동 금고 ${tre}/${PB_COST} Ducat`)); return 0 }
   LS.spendTreasury(server, PB_COST)
