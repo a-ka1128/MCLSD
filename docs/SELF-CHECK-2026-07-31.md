@@ -246,8 +246,10 @@ D-2 를 `tools/scan_dead_kubejs.py` 가 못 잡았다. C절이 - 함수만 - 셌
 
 ### 4-5. 운영
 
-- `gh` 2.96.0 설치됨, **인증 미완** — `gh auth login` 은 대화형이라 사람이 한 번 해야 한다.
-- PR 미개설: `boss-layer-t4-finale` → `main`.
+- `gh` 2.96.0 설치·인증 완료(계정 `a-ka1128`, 범위 `repo·workflow·read:org·gist`).
+  실행 파일이 `C:\Program Files\GitHub CLI\gh.exe` 인데 **설치 직후 세션의 PATH 에는 안 잡힌다** —
+  그 세션에서는 전체 경로로 부를 것.
+- PR **#1 개설됨**: `boss-layer-t4-finale` → `main` (github.com/a-ka1128/MCLSD/pull/1).
 - 월드 리셋을 막는 것은 없다. 밸런스·구조물 설정은 전부 `server/config/` 와 `kubejs/` 라 리셋에도 남는다.
 
 ---
