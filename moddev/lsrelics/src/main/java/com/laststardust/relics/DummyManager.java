@@ -54,14 +54,30 @@ public final class DummyManager {
     // 월드를 훑으려면 서버 참조가 필요한데, 명령어 쪽에는 없다. 틱 이벤트에서 받아 둔다.
     private static MinecraftServer server;
 
-    // 월드에 있는 표식 달린 더미를 리스트로 다시 모은다.
+    // 표식이 붙기 전에 소환된 더미를 알아보기 위한 이름. 아래 주석 참고.
+    private static final String DUMMY_NAME = "훈련 더미";
+
+    // 월드에 있는 더미를 리스트로 다시 모은다.
     // 명령어에서만 부르므로(초당이 아니라 사람이 칠 때) 전 엔티티 순회 비용은 문제되지 않는다.
+    //
+    // ── 표식이 없는 옛 더미도 주워야 한다 ──
+    // 표식은 소환 시점에 박히므로, 표식 도입 - 전에 - 소환돼 월드에 남아 있는 더미는
+    // 표식이 없다. 그것만으로 판별하면 이미 서 있던 더미는 영원히 안 지워진다
+    // (실제로 그랬다 — 수정을 배포하고 나서도 /dummy clear 가 0기를 돌려줬다).
+    // 그래서 커스텀 이름으로도 알아보고, 찾으면 그 자리에서 표식을 박아 이후엔 정상 경로를 타게 한다.
     private static void rescan() {
         if (server == null) return;
         for (ServerLevel lv : server.getAllLevels()) {
             for (Entity e : lv.getAllEntities()) {
                 if (!(e instanceof LivingEntity le)) continue;
-                if (!e.getPersistentData().getBoolean(DUMMY_TAG)) continue;
+                boolean tagged = e.getPersistentData().getBoolean(DUMMY_TAG);
+                if (!tagged) {
+                    // 옛 더미 구제 — 아이언골렘 + 그 이름이면 우리 더미다
+                    if (!(e instanceof IronGolem)) continue;
+                    Component name = e.getCustomName();
+                    if (name == null || !name.getString().contains(DUMMY_NAME)) continue;
+                    e.getPersistentData().putBoolean(DUMMY_TAG, true);   // 표식 소급 부여
+                }
                 if (!DUMMIES.contains(le)) DUMMIES.add(le);
             }
         }
