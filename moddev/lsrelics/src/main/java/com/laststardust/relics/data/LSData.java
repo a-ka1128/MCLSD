@@ -26,6 +26,7 @@ public class LSData extends SavedData {
     public static final String FILE_ID = "laststardust";
 
     private final TownData town = new TownData();
+    private final HeroData hero = new HeroData();
 
     // 성역 좌표 — 여러 시스템이 공유하는 가장 넓게 퍼진 상태다.
     // (공성·관문·구출·통계·귀환석이 전부 이걸 본다)
@@ -34,6 +35,11 @@ public class LSData extends SavedData {
 
     public TownData town() {
         return town;
+    }
+
+    // 가호·유물·각성 — 사람에 붙는 성장 상태 (이관 3단계).
+    public HeroData hero() {
+        return hero;
     }
 
     // 관문 진행도 0~4 — 클리어한 봉인 수.
@@ -74,6 +80,7 @@ public class LSData extends SavedData {
     private static LSData load(CompoundTag tag, HolderLookup.Provider registries) {
         LSData data = new LSData();
         data.town.load(tag.getCompound("town"), registries);
+        data.hero.load(tag.getCompound("hero"), registries);
         CompoundTag s = tag.getCompound("sanctuary");
         data.sancSet = s.getBoolean("set");
         data.sancX = s.getInt("x");
@@ -86,6 +93,7 @@ public class LSData extends SavedData {
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("town", town.save(registries));
+        tag.put("hero", hero.save(registries));
         CompoundTag s = new CompoundTag();
         s.putBoolean("set", sancSet);
         s.putInt("x", sancX);

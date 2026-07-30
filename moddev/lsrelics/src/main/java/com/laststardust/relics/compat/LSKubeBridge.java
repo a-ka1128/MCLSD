@@ -134,6 +134,83 @@ public class LSKubeBridge implements KubeJSPlugin {
             data.dirty();
         }
 
+        // ── 가호·유물·각성 (이관 3단계) ──
+        // `fate_<이름>` · `relic_<이름>` · `star_<이름>` 이라는 - 문자열로 조립한 키 - 셋이
+        // 세 스크립트에 흩어져 있었다. 그런 키는 오타가 나도 예외 없이 «없음/0» 을 돌려주고,
+        // 쓰는 쪽만 옮기면 읽는 쪽이 조용히 기본값을 읽는다(명예 보드 사고와 같은 구조).
+        // 이제 HeroData 가 유일한 소유자다. 상한(1~5)도 그쪽이 건다.
+        //
+        // ※ 성역 좌표 때와 같은 원칙: **스크립트는 자기 사본을 두지 않는다.** 두 벌이 있는 한
+        //   "한쪽만 갱신됨"은 시간 문제였다.
+        public String fate(MinecraftServer server, String name) {
+            return server == null ? "" : LSData.get(server).hero().fate(name);
+        }
+
+        public void setFate(MinecraftServer server, String name, String key) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.hero().setFate(name, key);
+            data.dirty();
+        }
+
+        // 이 가호를 이미 가진 사람 — 없으면 "". 같은 직업 둘을 막는 데 쓴다.
+        public String fateOwner(MinecraftServer server, String key, String exceptName) {
+            return server == null ? "" : LSData.get(server).hero().ownerOf(key, exceptName);
+        }
+
+        public boolean hasRelic(MinecraftServer server, String name) {
+            return server != null && LSData.get(server).hero().hasRelic(name);
+        }
+
+        public void setHasRelic(MinecraftServer server, String name, boolean v) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.hero().setHasRelic(name, v);
+            data.dirty();
+        }
+
+        // 0 = 아직 유물이 없다. 표시용으로 1 을 깔지 말 것 — 그 구분이 «유물은 받았는데
+        // 각성이 0» 같은 어긋난 상태를 알아보는 유일한 근거다.
+        public int star(MinecraftServer server, String name) {
+            return server == null ? 0 : LSData.get(server).hero().star(name);
+        }
+
+        public void setStar(MinecraftServer server, String name, int n) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.hero().setStar(name, n);
+            data.dirty();
+        }
+
+        // 제단은 사람이 아니라 - 가호 - 에 붙는다. 여덟 직업이 각자 자기 제단을 갖는다.
+        public boolean hasAltar(MinecraftServer server, String fateKey) {
+            return server != null && LSData.get(server).hero().hasAltar(fateKey);
+        }
+
+        public int altarX(MinecraftServer server, String f) { return altar(server, f, 0); }
+        public int altarY(MinecraftServer server, String f) { return altar(server, f, 1); }
+        public int altarZ(MinecraftServer server, String f) { return altar(server, f, 2); }
+
+        public void setAltar(MinecraftServer server, String fateKey, int x, int y, int z) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.hero().setAltar(fateKey, x, y, z);
+            data.dirty();
+        }
+
+        // 이관이 실제로 됐는지 한 줄로 본다 (/lsdata).
+        public String heroSummary(MinecraftServer server) {
+            return server == null ? "" : LSData.get(server).hero().summary();
+        }
+
+        private int altar(MinecraftServer server, String fateKey, int axis) {
+            if (server == null) return 0;
+            var h = LSData.get(server).hero();
+            if (!h.hasAltar(fateKey)) return 0;
+            var p = h.altar(fateKey);
+            return axis == 0 ? p.getX() : axis == 1 ? p.getY() : p.getZ();
+        }
+
         private int sanc(MinecraftServer server, int axis) {
             if (server == null) return 0;
             LSData data = LSData.get(server);

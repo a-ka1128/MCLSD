@@ -31,6 +31,7 @@ KubeJS 는 붙이기 빨랐지만, 하루 동안 **문법 검사로는 안 잡�
 | 저장 뿌리 | `data/LSData.java` — `SavedData`. 새 기능은 여기에 섹션을 건다 |
 | 마을 정의 | `data/TownCatalog.java` — 4트랙 × 4레벨 (밸런스 다이얼) |
 | 마을 상태 | `data/TownData.java` — 단계·**보관함**·기여도·플래그·금고 |
+| 성장 상태 | `data/HeroData.java` — **가호·유물 수령·각성 성급·직업별 제단** (이관 3단계) |
 | 마을 판정 | `town/TownService.java` — 완성 가능 여부·집행. **판정은 여기 한 곳** |
 | 마을 창 | `town/TownMenu.java` + `client/TownHubScreen`·`TownTrackScreen` |
 | 유물 8종·스킬·각성 새김 | `item/`, `RelicSkills`, `LSCommands` |
@@ -76,6 +77,14 @@ LS.hasSanctuary(server) · LS.sanctuaryX/Y/Z(server) · LS.setSanctuary(server, 
 // 관문 진행도 (이관 완료 — 모드가 유일 소유)
 LS.progress(server) · LS.setProgress(server, n)
 
+// 가호·유물·각성 (이관 완료 — 모드가 유일 소유, 2026-07-31)
+LS.fate(server, name) · LS.setFate(server, name, key)      // '' = 가호 없음
+LS.fateOwner(server, key, exceptName)                       // 같은 직업 둘 방지
+LS.hasRelic(server, name) · LS.setHasRelic(server, name, b)
+LS.star(server, name) · LS.setStar(server, name, n)         // 0 = 아직 없음, 1~5 = 성급
+LS.hasAltar(server, fateKey) · LS.altarX/Y/Z(server, fateKey) · LS.setAltar(server, f, x, y, z)
+LS.heroSummary(server)                                       // /lsdata 표시용
+
 // 전투 판정
 LS.reviveRule(player)                // 부활 직후 무적 창 + 별빛 쇠약 (ReviveRules.java)
 ```
@@ -84,7 +93,8 @@ LS.reviveRule(player)                // 부활 직후 무적 창 + 별빛 쇠약
 서로 다른 값이 되어 공성 보상이 영영 도착하지 않는다.
 
 현재 경유 중: `ls_siege` · `ls_rift` · `ls_beacon` · `ls_bounty` · `ls_rescue` · `ls_stats` ·
-`ls_ascend` · `ls_mobscale` · `ls_voice` · `ls_towneffect` · `ls_revive`
+`ls_ascend` · `ls_mobscale` · `ls_voice` · `ls_towneffect` · `ls_revive` · `ls_fate` · `ls_relic` ·
+`ls_hope` · `ls_migrate`
 
 > 대조는 `python tools/scan_dead_kubejs.py` 가 자동으로 한다 (A절) — 스크립트가 부르는데
 > 자바에 없는 메서드는 **그 줄에서 런타임에 터진다.** 문법 검사로는 절대 안 걸린다.
@@ -101,8 +111,8 @@ LS.reviveRule(player)                // 부활 직후 무적 창 + 별빛 쇠약
 |---|---|---|
 | 1 | **성역 좌표** (`ls_sanc_*`) | ✅ **완료** — `LSData.sanctuary()`. 스크립트는 `LS.sanctuaryX/Y/Z` 로 읽는다 |
 | 2 | **진행도** (`rf_progress`) | ✅ **완료** — `LSData.progress()`. 상한(0~4)도 그쪽이 건다 |
-| 3 | **가호·유물·각성** (`fate_*`·`relic_*`·`star_*`) | ⬜ 다음. RPG 성장의 뿌리이고 모드가 이미 아이템 NBT 를 다룬다 |
-| 4 | **공성** (`ls_siege` 1082줄) | ⬜ 최대 덩어리이자 간판 시스템. 위가 끝나야 깔끔하게 옮겨진다 |
+| 3 | **가호·유물·각성** (`fate_*`·`relic_*`·`star_*`) | ✅ **완료 (2026-07-31)** — `LSData.hero()`. 상한(1~5)·중복 직업 판정도 그쪽이 건다 |
+| 4 | **공성** (`ls_siege` 1100+줄) | ⬜ **다음.** 최대 덩어리이자 간판 시스템 |
 | 5 | 나머지 (`bounty`·`casino`·`rescue`·`beacon`·`bossdiff`·`title`) | ⬜ 서로 거의 독립 |
 
 > **매 단계 끝에 `python tools/scan_dead_kubejs.py` 를 돌린다.**

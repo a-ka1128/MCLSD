@@ -1,9 +1,9 @@
 // Last Stardust — 별의 유물 (Stellar Relics)  [히든 무기 / RPG 정체성]
 // 유물 아이템·실제 동작(활 발사/방패 막기/도끼 채굴/지팡이)·스탯은 커스텀 모드(lsrelics)가 담당한다.
 // 이 스크립트는 획득 흐름만 관리: 가호별 유물 지급 · 제단 클레임 · 칭호(ls_title.js) · /relic 대시보드.
-// 저장(공유 persistentData): relic_<user>(획득bool) · relic_altar_<fate>_set/x/y/z · fate_<user>(ls_fate.js가 씀)
+// 저장: 전부 모드가 소유한다 (이관 3단계) — LS.hasRelic / LS.setAltar / LS.fate.
+// 옛 persistentData 키(relic_<user> · relic_altar_<fate>_* · fate_<user>)는 더 이상 안 쓴다.
 
-function rlStore(server) { return server.overworld().persistentData }
 function rlSay(server, text) { server.players.forEach(p => p.tell(Text.of(text))) }
 function rlCmd(server, s) { server.runCommandSilent(s) }
 
@@ -35,9 +35,9 @@ const RL_COST = 1   // 유물 해금에 바치는 균열 정수
 // "받는 무기"가 아니라 "버텨서 얻은 무기"가 되어야 강한 성능이 정당해진다.
 function rlGrant(server, player, force) {
   const uname = player.username
-  const fate = String(rlStore(server).getString('fate_' + uname) || '')
+  const fate = String(LS.fate(server, uname) || '')
   if (!fate || !RELICS[fate]) { player.tell(Text.of('§c먼저 별의 가호를 선택하세요. §e/fate')); return 0 }
-  if (!force && rlStore(server).getBoolean('relic_' + uname)) { player.tell(Text.of('§7이미 당신의 유물을 손에 넣었습니다.')); return 0 }
+  if (!force && LS.hasRelic(server, uname)) { player.tell(Text.of('§7이미 당신의 유물을 손에 넣었습니다.')); return 0 }
   if (!force) {
     // 정수 확인 후 회수 — 인벤토리를 직접 읽는다 (ls_util.js).
     // /clear 반환값으로 세는 건 애초에 불가능했고(runCommandSilent 는 void),
@@ -54,7 +54,7 @@ function rlGrant(server, player, force) {
   rlCmd(server, `give ${uname} ${r.id}`)
   // 스틱스는 쌍단검 — 보조손에도 한 자루 쥐여준다 (Better Combat 쌍수). 각성 별은 asStamp가 양손 모두 새긴다.
   if (fate === 'assassin') { rlCmd(server, `item replace entity ${uname} weapon.offhand with ${r.id}`) }
-  rlStore(server).putBoolean('relic_' + uname, true)
+  LS.setHasRelic(server, uname, true)
   // 저장된 각성 단계를 새 유물에 다시 새긴다 (ls_ascend.js — 공유 스코프).
   // 유물을 잃고 재지급받아도 각성이 날아가지 않게.
   try { asStamp(server, uname) } catch (e) { lsWarn('ls_relic:60', e) }
@@ -78,14 +78,13 @@ BlockEvents.rightClicked(event => {
   if (!player) return
   const server = player.server
   if (!server) return
-  const st = rlStore(server)
   const keys = Object.keys(RELICS)
   for (let i = 0; i < keys.length; i++) {
     var fate = keys[i]
-    if (!st.getBoolean('relic_altar_' + fate + '_set')) continue
-    if (b.x === st.getInt('relic_altar_' + fate + '_x') && b.y === st.getInt('relic_altar_' + fate + '_y') && b.z === st.getInt('relic_altar_' + fate + '_z')) {
+    if (!LS.hasAltar(server, fate)) continue
+    if (b.x === LS.altarX(server, fate) && b.y === LS.altarY(server, fate) && b.z === LS.altarZ(server, fate)) {
       event.cancel()
-      var pf = String(st.getString('fate_' + player.username) || '')
+      var pf = String(LS.fate(server, player.username) || '')
       if (pf !== fate) { player.tell(Text.of(`§7이 제단은 §r${RELICS[fate].name}§7의 것 — 당신의 길이 아니다.`)); return }
       rlGrant(server, player, false)
       return
@@ -103,11 +102,11 @@ ServerEvents.commandRegistry(event => {
     .executes(ctx => {
       const s = ctx.source.server; const p = ctx.source.player
       if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
-      const fate = String(rlStore(s).getString('fate_' + p.username) || '')
+      const fate = String(LS.fate(s, p.username) || '')
       ctx.source.sendSystemMessage(Text.of('§6═══ ✦ 별의 유물 ═══'))
       if (!fate || !RELICS[fate]) { ctx.source.sendSystemMessage(Text.of('§7먼저 별의 가호를 선택하세요 — §e/fate')); return 1 }
       const r = RELICS[fate]
-      const got = rlStore(s).getBoolean('relic_' + p.username)
+      const got = LS.hasRelic(s, p.username)
       ctx.source.sendSystemMessage(Text.of(`§7당신의 유물: §r${r.name} §8(${fate})`))
       ctx.source.sendSystemMessage(Text.of(`§8   ${r.kind}`))
       if (got) {
@@ -130,11 +129,7 @@ ServerEvents.commandRegistry(event => {
         if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
         const fate = Arguments.STRING.getResult(ctx, 'fate')
         if (!RELICS[fate]) { ctx.source.sendSystemMessage(Text.of('§c가호: ' + Object.keys(RELICS).join('/'))); return 0 }
-        const st = rlStore(s)
-        st.putInt('relic_altar_' + fate + '_x', Math.floor(p.x))
-        st.putInt('relic_altar_' + fate + '_y', Math.floor(p.y))
-        st.putInt('relic_altar_' + fate + '_z', Math.floor(p.z))
-        st.putBoolean('relic_altar_' + fate + '_set', true)
+        LS.setAltar(s, fate, Math.floor(p.x), Math.floor(p.y), Math.floor(p.z))
         ctx.source.sendSystemMessage(Text.of(`§a${RELICS[fate].name}§a 제단 등록: ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)} §7(발밑 lodestone에 배치)`))
         return 1
       })))
@@ -143,17 +138,16 @@ ServerEvents.commandRegistry(event => {
     // /fate set 으로 직업을 바꿔주면 유물 플래그만 옛 직업에 남아 어긋난다.
     //
     // 플래그만 지우면 옛 직업 유물을 손에 든 채 새 유물까지 받게 된다 — 아이템도 함께 걷는다.
-    // 각성 성급(star_)은 건드리지 않는다. 그건 /ascend set 의 몫이다.
+    // 각성 성급은 건드리지 않는다. 그건 /ascend set 의 몫이다.
     .then(Commands.literal('revoke').requires(s => s.hasPermission(2))
       .then(lsTargetArg(event, Commands, Arguments).executes(ctx => {
         const s = ctx.source.server
         const target = Arguments.STRING.getResult(ctx, 'target')
-        const st = rlStore(s)
-        if (!st.getBoolean('relic_' + target)) {
+        if (!LS.hasRelic(s, target)) {
           ctx.source.sendSystemMessage(Text.of(`§7${target} 은(는) 아직 유물을 받지 않았습니다.`))
           return 0
         }
-        st.putBoolean('relic_' + target, false)
+        LS.setHasRelic(s, target, false)
 
         // 인벤에서 유물 8종을 전부 걷는다. 직업을 바꾼 뒤라면 저장된 가호와 손에 든 유물이
         // 다를 수 있으므로, 가호로 하나만 집어내지 않고 전부 훑는다.
