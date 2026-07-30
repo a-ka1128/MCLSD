@@ -549,8 +549,11 @@ public final class RelicSkills {
         String n = revived.getName().getString();
         srv.getCommands().performPrefixedCommand(srv.createCommandSourceStack(),
             "attribute " + n + " minecraft:generic.max_health modifier remove last_stardust:frailty_health");
+        // 공격력 모디파이어는 더 이상 쓰지 않는다(ReviveRules 로 옮김). 옛 세이브에 남아 있을 수
+        // 있어 제거는 남겨둔다 — 없으면 명령이 조용히 실패할 뿐이라 무해하다.
         srv.getCommands().performPrefixedCommand(srv.createCommandSourceStack(),
             "attribute " + n + " minecraft:generic.attack_damage modifier remove last_stardust:frailty_attack");
+        com.laststardust.relics.ReviveRules.clear(revived);
         // 떨어뜨린 자기 아이템 중 아직 바닥에 남은 것을 걷어 돌려준다 (ReviveManager 주석 참고)
         int back = com.laststardust.relics.ReviveManager.reclaimDrops(revived);
         // 그리고 시체를 치운다 — 아이템을 돌려줬는데 시체에도 같은 게 남아 있으면 복사가 된다.

@@ -124,6 +124,13 @@ public class LSKubeBridge implements KubeJSPlugin {
         }
 
         // 화면을 열어둔 사람에게 갱신을 밀어준다 (스크립트가 금고를 바꾼 직후 등)
+        // ── 부활 규칙 ──
+        // 리스폰 직후 ls_revive.js 가 부른다. 무적 창과 「별빛 쇠약」의 피해 감소는
+        // 자바가 판정한다 — 속성 모디파이어로는 원거리·스킬 피해를 못 잡는다(ReviveRules 주석).
+        public void reviveRule(ServerPlayer player) {
+            com.laststardust.relics.ReviveRules.begin(player);
+        }
+
         public void syncTown(ServerPlayer player) {
             if (player != null) TownGui.sync(player);
         }

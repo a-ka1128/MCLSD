@@ -7,20 +7,20 @@
 ── 왜 필요한가 ──
 Rhino(KubeJS)는 **반복 실행되는 블록에 새 스코프를 만들지 않는다.** 그래서 그런 블록 안의
 `const`/`let` 은 두 번째 실행에서 `InternalError: TypeError: redeclaration of var X` 로 터진다.
-이름을 유일하게 바꿔도 낫지 않는다 — 전역에 하나뿐인 이름으로도 터진다. `var` 는 재선언이
+이름을 유일하게 바꿔도 낫지 않는다 - 전역에 하나뿐인 이름으로도 터진다. `var` 는 재선언이
 합법이라 안전하다. (docs/TODO.md 함정 1번)
 
 대상은 두 가지다:
-  · `try { ... }`  — 그 함수가 반복 호출되면 터진다
-  · 루프 본문        — 두 번째 순회에서 바로 터진다  ← 2026-07-25 에 이걸 놓쳐 재발했다
+  · `try { ... }`  - 그 함수가 반복 호출되면 터진다
+  · 루프 본문        - 두 번째 순회에서 바로 터진다  ← 2026-07-25 에 이걸 놓쳐 재발했다
 
 증상이 지독한 이유는 **catch 가 있으면 조용히 삼켜지고, 없으면 핸들러가 통째로 중단**되기
 때문이다. 어느 쪽이든 "그 기능만 아무 말 없이 사라진다".
 
 이 스캐너가 실제로 잡아낸 것:
-  · ls_bounty  — 킬 집계 중단 → **사냥형 현상금이 전혀 진행되지 않음** (두 번 재발)
-  · ls_stats   — **킬 통계 전부 0**
-  · surfaceY×3 — 공성 몹·균열 제단·구출 지점이 **지형 무시하고 배치**
+  · ls_bounty  - 킬 집계 중단 → **사냥형 현상금이 전혀 진행되지 않음** (두 번 재발)
+  · ls_stats   - **킬 통계 전부 0**
+  · surfaceY×3 - 공성 몹·균열 제단·구출 지점이 **지형 무시하고 배치**
 
 ── 자동 변환하지 않는 것 ──
 루프 본문에 함수(화살표 포함)가 있으면 **건너뛰고 표시만 한다.** `for (let i…)` 를 `var` 로
@@ -43,14 +43,14 @@ ROOT = Path(__file__).resolve().parent.parent / "server" / "kubejs" / "server_sc
 
 DECL = re.compile(r"\b(const|let)\s+(?=[A-Za-z_$])")
 # try·루프뿐 아니라 **모든 중첩 블록**이 대상이다. 2026-07-26 에 `if` 블록 안의 선언이
-# 공성 틱 핸들러를 통째로 죽이고 있는 것을 발견해 범위를 넓혔다 (ls_siege.js 664/735 —
+# 공성 틱 핸들러를 통째로 죽이고 있는 것을 발견해 범위를 넓혔다 (ls_siege.js 664/735 -
 # 성벽 판정과 방벽 효과가 둘 다 안 돌고 있었다).
 #
 # 함수 본문 바로 아래 선언은 문제가 없다. 그보다 **한 겹 더 들어간 블록**이 위험하다.
 TRY_OPEN = re.compile(r"\btry\s*\{")
 LOOP_OPEN = re.compile(r"\b(for|while|if|else)\s*[({]")
 # 함수만 새 선언 스코프를 연다. `) {` 까지 함수로 보면 모든 `if (...) {` 이 함수로 오인되어
-# 본문의 나머지를 건너뛴다 — 숨은 고장을 찾는 스캐너에게 누락이 가장 나쁜 실패다.
+# 본문의 나머지를 건너뛴다 - 숨은 고장을 찾는 스캐너에게 누락이 가장 나쁜 실패다.
 FN_OPEN = re.compile(r"(\bfunction\b|=>)")
 
 
@@ -109,13 +109,13 @@ def main(write):
             skipped_total += len(skipped)
             print(f"\n--- {path.name} · 사람이 볼 것 ({len(skipped)}) ---")
             for ln, src in skipped:
-                print(f"  {ln:>4} [함수 포함 — 클로저 확인 필요] {src}")
+                print(f"  {ln:>4} [함수 포함 - 클로저 확인 필요] {src}")
 
     print(f"\n변환 대상 {total} · 수동 확인 {skipped_total}")
     if total and not write:
         print("(--write 를 붙이면 변환한다)")
     if total == 0 and skipped_total == 0:
-        print("반복 블록 안의 const/let 없음 — 정상")
+        print("반복 블록 안의 const/let 없음 - 정상")
 
 
 if __name__ == "__main__":
