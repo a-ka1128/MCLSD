@@ -258,11 +258,24 @@ function daysToSiege(day) {
 }
 
 // ── 몹 진화 단계 ──
-function threatTier(threat) { return threat >= 10 ? 4 : threat >= 7 ? 3 : threat >= 4 ? 2 : 1 }
+//
+// 2026-07-30: 진화의 주인이 위협도 → - 관문 진행도 - 로 바뀌었다.
+//   양(마릿수) = 위협도   · 방치하면 «많이» 온다
+//   질(몹 종류) = 관문 진행도 · 깰수록 «다른 게» 온다
+// 예전에는 threatTier() 하나가 둘 다 정했다. 그래서 관문을 아무리 깨도 공성에 나오는 놈은
+// 그대로였고, 반대로 관문을 하나도 안 깨도 방치만 하면 광전사가 나왔다. 진행의 대가가
+// 공성에 전혀 안 보였다는 뜻이다 (RESEARCH 2 「위협=양, 진행=질」의 나머지 절반).
+//
+// 방치 보정: 위협도 10+ 면 질도 한 단계 얹는다. 관문을 안 깨면 영원히 좀비만 오는
+// «안전한 정체»가 되어버려서, 방치에도 대가는 남긴다.
+function waveTier(prog, threat) {
+  return Math.min(5, (prog || 0) + 1 + (threat >= 10 ? 1 : 0))
+}
 const TIER_NEWS = {
   2: '§6⚠ 어둠이 짙어진다... §7메마른 자들과 얼어붙은 궁수가 공세에 섞여든다.',
   3: '§c⚠ 균열 깊은 곳에서 낯선 놈들이 기어나온다... §7불붙은 망령과 시든 해골.',
-  4: '§4⚠ 어둠의 정예가 모습을 드러냈다. §7광전사가 공세를 이끈다.'
+  4: '§4⚠ 어둠의 정예가 모습을 드러냈다. §7광전사가 공세를 이끈다.',
+  5: '§4⚠ 균열의 본대다. §7광전사가 무리를 이루고, 망령이 그 뒤를 메운다.'
 }
 
 // 공성 방향 (밤마다 1방향에서만 몰려옴 — 방어선 구축이 의미있어짐)
@@ -293,15 +306,20 @@ function partyCount(server) {
   return Math.max(1, n)
 }
 
-// 위협도 → 한 웨이브 몹 목록 (단계별 진화, grand=대공세 규모)
-function buildWave(threat, grand, players) {
+// 한 웨이브 몹 목록. 마릿수는 위협도·인원이, 종류는 관문 진행도(prog)가 정한다.
+// prog 를 인자로 받는 이유: 이 함수는 /siege status 가 «가정하고» 부르기도 해서(인원 1명일 때 등)
+// 서버 상태를 안에서 읽으면 그 예측이 실제와 갈린다.
+function buildWave(threat, grand, players, prog) {
   const mobs = []
   const mul = 1 + PARTY_PER_EXTRA * Math.max(0, (players || 1) - 1)
   const cap = Math.min(PARTY_HARD_CAP, Math.round((grand ? 16 : 12) * mul))
   const total = Math.min(cap, Math.round(((grand ? 5 : 3) + threat) * mul))
-  const tier = threatTier(threat)
+  const tier = waveTier(prog, threat)
   for (let i = 0; i < total; i++) {
-    if (tier >= 4 && i % 6 === 0) mobs.push('cataclysm:ignited_berserker')
+    // 5단계는 새 몹을 더하지 않고 - 밀도 - 를 올린다. 종류를 더 늘리면 화면에서 구분이 안 된다.
+    if (tier >= 5 && i % 4 === 0) mobs.push('cataclysm:ignited_berserker')
+    else if (tier >= 5 && i % 3 === 1) mobs.push('cataclysm:ignited_revenant')
+    else if (tier >= 4 && i % 6 === 0) mobs.push('cataclysm:ignited_berserker')
     else if (tier >= 3 && i % 5 === 0) mobs.push('cataclysm:ignited_revenant')
     else if (tier >= 3 && i % 4 === 1) mobs.push('minecraft:wither_skeleton')
     else if (tier >= 2 && i % 4 === 0) mobs.push('minecraft:husk')
@@ -321,7 +339,7 @@ function spawnWave(server, waveNo) {
   const c = sancPos(server)
   // 인원은 웨이브가 나올 때마다 다시 센다 — 도중에 들어오거나 나가는 사람이 반영된다
   const party = partyCount(server)
-  const wave = buildWave(threat, grand, party)
+  const wave = buildWave(threat, grand, party, LS.progress(server))
   const n = wave.length
   // 단일 방향 공성: 이번 공성의 진격 방향(±35° 부채꼴)에서만 스폰
   const baseDeg = sfGetI(server, 'ls_siege_ang')
@@ -350,7 +368,7 @@ function spawnWave(server, waveNo) {
       say(server, `§c⚔ 공성 시작! §7위협도 ${threat} · 웨이브 ${sfGetI(server, 'ls_siege_waves') + 1}개 · 첫 물결 ${n}기`)
     }
     // 몹 진화 단계 뉴스 (새 단계 첫 공성 때 1회)
-    var tier = threatTier(threat)
+    var tier = waveTier(LS.progress(server), threat)
     if (tier > sfGetI(server, 'ls_ann_tier')) {
       sfSetI(server, 'ls_ann_tier', tier)
       if (TIER_NEWS[tier]) say(server, TIER_NEWS[tier])
@@ -562,16 +580,14 @@ function onNewDay(server, day) {
     setThreat(server, threat - 1)
     if (getThreat(server) < threat) say(server, `§b세상이 조금씩 숨을 되찾는다. §7위협도 ${getThreat(server)}`)
   }
-  // 몹 진화 카운트다운 — 에스컬레이션을 데드라인으로 (노드가 살아있어 위협이 오르는 중일 때만)
+  // 방치 보정 카운트다운 — 진화의 주인은 관문 진행도지만, 위협도 10 을 넘기면 질이 한 단계 얹힌다.
+  // 관문 진행에는 «며칠 남았다»가 없으므로(플레이어가 깨야 오른다) 데드라인으로 쓸 수 있는 건 이쪽뿐이다.
   if (nodes > 0) {
     var th = getThreat(server)
-    var NEXT_TIER_AT = { 1: 4, 2: 7, 3: 10 } // 현재 단계 → 다음 진화 위협도
-    var nextAt = NEXT_TIER_AT[threatTier(th)]
-    if (nextAt && th < nextAt) {
-      var dleft = nextAt - th // 노드 활성 시 위협 +1/일
+    if (th < 10 && waveTier(LS.progress(server), th) < 5) {
+      var dleft = 10 - th   // 노드 활성 시 위협 +1/일
       if (dleft <= 2) {
-        var preview = { 4: '메마른 자들이 섞여들 것이다', 7: '불붙은 망령이 깨어날 것이다', 10: '어둠의 정예가 출정할 것이다' }[nextAt]
-        say(server, `§5⌛ 어둠의 진화 §cD-${dleft} §7— ${preview}... (위협도 ${th}/${nextAt})`)
+        say(server, `§5⌛ 어둠이 임계에 다가선다 §cD-${dleft} §7— 방치가 길어지면 더 사나운 놈들이 섞인다... (위협도 ${th}/10)`)
       }
     }
   }
@@ -1040,8 +1056,12 @@ ServerEvents.commandRegistry(event => {
       // 인원 계수가 실제로 얼마나 붙는지 — 안 보이면 조절할 근거가 없다
       var pc = partyCount(s)
       var et = effThreat(s)
+      var pg = LS.progress(s)
       ctx.source.sendSystemMessage(Text.of(
-        `§8인원 §7${pc}명§8 → 웨이브 §7${buildWave(et, false, pc).length}마리§8 (1명이면 ${buildWave(et, false, 1).length}) · 대공세 §7${buildWave(et, true, pc).length}마리`))
+        `§8인원 §7${pc}명§8 → 웨이브 §7${buildWave(et, false, pc, pg).length}마리§8 (1명이면 ${buildWave(et, false, 1, pg).length}) · 대공세 §7${buildWave(et, true, pc, pg).length}마리`))
+      // 양과 질이 갈렸으니 둘을 같이 보여준다 — 안 보이면 "관문 깼는데 뭐가 달라졌지"가 된다
+      ctx.source.sendSystemMessage(Text.of(
+        `§8몹 단계 §7${waveTier(pg, et)}§8/5 §7— 관문 ${pg}/4${et >= 10 ? ' §c+ 방치 보정(위협 10+)' : ''}`))
       // 첫 공성은 위협도가 강제로 깎인다. 이게 안 보이면 "대공세인데 왜 약하지"가 된다
       if (isFirstSiege(s)) {
         ctx.source.sendSystemMessage(Text.of(
