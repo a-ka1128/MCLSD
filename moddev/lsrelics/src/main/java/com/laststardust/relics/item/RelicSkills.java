@@ -398,6 +398,15 @@ public final class RelicSkills {
         return true;
     }
 
+    // ── 더미 수치가 낮은 것은 정상이다. 올리지 말 것 ──
+    // 스킬별 계측에서 산탄이 60초 창의 1~3%(34·44·86)로 나와 "죽은 스킬"로 보인다.
+    // 쿨 11초면 5회는 들어갈 수 있는데 한두 번만 쓰이기 때문인데, 이유가 구조적이다:
+    //   솔라리스는 저격 패시브(거리당 +, 30칸에서 +40%)가 있어서 딜을 넣으려면 멀리 서야 한다.
+    //   그런데 산탄은 거리 감쇄(점블랭크 100% -> 최대 사거리 40%)가 걸린 원뿔이다.
+    //   즉 - 최적 사거리가 서로 반대 - 라, 가만히 선 더미전에서는 쓸 자리가 없다.
+    // 실전에서는 몹이 플레이어에게 다가오므로 자연히 근거리 교전이 생기고 그때 쓰인다.
+    //
+    // 더미 측정은 이 스킬을 구조적으로 과소평가한다. 사용자 판단으로 수치는 유지한다(2026-07-28).
     public static void buckshot(Level level, Player player, ItemStack stack) {
         if (!(level instanceof ServerLevel sl)) return;
         if (!ready(sl, player, stack, "cdBuckshot", "산탄", 220, 2)) return;
