@@ -150,7 +150,12 @@ public final class LSCommands {
                         .suggests((c, b) -> { b.suggest("danger"); b.suggest("stack"); b.suggest("spread"); return b.buildFuture(); })
                         .executes(ctx -> testTelegraph(ctx.getSource(), StringArgumentType.getString(ctx, "kind")))))
                 .then(Commands.literal("clear").executes(ctx -> {
-                    int n = WroughtnautGimmick.clearTest() + IgnisGimmick.clearTest() + GauntletGimmick.clearTest();
+                    // 기믹을 새로 만들 때마다 여기에 한 줄을 - 반드시 - 더한다.
+                    // T4·최종이 빠져 있던 적이 있는데, 시험 소환은 PersistenceRequired 라
+                    // 청크를 벗어나도 안 사라진다 — 빠뜨리면 체력 1만짜리가 세계에 영구히 남는다.
+                    int n = WroughtnautGimmick.clearTest() + IgnisGimmick.clearTest()
+                          + GauntletGimmick.clearTest() + MonstrosityGimmick.clearTest()
+                          + LichGimmick.clearTest();
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§7시험 소환분 " + n + "기 제거 §8(세계에서 만난 개체는 건드리지 않는다)"), false);
                     return 1;
