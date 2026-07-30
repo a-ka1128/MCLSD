@@ -43,11 +43,14 @@ def main():
         if not webhook or not cls:
             skipped.append(cls.get("name", name) if cls else name)
             continue
-        post(webhook, cls, thread_id=getattr(mod, "THREAD_ID", ""), base_dir=BASE_DIR)
+        # 모듈명에서 키를 뽑는다("post_atlas" -> "atlas") — 웹훅 키와 같은 이름이라
+        # posted_ids.json 이 개별 실행(py post_atlas.py)과 같은 칸을 쓴다.
+        post(webhook, cls, thread_id=getattr(mod, "THREAD_ID", ""), base_dir=BASE_DIR,
+             key=name.removeprefix("post_"))
         posted += 1
         time.sleep(0.7)   # 웹훅 레이트리밋 여유
 
-    print(f"\n완료 — {posted}종 게시")
+    print(f"\n완료 : {posted}종 게시")
     if skipped:
         print("건너뜀(웹훅 없음):", ", ".join(skipped))
 

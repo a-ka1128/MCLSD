@@ -33,4 +33,5 @@ CLASS = {
 }
 
 if __name__ == "__main__":
-    post(WEBHOOK, CLASS, thread_id=THREAD_ID, base_dir=os.path.dirname(os.path.abspath(__file__)))
+    post(WEBHOOK, CLASS, thread_id=THREAD_ID, base_dir=os.path.dirname(os.path.abspath(__file__)),
+         key="atlas")

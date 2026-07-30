@@ -25,6 +25,34 @@ DEFAULT_COLOR = 0x9AA4B2     # 색을 안 준 경우
 CONTROLS = "R 기본 · V 이동(쉬프트 두 번도 가능) · C 추가 · X 궁극"
 
 
+# ── 다시 올리면 옛 글은 지운다 (replace) ──
+# 스킬 수치가 바뀔 때마다 새 글을 올리면 채널에 여러 세대가 쌓여서, 사람들이 어느 게
+# 최신인지 알 수 없다. 그래서 게시할 때마다 - 직전에 올린 것을 지우고 - 새로 올린다.
+#
+# 웹훅은 자기가 만든 메시지만 지울 수 있고, 그러려면 메시지 ID 가 필요하다. 그래서
+# 보낼 때 ?wait=true 응답의 ID 를 아래 파일에 남긴다.
+#
+# ※ 이 기능이 생기기 전에 올린 글은 ID 가 없어서 스크립트가 못 지운다.
+#   - 처음 한 번은 채널의 옛 글을 직접 지워야 한다 - . 그다음부터는 자동이다.
+#
+# 채널마다 다른 런타임 상태라 git 에 올리지 않는다(settings 는 코드, 상태는 파일 —
+# 이 저장소의 다른 봇들과 같은 규칙).
+POSTED_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "posted_ids.json")
+
+
+def _load_posted():
+    try:
+        with open(POSTED_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_posted(data):
+    with open(POSTED_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
 # ── 서식 ──
 def _ansi(code, s):
     return f"{E}[{code}m{s}{E}[0m"
@@ -106,7 +134,7 @@ def _send(webhook, thread_id, payload, image=None):
         headers={"Content-Type": "application/json", "User-Agent": UA})
     try:
         with urllib.request.urlopen(req) as r:
-            return r.status
+            return _message_id(r)
     except urllib.error.HTTPError as e:
         _explain(e)
 
@@ -138,13 +166,38 @@ def _send_multipart(url, payload, path):
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": UA})
     try:
         with urllib.request.urlopen(req) as r:
-            return r.status
+            return _message_id(r)
     except urllib.error.HTTPError as e:
         _explain(e)
 
 
+def _message_id(resp):
+    """?wait=true 응답에서 메시지 ID. 나중에 이 글을 지우기 위해 필요하다."""
+    try:
+        return json.loads(resp.read().decode("utf-8")).get("id")
+    except (ValueError, OSError):
+        return None
+
+
+def _delete(webhook, thread_id, message_id):
+    """웹훅이 올린 메시지 하나를 지운다. 이미 없으면(404) 조용히 넘어간다."""
+    url = f"{webhook}/messages/{message_id}"
+    if thread_id:
+        url += f"?thread_id={thread_id}"
+    req = urllib.request.Request(url, method="DELETE", headers={"User-Agent": UA})
+    try:
+        urllib.request.urlopen(req)
+        return True
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return False          # 사람이 이미 지웠다 — 정상
+        print(f"  ! 삭제 실패 HTTP {e.code} (id={message_id})")
+        return False
+
+
 def _explain(e):
-    print(f"  ! HTTP {e.code} — {e.read().decode('utf-8', 'replace')[:300]}")
+    # cp949 콘솔이 U+2014(em dash) 를 못 써서, print 문에는 쓰지 않는다.
+    print(f"  ! HTTP {e.code} : {e.read().decode('utf-8', 'replace')[:300]}")
     if e.code == 401:
         print("    → 웹훅 URL(토큰)이 틀렸습니다.")
     elif e.code == 404:
@@ -154,30 +207,62 @@ def _explain(e):
     raise SystemExit(1)
 
 
-def post(webhook, cls, thread_id="", base_dir=".", header=True, mode="embed"):
-    """클래스 하나를 게시한다. mode: 'embed' | 'ansi' | 'both'"""
+def post(webhook, cls, thread_id="", base_dir=".", header=True, mode="embed",
+         key=None, replace=True):
+    """클래스 하나를 게시한다. mode: 'embed' | 'ansi' | 'both'
+
+    key      posted_ids.json 에 쓸 이름(웹훅 키와 같게 준다). 없으면 교체를 못 한다.
+    replace  True 면 이 키로 지난번에 올린 글을 먼저 지운다.
+    """
     if not webhook:
         print("WEBHOOK 을 먼저 채워주세요. (채널 설정 → 연동 → 웹훅)")
         return
+
+    posted = _load_posted()
+    old = posted.get(key, []) if key else []
+
+    # ── 옛 글 정리 ──
+    # 새로 올리기 전에 지운다. 순서가 반대면 실패 시 아무것도 안 남는 순간이 생긴다.
+    if replace and key:
+        if old:
+            gone = sum(1 for mid in old if _delete(webhook, thread_id, mid))
+            print(f"  · 옛 글 {gone}/{len(old)}개 제거")
+        else:
+            # ※ print 에는 em dash 를 쓰지 않는다 — 한국어 윈도 콘솔(cp949)이 U+2014 를
+            #    인코딩하지 못해 스크립트가 UnicodeEncodeError 로 죽는다.
+            print("  · 기록된 옛 글이 없습니다. 이번에 올리는 것부터 추적합니다.")
+            print("    (이 기능 이전에 올린 글이 채널에 있으면 직접 지워주세요)")
+
+    fresh = []
+
+    def keep(mid):
+        if mid:
+            fresh.append(mid)
 
     if header:
         text = build_header(cls)
         if text:
             img_path = cls.get("image")
             resolved = _resolve(img_path, base_dir)
-            _send(webhook, thread_id, {"content": text}, image=resolved)
+            keep(_send(webhook, thread_id, {"content": text}, image=resolved))
             if img_path and not resolved:
                 print(f"  · 이미지 없음(건너뜀): {img_path}")
             time.sleep(0.7)
 
     if cls.get("rows"):
         if mode in ("embed", "both"):
-            _send(webhook, thread_id, {"embeds": [build_embed(cls)]})
+            keep(_send(webhook, thread_id, {"embeds": [build_embed(cls)]}))
             time.sleep(0.7)
         if mode in ("ansi", "both"):
-            _send(webhook, thread_id, {"content": build_ansi(cls)})
+            keep(_send(webhook, thread_id, {"content": build_ansi(cls)}))
             time.sleep(0.7)
     else:
         print("  · 스킬 목록이 비어 있어 임베드는 건너뜁니다 (로어만 게시)")
 
-    print("게시 완료:", cls.get("name", "?"))
+    # 전송이 중간에 죽으면 _explain 이 SystemExit 을 던져 여기 못 온다 —
+    # 그러면 옛 ID 가 그대로 남아, 다음 실행이 남은 글을 다시 지우려 시도한다(무해).
+    if key:
+        posted[key] = fresh
+        _save_posted(posted)
+
+    print("게시 완료:", cls.get("name", "?"), f"({len(fresh)}개)")
