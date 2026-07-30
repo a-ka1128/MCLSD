@@ -102,9 +102,40 @@ public final class DummyManager {
     private static final Map<String, Float> BY_SKILL = new HashMap<>();
     private static final String UNLABELED = "평타";
 
+    // 이름표별 타격 횟수. 피해 총합만 있으면 "한 방이 세졌다"와 "더 많이 때렸다"를 구분할 수 없다.
+    // 실제로 시리우스에서 값을 x1.077 했는데 평타가 x1.42 로 뛰어 원인을 못 짚었다 —
+    // 횟수가 있으면 발사 수가 늘었는지 한 발이 세졌는지 즉시 갈라진다.
+    private static final Map<String, Integer> HITS = new HashMap<>();
+
     // 누가 어떤 유물로 쟀는지. 로그에는 스킬 이름만 남아서, 나중에 기록을 다시 볼 때
     // 어느 유물의 측정이었는지 사람에게 물어봐야 했다. 그 왕복을 없앤다.
     private static final Map<UUID, String> RELICS = new HashMap<>();
+
+    // 시전자에게 걸려 있던 버프. 표적 방어도는 남기는데 시전자 조건은 안 남겨서,
+    // 축복 안/밖에서 잰 기록이 섞이고도 사후에 구분할 수가 없었다.
+    //
+    // 성소 Lv4「별빛 축복」은 성역 64칸 안에서 자동으로 붙는다(ls_towneffect.js):
+    //   Strength I -> 근접 공격력 +3.0 · projectile_damage +25% -> 활·총·지팡이 전부
+    // 이 차이 때문에 같은 유물의 두 측정이 x1.25 넘게 벌어졌고, 원인을 찾는 데 오래 걸렸다.
+    private static final Map<UUID, String> BUFFS = new HashMap<>();
+
+    // apothic_attributes 는 외부 모드라 없을 수도 있다 — 없으면 조용히 건너뛴다.
+    private static final net.minecraft.resources.ResourceLocation PROJ_ATTR =
+        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("apothic_attributes", "projectile_damage");
+
+    private static String buffsOf(ServerPlayer p) {
+        StringBuilder sb = new StringBuilder();
+        if (p.hasEffect(net.minecraft.world.effect.MobEffects.DAMAGE_BOOST)) sb.append("힘");
+        var attr = net.minecraft.core.registries.BuiltInRegistries.ATTRIBUTE.get(PROJ_ATTR);
+        if (attr != null) {
+            var inst = p.getAttribute(net.minecraft.core.Holder.direct(attr));
+            if (inst != null && inst.getValue() > 1.0001) {
+                if (sb.length() > 0) sb.append('·');
+                sb.append(String.format("투사체+%.0f%%", (inst.getValue() - 1.0) * 100));
+            }
+        }
+        return sb.length() == 0 ? null : sb.toString();
+    }
 
     // 유물 이름은 게임 내 표기(한글)를 쓴다. getHoverName() 은 서버 언어로 풀려서
     // 번역 키나 영문이 나올 수 있어, 필요한 8종만 직접 적는다.
@@ -206,7 +237,9 @@ public final class DummyManager {
         DAMAGE.clear();
         NAMES.clear();
         BY_SKILL.clear();
+        HITS.clear();
         RELICS.clear();
+        BUFFS.clear();
         for (LivingEntity d : DUMMIES) d.setHealth(d.getMaxHealth());
         startTick = tick;
         measuring = true;
@@ -258,10 +291,12 @@ public final class DummyManager {
         for (Map.Entry<UUID, Float> e : rows) {
             String name = NAMES.getOrDefault(e.getKey(), "?");
             String relic = RELICS.get(e.getKey());
+            String buffs = BUFFS.get(e.getKey());
             float dmg = e.getValue();
             out.add(Component.literal(String.format(
-                "§f%-12s §d%-6s §7%,.0f §8· §e%.1f DPS §8· %.0f%%",
-                name, relic == null ? "" : relic, dmg, dmg / secs, dmg * 100f / total)));
+                "§f%-12s §d%-6s §7%,.0f §8· §e%.1f DPS §8· %.0f%%%s",
+                name, relic == null ? "" : relic, dmg, dmg / secs, dmg * 100f / total,
+                buffs == null ? "" : " §6[" + buffs + "]")));
         }
         // ── 스킬별 배분 ──
         // 이름표가 하나뿐이면(=전부 평타) 줄만 늘어나므로 생략한다.
@@ -271,9 +306,12 @@ public final class DummyManager {
             skills.sort(Comparator.<Map.Entry<String, Float>>comparingDouble(Map.Entry::getValue).reversed());
             for (Map.Entry<String, Float> e : skills) {
                 float dmg = e.getValue();
+                int hits = HITS.getOrDefault(e.getKey(), 0);
+                // 타격 수와 1회 평균을 같이 낸다 — 총합만 보면 원인을 못 짚는다
                 out.add(Component.literal(String.format(
-                    "§b%-8s §7%,.0f §8· §e%.1f DPS §8· %.0f%%",
-                    e.getKey(), dmg, dmg / secs, dmg * 100f / total)));
+                    "§b%-8s §7%,.0f §8· §e%.1f DPS §8· %.0f%% §8· %d타 평균 %.1f",
+                    e.getKey(), dmg, dmg / secs, dmg * 100f / total,
+                    hits, hits > 0 ? dmg / hits : 0f)));
             }
         }
 
@@ -299,6 +337,8 @@ public final class DummyManager {
         if (!RELICS.containsKey(p.getUUID())) {
             String relic = relicName(p.getMainHandItem().getItem());
             if (relic != null) RELICS.put(p.getUUID(), relic);
+            String buffs = buffsOf(p);
+            if (buffs != null) BUFFS.put(p.getUUID(), buffs);
         }
         // 이름표는 두 곳에서 온다.
         //   1) LsDamage — 우리 코드가 직접 넣는 피해(스킬 대부분)
@@ -313,7 +353,9 @@ public final class DummyManager {
                 if (!tagged.isEmpty()) label = tagged;
             }
         }
-        BY_SKILL.merge(label == null ? UNLABELED : label, event.getNewDamage(), Float::sum);
+        String key = label == null ? UNLABELED : label;
+        BY_SKILL.merge(key, event.getNewDamage(), Float::sum);
+        HITS.merge(key, 1, Integer::sum);
     }
 
     @SubscribeEvent
