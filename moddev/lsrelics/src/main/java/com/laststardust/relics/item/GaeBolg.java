@@ -17,10 +17,10 @@ public class GaeBolg extends Item implements RelicActions {
     }
 
     // ── R = 투창 (기본·1성) ──
-    // 차징이 사라졌으므로 항상 최대 위력(1.0)으로 나간다. 쿨다운 8초는 그대로다.
+    // 차징 조작이 없다. 항상 최대 위력·최대 사거리로 즉시 나간다. 쿨다운 8초.
     @Override
     public void basicSkill(ServerLevel level, ServerPlayer player, ItemStack stack) {
-        RelicSkills.javelinThrow(level, player, stack, 1.0f);
+        RelicSkills.javelinThrow(level, player, stack);
     }
 
     // ── V = 이동기 · 질풍 돌진 ──

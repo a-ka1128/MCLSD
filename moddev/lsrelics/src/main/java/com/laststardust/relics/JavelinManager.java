@@ -68,12 +68,16 @@ public final class JavelinManager {
         }
     }
 
-    // charge 0~1: 당길수록 빠르고 멀리 난다 (속도 1.2→2.0, 사거리 10→20)
+    // 속도 2.0 · 사거리 20칸.
+    // 예전엔 charge(0~1) 를 받아 속도 1.2~2.0 / 사거리 10~20 으로 나눴는데, 차징 조작이
+    // 사라지면서 호출부가 항상 1.0 을 넘기게 됐다. 쓰이지 않는 축은 지우고 상수로 접었다.
+    private static final double SPEAR_SPEED = 2.0;
+    private static final double SPEAR_RANGE = 20.0;
+
     public static void throwSpear(ServerLevel level, ServerPlayer owner, Vec3 start, Vec3 dir,
-                                  float damage, float bleedPerSec, int bleedTicks, float charge) {
-        double speed = 1.2 + 0.8 * charge;
-        double range = 10.0 + 10.0 * charge;
-        Javelin j = new Javelin(level, owner, start, dir.normalize(), damage, bleedPerSec, bleedTicks, speed, range);
+                                  float damage, float bleedPerSec, int bleedTicks) {
+        Javelin j = new Javelin(level, owner, start, dir.normalize(), damage, bleedPerSec, bleedTicks,
+                                SPEAR_SPEED, SPEAR_RANGE);
         // 손에 든 게볼그 모델을 그대로 띄운다 — 파티클이 아니라 진짜 창이 날아간다
         Display.ItemDisplay disp = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, level);
         disp.setItemStack(new ItemStack(LSRelics.LANCER.get()));

@@ -627,22 +627,24 @@ public final class RelicSkills {
     // ─────────────────────────────── 스킬: 게볼그 "투창" (기본·1성) ───────────────────────────────
     // R 키. 명중 + 출혈, 최대 거리에서
     // 되돌아오며 다시 벤다. 쿨 8초. 기본 슬롯이라 상시 원거리 견제 무브다.
-    public static void javelinThrow(ServerLevel sl, ServerPlayer player, ItemStack stack, float charge) {
+    public static void javelinThrow(ServerLevel sl, ServerPlayer player, ItemStack stack) {
         if (!ready(sl, player, stack, "cdJavelin", "투창", 160, 1)) return;
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
-        float power = 1.0f + 0.5f * charge; // 데미지 배수 1.0~1.5
         // 눈이 아니라 오른손 위치에서 창이 나간다 (손에서 던지는 느낌)
         Vec3 right = look.cross(new Vec3(0, 1, 0)).normalize();
         Vec3 hand = eye.add(look.scale(0.6)).add(right.scale(0.35)).add(0, -0.3, 0);
+        // 10.2 = 6.80 x 1.5. 차징이 있던 시절 power(=1.0+0.5*charge) 가 곱해지던 값인데,
+        // 호출부가 항상 charge=1.0 을 넘겨서 사실상 상수였다. 접으면서 배율을 그대로 흡수했다
+        // — 안 그러면 실측으로 맞춰둔 투창이 조용히 33% 약해진다.
         JavelinManager.throwSpear(sl, player, hand, look,
-            dmg(stack, 6.80f) * power, dmgTick(stack, 1.36f), 60, charge); // 8.9/1.78 -> 6.80/1.36 (x0.764)
+            dmg(stack, 10.2f), dmgTick(stack, 1.36f), 60);
 
-        dustBurst(sl, eye, 0.5, 12 + (int) (charge * 18), GOLD, 1.2f);
+        dustBurst(sl, eye, 0.5, 30, GOLD, 1.2f);
         sl.sendParticles(ParticleTypes.FLASH, eye.x + look.x, eye.y + look.y, eye.z + look.z, 1, 0, 0, 0, 0);
         // 완충일수록 던지는 소리가 묵직하다
-        play(sl, player, SoundEvents.TRIDENT_THROW.value(), 1.0f, 1.3f - charge * 0.4f);
-        if (charge >= 1.0f) play(sl, player, SoundEvents.TRIDENT_RIPTIDE_3.value(), 1.0f, 0.9f);
+        play(sl, player, SoundEvents.TRIDENT_THROW.value(), 1.0f, 0.9f);
+        play(sl, player, SoundEvents.TRIDENT_RIPTIDE_3.value(), 1.0f, 0.9f);
         SoundScheduler.at(sl, eye, SoundEvents.TRIDENT_RIPTIDE_1.value(), 0.7f, 1.2f, 3);
     }
 
