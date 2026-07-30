@@ -26,10 +26,18 @@ $OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $props = Join-Path $PSScriptRoot '..\server\server.properties'
 if (-not (Test-Path $props)) { Write-Output "ERR: server.properties 없음: $props"; exit 1 }
+# 한 번 파싱해서 표로 만든 뒤 꺼내 쓴다. 키마다 match/replace 를 반복하던 것을 접었는데,
+# 부수 효과가 하나 더 있다 — 예전 형태는 시크릿 스캐너(pre-push f4a)가 «password= 뒤에
+# 따옴표»를 하드코딩된 자격증명으로 오탐해서 push 마다 걸렸다. 상시 울리는 경보는
+# 무시하게 되므로 규칙을 끄는 대신 코드를 바꿨다.
 $raw = Get-Content $props -Encoding UTF8
-$pw = ((($raw | Where-Object { $_ -match '^rcon\.password=' }) -replace '^rcon\.password=', '')).Trim()
-$port = ((($raw | Where-Object { $_ -match '^rcon\.port=' }) -replace '^rcon\.port=', '')).Trim()
-$enabled = ((($raw | Where-Object { $_ -match '^enable-rcon=' }) -replace '^enable-rcon=', '')).Trim()
+$conf = @{}
+foreach ($line in $raw) {
+    if ($line -match '^\s*([^#=]+?)\s*=\s*(.*)$') { $conf[$Matches[1]] = $Matches[2].Trim() }
+}
+$pw = $conf['rcon.password']
+$port = $conf['rcon.port']
+$enabled = $conf['enable-rcon']
 if ($enabled -ne 'true') { Write-Output 'ERR: enable-rcon=false'; exit 1 }
 if (-not $pw) { Write-Output 'ERR: rcon.password 비어 있음'; exit 1 }
 
