@@ -42,6 +42,15 @@ function bdEffHp(server, id) {
   const c = bdCfgBoss(id); if (c && c.hp > 0) return c.hp
   return bdGlobalHp(server)
 }
+// ── 절대 체력 (%보다 우선) ──
+// %는 모드 원본 체력을 알아야 쓰는데 그 값이 코드 안에 있어 안 보인다(Mowzie's·Cataclysm).
+// 반면 튜닝의 입력은 «4명이 1분» 같은 목표 시간이고, 거기서 나오는 건 절대값이다.
+// 모드가 업데이트로 원본을 바꿔도 우리 목표는 안 흔들린다. 0 = 지정 없음(= % 경로).
+function bdEffAbs(server, id) {
+  const p = bdStore(server).getInt('bd_' + id + '_abs'); if (p > 0) return p
+  const c = bdCfgBoss(id); if (c && c.absHp > 0) return c.absHp
+  return 0
+}
 function bdEffDmg(server, id) {
   const p = bdStore(server).getInt('bd_' + id + '_dmg'); if (p > 0) return p
   const c = bdCfgBoss(id); if (c && c.dmg > 0) return c.dmg
@@ -64,6 +73,7 @@ EntityEvents.spawned(event => {
   if (!server) return
   const hp = bdEffHp(server, id)
   const dmg = bdEffDmg(server, id)
+  const abs = bdEffAbs(server, id)
 
   // 체력: setMaxHealth 는 내부적으로 Attributes.MAX_HEALTH Holder 를 직접 쓰므로 안전하다.
   //
@@ -73,13 +83,23 @@ EntityEvents.spawned(event => {
   //   다음 사람이 우회만 늘리고 원인은 못 고친다(실제로 아래 공격력이 그렇게 방치돼 있었다).
   // ※ 자바 쪽 실제 이름은 kjs$setMaxHealth 지만, KubeJS 는 kjs$ 접두사를 떼고 노출한다 —
   //   스크립트에서 접두사를 붙여 부르면 'Cannot find function' 으로 핸들러 전체가 죽는다.
-  let hpMsg = 'hp=' + hp + '%'
-  if (hp !== 100) {
-    var oldMax = e.getMaxHealth()
-    var newMax = oldMax * hp / 100.0
-    e.setMaxHealth(newMax)
-    e.setHealth(e.getMaxHealth())   // 새 최대치로 채운다
-    hpMsg += ` (${oldMax}→${e.getMaxHealth()})`
+  // 원본 최대 체력은 - 항상 - 찍는다. 예전엔 배율이 100%면 아무것도 안 찍혀서,
+  // "이 보스 원본이 얼마인지"를 알아낼 방법이 서버 어디에도 없었다. 튜닝의 출발점이 그 숫자다.
+  var oldMax = e.getMaxHealth()
+  let hpMsg = 'base=' + oldMax + ' '
+  if (abs > 0) {
+    // 절대 지정이 있으면 %는 무시한다. 둘을 곱하면 어느 쪽을 만졌는지 추적이 안 된다.
+    e.setMaxHealth(abs)
+    e.setHealth(e.getMaxHealth())
+    hpMsg += `hp=절대 ${e.getMaxHealth()}`
+  } else {
+    hpMsg += 'hp=' + hp + '%'
+    if (hp !== 100) {
+      var newMax = oldMax * hp / 100.0
+      e.setMaxHealth(newMax)
+      e.setHealth(e.getMaxHealth())   // 새 최대치로 채운다
+      hpMsg += ` (${oldMax}→${e.getMaxHealth()})`
+    }
   }
 
   // 공격력: 여전히 속성으로 접근한다. old→new 를 찍어서, 안 바뀌면
@@ -101,8 +121,38 @@ EntityEvents.spawned(event => {
 // ── 명령어 ──
 ServerEvents.commandRegistry(event => {
   const { commands: Commands, arguments: Arguments } = event
-  const bossArg = () => Commands.argument('boss', Arguments.STRING.create(event))
+  // ── 보스 인자 ──
+  // 예전엔 Arguments.STRING 이었다. 그건 Brigadier 의 «따옴표 가능 문자열»이고, 따옴표 없이
+  // 읽을 때는 [0-9A-Za-z_.+-] 만 허용한다 — 콜론에서 토큰이 끊긴다. 그래서 탭 완성이 제안한
+  // mowziesmobs:ferrous_wroughtnaut 를 그대로 치면
+  //     Expected whitespace to end one argument, but found trailing data
+  // 로 거부됐다. - 제안한 값을 그대로 입력할 수 없는 - 상태였고, 따옴표를 아는 사람만 쓸 수 있었다.
+  //
+  // RESOURCE_LOCATION 은 ResourceLocationArgument.id() 라 ResourceLocation.read() 로 읽는다.
+  // 콜론·슬래시가 정식 문자이므로 따옴표가 필요 없고, 대문자·공백 같은 진짜 오타는
+  // 우리 코드에 닿기 전에 파서가 걸러준다.
+  const bossArg = () => Commands.argument('boss', Arguments.RESOURCE_LOCATION.create(event))
     .suggests((ctx, b) => { BOSS_LIST.forEach(x => b.suggest(x)); return b.buildFuture() })
+
+  // 결과는 ResourceLocation 객체다. 문자열로 눌러 BOSS_SET 키와 맞춘다.
+  // 네임스페이스를 생략하면 파서가 minecraft: 를 붙이므로(`frostmaw` → `minecraft:frostmaw`)
+  // 짧은 이름도 받아준다 — 목록에서 뒷부분이 유일하게 맞으면 그걸로 친다.
+  const bossId = (ctx) => {
+    var raw = String(Arguments.RESOURCE_LOCATION.getResult(ctx, 'boss'))
+    if (BOSS_SET[raw]) return raw
+    var hits = BOSS_LIST.filter(x => x.substring(x.indexOf(':') + 1) === raw.substring(raw.indexOf(':') + 1))
+    return hits.length === 1 ? hits[0] : raw
+  }
+
+  // 못 찾았을 때. 이름이 겹쳐서 못 고른 건지(리치가 둘 있다) 아예 없는 건지 구분해 준다 —
+  // 둘 다 «알 수 없는 보스»로 뭉뚱그리면 네임스페이스를 붙이면 된다는 걸 알 방법이 없다.
+  const bossFail = (ctx, raw) => {
+    var hits = BOSS_LIST.filter(x => x.substring(x.indexOf(':') + 1) === raw.substring(raw.indexOf(':') + 1))
+    ctx.source.sendSystemMessage(Text.of(hits.length > 1
+      ? `§c이름이 겹칩니다: §7${hits.join(' · ')}§c — 네임스페이스까지 적어주세요.`
+      : `§c알 수 없는 보스: ${raw}`))
+    return 0
+  }
 
   event.register(Commands.literal('bossdiff')
     .executes(ctx => {
@@ -113,6 +163,7 @@ ServerEvents.commandRegistry(event => {
         ? '§c● 라이브 오버라이드 적용 중 §7— 월드 리셋 시 사라진다. 남기려면 §e/bossdiff export'
         : '§a● ls_config.js 파일 값 사용 중 §7— 월드 리셋에도 유지된다'))
       ctx.source.sendSystemMessage(Text.of('§7/bossdiff global <hp> <dmg> · set <boss> <hp> <dmg> · get <boss> · list · export · reset'))
+      ctx.source.sendSystemMessage(Text.of('§7/bossdiff §eabs <boss> <체력>§7 — 절대 체력 (%보다 우선 · 0 이면 해제). 목표 시간으로 잡을 땐 이쪽.'))
       return 1
     })
     .then(Commands.literal('global').requires(s => s.hasPermission(2))
@@ -128,19 +179,35 @@ ServerEvents.commandRegistry(event => {
       .then(bossArg()
         .then(Commands.argument('hp', Arguments.INTEGER.create(event))
           .then(Commands.argument('dmg', Arguments.INTEGER.create(event)).executes(ctx => {
-            const id = Arguments.STRING.getResult(ctx, 'boss')
-            if (!BOSS_SET[id]) { ctx.source.sendSystemMessage(Text.of(`§c알 수 없는 보스: ${id}`)); return 0 }
+            const id = bossId(ctx)
+            if (!BOSS_SET[id]) return bossFail(ctx, id)
             const p = bdStore(ctx.source.server)
             p.putInt('bd_' + id + '_hp', Math.max(1, Arguments.INTEGER.getResult(ctx, 'hp')))
             p.putInt('bd_' + id + '_dmg', Math.max(1, Arguments.INTEGER.getResult(ctx, 'dmg')))
             ctx.source.sendSystemMessage(Text.of(`§a${id} → 체력 ${bdEffHp(ctx.source.server, id)}% · 공격 ${bdEffDmg(ctx.source.server, id)}%`))
             return 1
           })))))
+    // 절대 체력 지정. 0 을 넣으면 해제되어 % 로 돌아간다.
+    .then(Commands.literal('abs').requires(s => s.hasPermission(2))
+      .then(bossArg()
+        .then(Commands.argument('hp', Arguments.INTEGER.create(event)).executes(ctx => {
+          const id = bossId(ctx)
+          if (!BOSS_SET[id]) return bossFail(ctx, id)
+          const v = Math.max(0, Arguments.INTEGER.getResult(ctx, 'hp'))
+          bdStore(ctx.source.server).putInt('bd_' + id + '_abs', v)
+          ctx.source.sendSystemMessage(Text.of(v > 0
+            ? `§a${id} → 체력 §e절대 ${v} §7(%는 무시된다 · 새로 스폰되는 보스부터)`
+            : `§a${id} → 절대 체력 해제 §7(체력 ${bdEffHp(ctx.source.server, id)}% 로 복귀)`))
+          return 1
+        }))))
     .then(Commands.literal('get')
       .then(bossArg().executes(ctx => {
-        const id = Arguments.STRING.getResult(ctx, 'boss'); const s = ctx.source.server
-        if (!BOSS_SET[id]) { ctx.source.sendSystemMessage(Text.of(`§c알 수 없는 보스: ${id}`)); return 0 }
-        ctx.source.sendSystemMessage(Text.of(`§6${id}§7 — 체력 §e${bdEffHp(s, id)}%§8(${bdSrc(s, id, 'hp')})§7 · 공격 §e${bdEffDmg(s, id)}%§8(${bdSrc(s, id, 'dmg')})`))
+        const id = bossId(ctx); const s = ctx.source.server
+        if (!BOSS_SET[id]) return bossFail(ctx, id)
+        const ab = bdEffAbs(s, id)
+        ctx.source.sendSystemMessage(Text.of(ab > 0
+          ? `§6${id}§7 — 체력 §e절대 ${ab}§7 · 공격 §e${bdEffDmg(s, id)}%§8(${bdSrc(s, id, 'dmg')})`
+          : `§6${id}§7 — 체력 §e${bdEffHp(s, id)}%§8(${bdSrc(s, id, 'hp')})§7 · 공격 §e${bdEffDmg(s, id)}%§8(${bdSrc(s, id, 'dmg')})`))
         return 1
       })))
     .then(Commands.literal('list').executes(ctx => {
@@ -148,8 +215,11 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of(`§6전역: 체력 ${bdGlobalHp(s)}% · 공격 ${bdGlobalDmg(s)}% §7| 개별 오버라이드:`))
       let any = false
       BOSS_LIST.forEach(id => {
+        const ab = bdEffAbs(s, id)
         const ph = bdStore(s).getInt('bd_' + id + '_hp'); const pd = bdStore(s).getInt('bd_' + id + '_dmg')
-        if (ph > 0 || pd > 0) { any = true; ctx.source.sendSystemMessage(Text.of(`§7 ${id}: 체력 ${bdEffHp(s, id)}% · 공격 ${bdEffDmg(s, id)}%`)) }
+        // 절대 지정은 파일 값이어도 보여준다 — 이제 이쪽이 주 튜닝 수단이라 안 보이면 놓친다.
+        if (ab > 0) { any = true; ctx.source.sendSystemMessage(Text.of(`§7 ${id}: 체력 §e절대 ${ab}§7 · 공격 ${bdEffDmg(s, id)}%`)) }
+        else if (ph > 0 || pd > 0) { any = true; ctx.source.sendSystemMessage(Text.of(`§7 ${id}: 체력 ${bdEffHp(s, id)}% · 공격 ${bdEffDmg(s, id)}%`)) }
       })
       if (!any) ctx.source.sendSystemMessage(Text.of('§7 (개별 설정 없음 — 전부 전역값 사용)'))
       return 1
@@ -158,7 +228,7 @@ ServerEvents.commandRegistry(event => {
     .then(Commands.literal('reset').requires(s => s.hasPermission(2)).executes(ctx => {
       const s = ctx.source.server; const p = bdStore(s)
       p.putInt('bd_g_hp', 0); p.putInt('bd_g_dmg', 0)
-      BOSS_LIST.forEach(id => { p.putInt('bd_' + id + '_hp', 0); p.putInt('bd_' + id + '_dmg', 0) })
+      BOSS_LIST.forEach(id => { p.putInt('bd_' + id + '_hp', 0); p.putInt('bd_' + id + '_dmg', 0); p.putInt('bd_' + id + '_abs', 0) })
       ctx.source.sendSystemMessage(Text.of(`§a라이브 오버라이드 초기화 — ls_config.js 값으로 복귀 §7(전역 ${bdGlobalHp(s)}% / ${bdGlobalDmg(s)}%)`))
       return 1
     }))
@@ -171,7 +241,8 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of('§f    perBoss: {'))
       let n = 0
       BOSS_LIST.forEach(id => {
-        const hp = bdEffHp(s, id); const dmg = bdEffDmg(s, id)
+        const hp = bdEffHp(s, id); const dmg = bdEffDmg(s, id); const ab = bdEffAbs(s, id)
+        if (ab > 0) { n++; ctx.source.sendSystemMessage(Text.of(`§f      '${id}': { absHp: ${ab}, dmg: ${dmg} },`)); return }
         // 전역값과 같으면 굳이 적지 않는다
         if (hp === bdGlobalHp(s) && dmg === bdGlobalDmg(s)) return
         n++
@@ -182,7 +253,8 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of('§7※ 서버 로그에도 같은 내용이 남는다 — 복사하기 편함'))
       console.log('[LS-BOSSDIFF] export → globalHp:' + bdGlobalHp(s) + ' globalDmg:' + bdGlobalDmg(s))
       BOSS_LIST.forEach(id => {
-        const hp = bdEffHp(s, id); const dmg = bdEffDmg(s, id)
+        const hp = bdEffHp(s, id); const dmg = bdEffDmg(s, id); const ab = bdEffAbs(s, id)
+        if (ab > 0) { console.log(`      '${id}': { absHp: ${ab}, dmg: ${dmg} },`); return }
         if (hp === bdGlobalHp(s) && dmg === bdGlobalDmg(s)) return
         console.log(`      '${id}': { hp: ${hp}, dmg: ${dmg} },`)
       })
