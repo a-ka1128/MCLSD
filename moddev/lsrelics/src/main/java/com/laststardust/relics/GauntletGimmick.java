@@ -99,8 +99,7 @@ public final class GauntletGimmick {
         List<ServerPlayer> in = Telegraph.inside(level, center, RADIUS);
         if (in.size() < 2) return;
         for (ServerPlayer p : in) {
-            if (p.isSpectator() || !p.isAlive()) continue;
-            if (p.level() != level) continue;
+            if (!Telegraph.hittable(p, level)) continue;
             p.invulnerableTime = 0;
             p.hurt(level.damageSources().mobAttack(boss), DAMAGE);
             p.hurtMarked = true;
@@ -112,8 +111,7 @@ public final class GauntletGimmick {
         if (!boss.isAlive()) return;
         List<ServerPlayer> in = Telegraph.inside(level, center, CORE_RADIUS);
         for (ServerPlayer p : in) {
-            if (p.isSpectator() || !p.isAlive()) continue;
-            if (p.level() != level) continue;
+            if (!Telegraph.hittable(p, level)) continue;
             if (!near.contains(p)) continue;
             p.invulnerableTime = 0;
             p.hurt(level.damageSources().mobAttack(boss), CORE_DAMAGE);

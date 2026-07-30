@@ -267,7 +267,7 @@ public final class WroughtnautGimmick {
         // 거인이 먼저 쓰러지면 도끼도 멈춘다. 죽은 보스에게 맞는 건 납득되지 않는다.
         if (!boss.isAlive()) return;
         for (ServerPlayer p : Telegraph.inside(level, center, RADIUS)) {
-            if (p.isSpectator()) continue;
+            if (!Telegraph.hittable(p, level)) continue;
             // 1.5초를 줬는데 무적 프레임에 씹히면 "피했다/안 피했다"의 인과가 끊긴다.
             // 예고형 기믹은 결과가 결정적이어야 배울 수 있다. 14초에 한 번이라
             // LsDamage 주석이 경고하는 "지속 장판이 20배가 되는" 경우와는 다르다.

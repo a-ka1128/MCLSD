@@ -224,6 +224,13 @@ public final class Telegraph {
         return out;
     }
 
+    // 기믹 피해를 넣기 전에 매번 확인해야 하는 것. 다섯 기믹이 각자 조금씩 다르게 쓰고 있었다
+    // (누구는 관전자만, 누구는 차원까지). 빠뜨리면 관전자가 맞거나, 차원을 옮긴 사람이
+    // 옛 차원의 판정에 맞는다 — 둘 다 «가끔 이상하다»로만 보여서 원인을 못 찾는 종류다.
+    public static boolean hittable(ServerPlayer p, ServerLevel level) {
+        return !p.isSpectator() && p.isAlive() && p.level() == level;
+    }
+
     public static List<ServerPlayer> outside(ServerLevel level, Vec3 center, double radius) {
         List<ServerPlayer> out = new ArrayList<>();
         for (ServerPlayer p : level.players()) {

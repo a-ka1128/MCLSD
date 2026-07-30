@@ -123,7 +123,7 @@ public final class LichGimmick {
                 // 그러면 나머지는 계속 때리면 되고, 파랑이 «치지 마라»가 아니라 «한 명만 빠져라»가 된다.
                 int inside = 0;
                 for (ServerPlayer p : Telegraph.inside(level, ring, RING_RADIUS)) {
-                    if (near.contains(p) && !p.isSpectator() && p.isAlive()) inside++;
+                    if (near.contains(p) && Telegraph.hittable(p, level)) inside++;
                 }
                 int need = Math.max(1, (near.size() + 1) / 2);
                 int held = HELD.getOrDefault(id, 0) + (inside >= need ? 1 : 0);

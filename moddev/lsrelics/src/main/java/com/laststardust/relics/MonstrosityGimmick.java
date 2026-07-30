@@ -134,7 +134,7 @@ public final class MonstrosityGimmick {
         List<ServerPlayer> in = Telegraph.inside(level, center, SPREAD_RADIUS);
         if (in.size() < 2) return;
         for (ServerPlayer p : in) {
-            if (!hittable(p, level)) continue;
+            if (!Telegraph.hittable(p, level)) continue;
             p.invulnerableTime = 0;
             p.hurt(level.damageSources().mobAttack(boss), SPREAD_DAMAGE);
             p.hurtMarked = true;
@@ -146,7 +146,7 @@ public final class MonstrosityGimmick {
         if (!boss.isAlive()) return;
         List<ServerPlayer> in = Telegraph.inside(level, center, STACK_RADIUS);
         for (ServerPlayer p : near) {
-            if (!hittable(p, level) || in.contains(p)) continue;
+            if (!Telegraph.hittable(p, level) || in.contains(p)) continue;
             p.invulnerableTime = 0;
             p.hurt(level.damageSources().mobAttack(boss), STACK_DAMAGE);
             p.igniteForSeconds(STACK_BURN);
@@ -157,16 +157,12 @@ public final class MonstrosityGimmick {
     private static void resolveCore(ServerLevel level, LivingEntity boss, Vec3 center, List<ServerPlayer> near) {
         if (!boss.isAlive()) return;
         for (ServerPlayer p : Telegraph.inside(level, center, CORE_RADIUS)) {
-            if (!hittable(p, level) || !near.contains(p)) continue;
+            if (!Telegraph.hittable(p, level) || !near.contains(p)) continue;
             p.invulnerableTime = 0;
             p.hurt(level.damageSources().mobAttack(boss), CORE_DAMAGE);
             p.push(0.0, 0.42, 0.0);
             p.hurtMarked = true;
         }
-    }
-
-    private static boolean hittable(ServerPlayer p, ServerLevel level) {
-        return !p.isSpectator() && p.isAlive() && p.level() == level;
     }
 
     // ── 이벤트 위임 (BossFightTracker 주석 참고: 구독은 기믹이 한다) ──

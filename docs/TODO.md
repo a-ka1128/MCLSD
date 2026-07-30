@@ -188,20 +188,19 @@
 
 > 조사 후보가 아니라, 코드를 읽으며 눈에 띈 것들. 착수 전 실제 인게임에서 재현 확인 권장.
 
-1. **`ls_siege.js` — `const accrued` 재할당 (버그 의심, 도달 가능)**
+1. ~~**`ls_siege.js` — `const accrued` 재할당**~~ · **해결됨** (A절 A6). `dawnReward` 를 따로 두는 방식으로 고쳤고, 채팅/로그가 정규화 전 값을 찍던 표시 버그도 같이 잡았다. 아래는 당시 기록.
    `finishSiege`에서 `const accrued = sfGetI(...)`(≈389행)로 선언한 뒤, `dawn` 분기(≈419행)에서
    `accrued = Math.round(accrued * REWARD_MULT)`로 **재할당**한다. `dawn` 경로는 "밤을 다 못 깨고 아침이 온"
    흔한 상황(`finishSiege(server,'dawn')`, 619행)이라 실제로 실행된다. KubeJS(Rhino)에서 const 재할당은
    런타임 TypeError를 던질 수 있음 → `let accrued`로 바꾸거나 새 변수 사용. **한 줄 수정, 우선 확인 권장.**
 
-2. **`ls_beacon.js` — 정화 대상 목록 이중 관리(드리프트 위험)**
+2. ~~**`ls_beacon.js` — 정화 대상 목록 이중 관리**~~ · **해결됨 (2026-07-31)**. `PB_PURGE` 배열은 «문서용 원본»으로 남아 있었을 뿐 - 쓰는 곳이 없었다 - . 지웠고 이제 태그 `#last_stardust:purge` 하나가 유일한 출처다. 이걸 놓친 게 `tools/scan_dead_kubejs.py` 가 함수만 보고 상수는 안 봤기 때문이라, 스캐너도 같이 고쳤다. 아래는 당시 기록.
    실제 정화는 태그 `#last_stardust:purge`(`purge.json`)를 쓰고, 코드의 `PB_PURGE` 배열은 "문서용 원본"이다
    (주석에 명시됨). 대상 변경 시 **두 곳을 같이** 고쳐야 함 — 잊으면 조용히 어긋난다. 한쪽을 SSOT로 정리 검토.
 
-3. **복구 커맨드 비대칭** · `ls_town`은 관리자 레벨 set/reset이 없다(위 B절과 동일). 인식 버그 시 수동 복구 불가.
+3. **복구 커맨드 비대칭** · ⬜ 미해결. 다만 마을은 모드로 이관되며 `/town level <track> <n>` 이 생겨 레벨 조정은 가능해졌다(`LSCommands.setLevel` — 지급 훅까지 `TownService.reconcile` 로 맞춘다). 남은 것은 유물·각성 쪽(`/relic revoke`, `/ascend set <이름>`)이다.
 
-4. **`main.js` 예제 잔재** · `server_scripts/main.js`·`startup_scripts/main.js`가 KubeJS 기본 "Hello, World" 로그를
-   그대로 출력. 무해하지만 콘솔 노이즈 — 정리 권장.
+4. ~~**`main.js` 예제 잔재**~~ · **해결됨 (2026-07-31)**. `server_scripts/main.js`·`startup_scripts/main.js` 삭제. 기동 로그에서 `Hello, World` 가 사라졌고 스크립트 수가 23 → 22 가 됐다.
 
 5. **전역 심볼 결합** · 여러 스크립트가 파일 경계를 넘어 전역(`ttGrant`, `asStamp`, `BOSS_SET`, `LS_CONFIG`)을
    공유한다. 의도된 설계(공유 스코프)이고 잘 동작하지만, **로드 순서·오타에 취약**하다. 신규 스크립트 추가 시

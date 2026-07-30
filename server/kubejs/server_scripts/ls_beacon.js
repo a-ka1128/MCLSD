@@ -12,12 +12,13 @@ function pbNames(server) { const s = String(pbStore(server).getString('pb_names'
 
 const PB_COST = 150       // 등록 비용 (공동 금고 Ducat)
 const PB_RADIUS = 24      // 정화 반경
-// 정화 대상 (흔한 어둠의 잡몹 — 공성 몹(ls_siege 태그)은 건드리지 않음: 공성은 정면으로 막아야)
-// ※ 실제 정화 명령은 이 배열이 아니라 엔티티 타입 태그 #last_stardust:purge 를 쓴다.
-//   (kubejs/data/last_stardust/tags/entity_type/purge.json — 대상을 바꾸려면 그 파일과 이 배열을 같이 수정)
-//   아래 배열은 문서용 원본 목록. 태그 변경 시 함께 맞춰 둘 것.
-const PB_PURGE = ['minecraft:zombie', 'minecraft:skeleton', 'minecraft:creeper', 'minecraft:spider',
-  'minecraft:husk', 'minecraft:stray', 'minecraft:phantom', 'minecraft:witch', 'minecraft:zombie_villager']
+// ── 정화 대상은 태그 하나가 유일한 출처다 ──
+//   kubejs/data/last_stardust/tags/entity_type/purge.json  (#last_stardust:purge)
+// 흔한 어둠의 잡몹만 넣는다. 공성 몹은 - 안 넣는다 - — 공성은 정면으로 막아야 한다.
+//
+// ※ 2026-07-31: 여기 같은 목록을 담은 PB_PURGE 배열이 «문서용 원본»으로 남아 있었다.
+//   쓰는 곳은 없고 태그와 따로 관리해야 하는 상태 = TODO D-2 가 지적한 드리프트 위험 그대로였다.
+//   목록이 두 벌이면 언젠가 갈린다. 지웠다 — 대상을 바꾸려면 위 태그 파일만 고친다.
 
 // ── 등록: 신호기 블록 근처에서 ──
 function pbRegister(server, player, name) {

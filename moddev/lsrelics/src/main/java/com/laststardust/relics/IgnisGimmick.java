@@ -191,8 +191,7 @@ public final class IgnisGimmick {
 
         // near 기준으로 도는 이유는 BossFightTracker.nearby() 주석 참고 (Telegraph.outside() 는 월드 전체다).
         for (ServerPlayer p : near) {
-            if (p.isSpectator() || !p.isAlive()) continue;
-            if (p.level() != level) continue;          // 그 사이 차원을 옮겼을 수 있다
+            if (!Telegraph.hittable(p, level)) continue;   // 관전자·사망·차원 이동을 한 번에 거른다
             if (in.contains(p)) continue;              // 결계 안 = 무사
 
             // 무적 프레임에 씹히면 "피했다/안 피했다"의 인과가 끊긴다. 예고형은 결정적이어야 배운다.
