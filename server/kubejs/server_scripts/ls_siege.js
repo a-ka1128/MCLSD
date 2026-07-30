@@ -378,7 +378,7 @@ function spawnWave(server, waveNo) {
       + `PersistenceRequired:1b,Glowing:1b,CustomNameVisible:1b,`
       + `CustomName:'{"text":"균열의 선봉","color":"dark_red","bold":true}'}`)
     sbSpawned = 1
-    server.runCommandSilent('title @a subtitle {"text":"\\uadf8\\ub9ac\\uace0 \\uc120\\ubd09\\uc774 \\uc628\\ub2e4","color":"dark_red"}')
+    server.runCommandSilent('title @a subtitle {"text":"그리고 선봉이 온다","color":"dark_red"}')
     playAll(server, 'minecraft:entity.ravager.roar', 1, 0.7)
   }
 
@@ -655,6 +655,84 @@ function onNewDay(server, day) {
   console.log(`[LS-SIEGE] day=${day} nodes=${nodes} threat=${getThreat(server)}`)
 }
 
+// ── 공성일의 하루가 「곧 온다」로 물든다 ──
+//
+// 여태 공성일의 낮은 - 평범한 낮 - 이었다. 아침에 «다음 공성 D-0» 한 줄이 지나가고,
+// 해가 지고, 갑자기 뿔피리와 함께 시작됐다. 긴장이 시작 순간에만 몰려 있었다.
+//
+// 7 Days to Die 가 블러드문 하루를 통째로 예고로 쓰는 이유가 여기 있다:
+// **긴장은 사건이 아니라 예고에서 나온다.** 오늘 밤 온다는 걸 아침부터 알면
+// 그날의 채굴·건설·원정이 전부 «밤까지 돌아올 수 있나»로 다시 계산된다.
+// 사건 자체는 30초면 끝나지만 예고는 하루를 채운다.
+//
+// 세 박자로 나눈다. 각자 다른 감각을 쓴다 — 글자·소리·화면:
+//   아침(하루 시작)   글자   "오늘 밤이다"          — 계획을 세울 시간을 준다
+//   저녁(11500)       소리   먼 천둥                 — 밖에 있다면 지금 돌아와야 한다
+//   밤 직전(12600)    화면   뿔피리 + 성역으로       — 마지막 호출
+//
+// ※ 하늘을 실제로 어둡게 하려면 /weather thunder 뿐인데 그건 비를 동반한다.
+//   불이 꺼지고 작물·몹 스폰이 달라지는 건 예고의 대가로 너무 크다. 소리로만 한다.
+const DREAD_DUSK = 11500      // ls_daynight.js 의 B_DUSK 와 같은 값
+const DREAD_HORN = 12600      // isNight 의 13000 직전 — 마지막 호출
+const DREAD_BAR_EVERY = 2     // 저녁 이후 액션바 갱신 간격(초)
+
+// 오늘 밤 실제로 공성이 오는가. 위 tick 의 시작 조건과 - 같은 판정 - 이어야 한다.
+// 갈리면 «온다고 해놓고 안 오거나», 더 나쁘게는 «예고 없이 온다».
+function sdSiegeComing(server) {
+  return finaleStage(server) === 0
+    && !sfGetB(server, 'ls_siege_active')
+    && sancIsSet(server)
+    && getThreat(server) > 0
+    && isSiegeDay(worldDay(server))
+}
+
+function sdTick(server) {
+  if (!sdSiegeComing(server)) return
+  var sdT = dayTime(server)
+  var sdStep = sfGetI(server, 'ls_dread_step')
+
+  // 1박: 아침. onNewDay 가 아니라 여기서 내는 이유는 판정을 한 곳에만 두기 위해서다
+  // (onNewDay 는 위협도를 - 올리는 중 - 이라, 거기서 판정하면 오늘 값과 어긋날 수 있다).
+  if (sdStep < 1) {
+    sfSetI(server, 'ls_dread_step', 1)
+    var sdGrand = isGrandDay(server)
+    say(server, sdGrand
+      ? '§4☠ 오늘 밤, 대공세다. §7해가 지기 전에 돌아와라.'
+      : '§c⚔ 오늘 밤, 공성이다. §7해가 지기 전에 돌아와라.')
+    playAll(server, 'minecraft:entity.wither.ambient', 0.35, 0.6)
+    return
+  }
+
+  // 2박: 저녁. 먼 천둥 — 밖에 있다면 지금이 돌아올 시각이다.
+  if (sdStep < 2 && sdT >= DREAD_DUSK) {
+    sfSetI(server, 'ls_dread_step', 2)
+    say(server, '§8먼 곳에서 천둥이 친다. §7어둠이 모이고 있다.')
+    playAll(server, 'minecraft:entity.lightning_bolt.thunder', 0.9, 0.5)
+    playAll(server, 'minecraft:ambient.cave', 0.6, 0.5)
+    return
+  }
+
+  // 3박: 밤 직전. 뿔피리 + 화면 — 마지막 호출이다.
+  if (sdStep < 3 && sdT >= DREAD_HORN) {
+    sfSetI(server, 'ls_dread_step', 3)
+    server.runCommandSilent('title @a times 5 40 10')
+    server.runCommandSilent('title @a title {"text":"어둠이 온다","color":"dark_red","bold":true}')
+    server.runCommandSilent('title @a subtitle {"text":"성역으로","color":"red"}')
+    playAll(server, 'minecraft:event.raid.horn', 1, 0.45)
+    return
+  }
+
+  // 저녁부터 밤까지는 남은 시간을 액션바로 센다. 하루 종일 띄우지 않는 이유:
+  // 상시 표시는 배경이 되어 안 읽힌다. 마지막 구간에만 나와야 «줄어든다»가 보인다.
+  if (sdStep >= 2 && sdT < 13000 && (LS_TICK / 20) % DREAD_BAR_EVERY === 0) {
+    // 남은 실시간(초) = 남은 틱 ÷ 그 구간 배율 ÷ 20. 저녁 구간 배율은 ls_daynight 이 정한다.
+    // 여기서 정확히 역산하면 두 파일이 결합되므로, 대략치를 «약 N초»로만 보여준다.
+    var sdLeft = Math.max(0, Math.round((13000 - sdT) / 0.42 / 20))
+    server.runCommandSilent(
+      `title @a actionbar {"text":"어둠까지 약 ${sdLeft}초","color":"red"}`)
+  }
+}
+
 // ── 상단 상시 표시: 며칠차 · 다음 공성 · 위협도 ──
 // 커스텀 낮밤이라 체감으로 날짜를 세기 어렵다 — 항상 보이게 띄운다.
 let DAY_BAR_LAST = ''
@@ -704,8 +782,10 @@ ServerEvents.tick(event => {
   const day = worldDay(server)
   if (day !== sfGetI(server, 'ls_day')) {
     sfSetI(server, 'ls_day', day)
+    sfSetI(server, 'ls_dread_step', 0)   // 예고 박자를 새 하루마다 처음부터
     onNewDay(server, day)
   }
+  sdTick(server)
 
   const night = isNight(server)
   const wasNight = sfGetB(server, 'ls_night')
@@ -1086,6 +1166,18 @@ ServerEvents.commandRegistry(event => {
 
   event.register(Commands.literal('siege')
     .then(Commands.literal('start').requires(s => s.hasPermission(2)).executes(ctx => startSiege(ctx.source.server, false)))
+    // 예고 세 박자를 다시 보기. 박자는 하루에 한 번씩만 도는데, 그걸 확인하려고
+    // 실제로 하루를 기다릴 수는 없다. 되감고 /time set 으로 원하는 시각에 놓는다.
+    .then(Commands.literal('dread').requires(s => s.hasPermission(2)).executes(ctx => {
+      const s = ctx.source.server
+      sfSetI(s, 'ls_dread_step', 0)
+      ctx.source.sendSystemMessage(Text.of(
+        `§7예고 박자 되감김 §8— 오늘 공성 ${sdSiegeComing(s) ? '§a예정' : '§c없음'}§8 · 지금 ${dayTime(s)}틱`))
+      ctx.source.sendSystemMessage(Text.of(
+        `§8아침(즉시) → 저녁(${DREAD_DUSK}) → 뿔피리(${DREAD_HORN}) → 공성(13000)`))
+      ctx.source.sendSystemMessage(Text.of('§8/time set <틱> 으로 각 구간에 놓고 본다'))
+      return 1
+    }))
     // 대공세를 그날이 아니어도 강제로 연다. 원래는 GRAND_EVERY(12일)의 배수 밤에만 붙는데,
     // 테스트하려고 /time set 으로 날짜를 넘기는 건 다른 주기(공성일·현상금·시세)까지 흔든다.
     .then(Commands.literal('grand').requires(s => s.hasPermission(2)).executes(ctx => startSiege(ctx.source.server, false, true)))
