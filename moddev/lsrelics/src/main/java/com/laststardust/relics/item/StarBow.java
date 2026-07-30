@@ -99,7 +99,7 @@ public class StarBow extends BowItem implements RelicActions {
         Arrow arrow = com.laststardust.relics.LsArrows.create(sl, player, stack);
         arrow.setPos(player.getX(), player.getEyeY() - 0.1, player.getZ());
         arrow.shoot(look.x, look.y, look.z, ARROW_SPEED, ARROW_INACCURACY);
-        arrow.setBaseDamage(ARROW_DMG * RelicSkills.ascension(stack)); // 평타도 각성 배율을 받는다
+        arrow.setBaseDamage(ARROW_DMG * RelicSkills.power(stack)); // 평타도 각성·전역 배율을 받는다
         if (sl.getRandom().nextFloat() < CRIT_CHANCE) arrow.setCritArrow(true); // 확률 크리
         arrow.pickup = AbstractArrow.Pickup.DISALLOWED; // 별빛 화살(무한, 회수 불가)
         sl.addFreshEntity(arrow);

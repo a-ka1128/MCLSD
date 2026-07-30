@@ -262,8 +262,10 @@ public final class RelicEventHandlers {
     public static void onRelicAttributes(ItemAttributeModifierEvent event) {
         ItemStack stack = event.getItemStack();
         if (!isRelic(stack)) return;
-        float mult = RelicSkills.ascension(stack);
-        if (mult <= 1.0f) return; // 1성은 보정 없음
+        // 각성 × 전역 위력. 1성에도 전역 배율이 걸리므로 예전처럼 "1성은 건너뛴다"가 아니다 —
+        // 1성 평타가 네더라이트 검보다 약했던 게 바로 그 건너뛰기 때문이었다.
+        float mult = RelicSkills.power(stack);
+        if (mult <= 1.0f) return; // 배율이 1이면 더할 게 없다
 
         // 우리가 등록한 기본 공격력만 대상으로 한다. 어픽스·젬으로 붙은 공격력까지 곱하면
         // 각성과 어픽스가 서로 곱해져 후반에 폭주한다.

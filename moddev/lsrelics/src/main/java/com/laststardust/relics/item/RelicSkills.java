@@ -1286,6 +1286,34 @@ public final class RelicSkills {
     // 최대 체력도 같은 폭으로 20→60까지 오른다(ls_ascend.js) — 보스 공격력 상승과 짝을 맞추기 위해.
     private static final float[] ASCENSION = {1.0f, 1.5f, 2.0f, 2.5f, 3.0f}; // 1성~5성
 
+    // ── 전역 위력 배율 ──
+    // 각성 배율과 곱해져 최종 위력이 된다. 유물 사이의 상대 밸런스는 전혀 건드리지 않고
+    // 절대 수준만 움직이는 단일 손잡이 — 8종이 전부 같은 배수를 받는다.
+    //
+    // ── 왜 생겼나 (2026-07-30) ──
+    // 밸런싱을 - 5성 총 DPS - 하나로만 해 왔다. 각성이 등차(×1.0~×3.0)라 1성은 정확히 그 1/3인데,
+    // 그 1성 근접 평타가 이랬다:
+    //     이지스 9.08 · 게볼그 8.50 · 타이탄 8.29 · 스틱스 5.34   (맨 네더라이트 검 = 12.8)
+    // 총합(17~19)은 검을 이기지만 - 평타가 전체의 70% - 다. 스킬은 쿨을 타고 평타는 계속 치는
+    // 거라 손에 잡히는 감각은 전부 평타에서 온다. 그래서 "총합은 이겼는데 체감은 진" 상태였다.
+    // 총 DPS 하나만 보면 배분이 안 보인다 — 마총에서 세 번 연속 빗나갔던 것과 같은 종류의 눈멂이다.
+    //
+    // ×1.8 이면 1성 평타가 검의 1.17~1.28 배가 된다:
+    //     이지스 16.3 · 게볼그 15.3 · 타이탄 14.9 · 스틱스 9.6(백어택 11.5 · 백어택+크리 17.3)
+    // ※ 스틱스만 맨 정면 평타로는 검에 못 미친다. 낮은 기본치 × 높은 배수(백어택·기습·크리)가
+    //   그 무기의 정체성이라 여기서 억지로 올리면 상단이 같이 튄다. 별도 결정 사항.
+    //
+    // 5성 실측(50~56 DPS)도 같은 배수로 90~101 이 된다.
+    // → 보스 체력은 ls_config.js 의 boss.globalHp 로 맞춘다 (100 → 180).
+    public static final float GLOBAL_POWER = 1.8f;
+
+    // 각성 × 전역. - 피해를 만드는 곳은 전부 이걸 쓴다 - .
+    // ascension() 은 툴팁에 "각성 +N%" 를 찍는 표시 전용으로만 남는다 —
+    // 전역 배율은 각성 보상이 아니므로 그 숫자에 섞이면 안 된다.
+    public static float power(ItemStack stack) {
+        return ASCENSION[star(stack) - 1] * GLOBAL_POWER;
+    }
+
     // 각성 단계(1~5). 아직 각성 시스템이 없으면 1성.
     public static int star(ItemStack stack) {
         int s = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getInt("star");
@@ -1351,15 +1379,17 @@ public final class RelicSkills {
     }
 
     // 스킬 최종 피해. 단발성 스킬이 이 함수를 통과한다.
+    // ※ 어픽스·젬 항(weaponAttack)에는 전역 배율을 안 곱한다 — 외부에서 붙은 힘까지 같이
+    //   부풀리면 유물 강화와 장비 강화가 서로 곱해져 후반에 폭주한다(각성 때와 같은 이유).
     public static float dmg(ItemStack stack, float base) {
-        return base * ASCENSION[star(stack) - 1] + (float) (weaponAttack(stack) * WEAPON_SCALE);
+        return base * power(stack) + (float) (weaponAttack(stack) * WEAPON_SCALE);
     }
 
     // 다단히트·지속피해용. 무기 공격력 항을 빼고 각성 배율만 적용한다.
     // 장판이 5초간 매 초, 화살비가 3초간 90발씩 때리는데 매 타격마다 무기 보너스를 더하면
     // 그 항이 타격 수만큼 곱해져 단발 스킬의 몇 배가 되어버린다. (접두사·젬으로 공격력이 붙으면 더 심해짐)
     public static float dmgTick(ItemStack stack, float base) {
-        return base * ASCENSION[star(stack) - 1];
+        return base * power(stack);
     }
 
     // ─────────────────────────────── 공통 프리미티브 ───────────────────────────────
