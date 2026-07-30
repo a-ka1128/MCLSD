@@ -1,0 +1,220 @@
+package com.laststardust.relics;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+
+// ── 보스 기믹 공통 뼈대 ──
+// 기믹마다 다른 건 「무엇이 일어나는가」뿐이고 나머지(추적·교전 판정·유휴 되감기·시험 소환)는 같다.
+// WroughtnautGimmick 은 검증된 코드라 일부러 안 옮겼다.
+//
+// ── 이벤트를 여기서 구독하지 않는 이유 ──
+// @EventBusSubscriber 가 붙은 클래스는 NeoForge 가 찾아서 로드해준다. 반대로 여기서 다 받고
+// 기믹은 등록만 하는 구조라면, 그 기믹 클래스를 아무도 로드하지 않아 등록 자체가 안 일어난다.
+// 구독은 각 기믹이 한다 — 위임 3줄이면 되고 로딩 순서에 기대지 않는다.
+public final class BossFightTracker {
+
+    // 표적은 한두 틱씩 흔히 비어서, null 을 보자마자 초기화하면 시전이 영영 안 온다.
+    private static final int IDLE_RESET = 5 * 20;
+
+    public static final class Fight {
+        public final Mob boss;
+        public int next;
+        public int idle = 0;
+        public int phase = 1;
+        public boolean taught = false;   // 이번 전투에서 어휘를 이미 안내했는가
+        public int echo = 0;             // 연속 시전 남은 횟수 (핸들러가 직접 쓴다)
+
+        Fight(Mob boss, int firstDelay) { this.boss = boss; this.next = firstDelay; }
+    }
+
+    public interface Handler {
+        // 호출 시점에 f.next 는 이미 「그 페이즈의 주기」로 채워져 있다 —
+        // 연속 시전처럼 다음 간격을 바꾸려면 이 안에서 f.next 를 덮어쓴다.
+        void cast(ServerLevel level, Fight f, List<ServerPlayer> near);
+
+        // 페이즈가 올라간 직후 1회. 연출만 하고 실제 시전은 다음 주기에 온다.
+        default void onPhaseChange(ServerLevel level, Fight f, List<ServerPlayer> near) {}
+    }
+
+    private final ResourceLocation bossId;
+    private final String label;             // 표시용 이름 ("이그니스")
+    private final String testTag;
+    private final int firstDelay;
+    private final int[] intervalByPhase;    // [0]=1페이즈, [1]=2페이즈 …
+    private final float[] phaseHpFrac;      // [0]=2페이즈 진입 체력 비율(0.5 = 50%)
+    private final double range;
+    private final Handler handler;
+
+    private final List<Fight> fights = new ArrayList<>();
+
+    public BossFightTracker(ResourceLocation bossId, String label, String testTag,
+                            int firstDelay, int[] intervalByPhase, float[] phaseHpFrac,
+                            double range, Handler handler) {
+        this.bossId = bossId;
+        this.label = label;
+        this.testTag = testTag;
+        this.firstDelay = firstDelay;
+        this.intervalByPhase = intervalByPhase;
+        this.phaseHpFrac = phaseHpFrac;
+        this.range = range;
+        this.handler = handler;
+    }
+
+    public int interval(int phase) {
+        int i = Math.min(phase, intervalByPhase.length) - 1;
+        return intervalByPhase[Math.max(0, i)];
+    }
+
+    // 스폰뿐 아니라 청크 로드에서도 불린다 — 서버를 껐다 켜도 남아 있던 개체가 다시 추적된다.
+    public void onJoin(EntityJoinLevelEvent event) {
+        if (event.getLevel().isClientSide) return;
+        Entity e = event.getEntity();
+        if (!(e instanceof Mob mob)) return;
+        if (!bossId.equals(EntityType.getKey(e.getType()))) return;
+        for (Fight f : fights) if (f.boss == mob) return;   // 중복 등록 방지
+        fights.add(new Fight(mob, firstDelay));
+    }
+
+    public void tick() {
+        if (fights.isEmpty()) return;
+        Iterator<Fight> it = fights.iterator();
+        while (it.hasNext()) {
+            Fight f = it.next();
+            // isRemoved 는 죽음뿐 아니라 청크 언로드도 포함한다 — 둘 다 추적을 끊는 게 맞다.
+            if (f.boss.isRemoved() || !f.boss.isAlive()) { it.remove(); continue; }
+            if (!(f.boss.level() instanceof ServerLevel level)) continue;
+
+            List<ServerPlayer> near = nearby(level, f.boss);
+            // 교전 전에는 시계가 흐르지 않는다. 잠든 보스 옆을 지나갔다고 기믹이 떨어지면
+            // 그건 예고가 아니라 함정이다.
+            if (near.isEmpty() || f.boss.getTarget() == null) {
+                if (++f.idle > IDLE_RESET) { f.next = firstDelay; f.phase = 1; f.taught = false; f.echo = 0; }
+                continue;
+            }
+            f.idle = 0;
+
+            // 페이즈 전환은 시전 주기와 무관하게 즉시 본다 — 체력이 넘어간 순간에 알려야
+            // "무엇 때문에 달라졌는지"가 이어진다.
+            int want = 1;
+            for (int i = 0; i < phaseHpFrac.length; i++) {
+                if (f.boss.getHealth() / f.boss.getMaxHealth() <= phaseHpFrac[i]) want = i + 2;
+            }
+            if (want > f.phase) {
+                f.phase = want;
+                handler.onPhaseChange(level, f, near);
+                // 전환 직후에 바로 때리지 않는다. 연출을 볼 시간을 준다.
+                f.next = Math.min(f.next, interval(f.phase));
+            }
+
+            if (--f.next > 0) continue;
+            f.next = interval(f.phase);
+            handler.cast(level, f, near);
+        }
+    }
+
+    // 서버가 멈추면 목록을 비운다. 죽은 레벨의 엔티티를 붙들고 있으면
+    // 싱글(내장 서버)에서 월드를 갈아탈 때 그대로 새 세계로 새어 들어간다.
+    public void stop() { fights.clear(); }
+
+    // 교전 범위 안의 플레이어. ※ Telegraph.outside() 는 - 월드 전체 - 를 훑으므로
+    // "원 밖이면 피해" 판정에 그대로 쓰면 성역에 있던 사람까지 맞는다. 항상 이 목록을 기준으로 판정할 것.
+    public List<ServerPlayer> nearby(ServerLevel level, Mob boss) {
+        List<ServerPlayer> out = new ArrayList<>();
+        for (ServerPlayer p : level.players()) {
+            if (p.isSpectator() || !p.isAlive()) continue;
+            if (p.distanceToSqr(boss) <= range * range) out.add(p);
+        }
+        return out;
+    }
+
+    public static Vec3 centroid(List<ServerPlayer> players) {
+        double x = 0, y = 0, z = 0;
+        for (ServerPlayer p : players) { x += p.getX(); y += p.getY(); z += p.getZ(); }
+        int n = Math.max(1, players.size());
+        return new Vec3(x / n, y / n, z / n);
+    }
+
+    // ── 시험용 ──
+
+    public int tracked() { return fights.size(); }
+
+    // 가장 가까운 개체가 지금 시전한다. 주기를 기다리며 검증할 수는 없다.
+    public boolean forceNear(ServerPlayer player) {
+        Fight best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Fight f : fights) {
+            if (f.boss.isRemoved() || !f.boss.isAlive()) continue;
+            if (f.boss.level() != player.level()) continue;
+            double d = f.boss.distanceToSqr(player);
+            if (d < bestDist) { bestDist = d; best = f; }
+        }
+        if (best == null || !(best.boss.level() instanceof ServerLevel level)) return false;
+        List<ServerPlayer> near = nearby(level, best.boss);
+        if (near.isEmpty()) near = List.of(player);   // 사거리 밖에서 불러도 시전자는 본다
+        best.next = interval(best.phase);
+        handler.cast(level, best, near);
+        return true;
+    }
+
+    // 시험 소환도 관문과 - 똑같은 경로 - 를 탄다(/summon). 자바에서 직접 스폰하면
+    // KubeJS 의 EntityEvents.spawned 를 안 타서 /bossdiff 배율이 빠진 개체로 시험하게 된다.
+    public boolean summon(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) return false;
+        Vec3 look = player.getViewVector(1.0f);
+        double x = player.getX() + look.x * 8.0;
+        double z = player.getZ() + look.z * 8.0;
+        // Locale.ROOT 고정 — 소수점이 쉼표인 지역 설정에서는 "12,34" 가 되어 명령이 통째로 깨진다.
+        String cmd = String.format(Locale.ROOT,
+            "summon %s %.2f %.2f %.2f {Tags:[\"%s\"],PersistenceRequired:1b}",
+            bossId, x, player.getY(), z, testTag);
+        server.getCommands().performPrefixedCommand(
+            player.createCommandSourceStack().withPermission(2).withSuppressedOutput(), cmd);
+        return true;
+    }
+
+    // 시험 소환분만 지운다. 표식이 없는 개체 — 즉 세계에서 만난 보스 — 는 건드리지 않는다.
+    public int clearTest() {
+        int n = 0;
+        Iterator<Fight> it = fights.iterator();
+        while (it.hasNext()) {
+            Fight f = it.next();
+            if (!f.boss.getTags().contains(testTag)) continue;
+            if (f.boss.isAlive()) { f.boss.discard(); n++; }
+            it.remove();
+        }
+        return n;
+    }
+
+    public List<Component> status() {
+        List<Component> out = new ArrayList<>();
+        if (fights.isEmpty()) {
+            out.add(Component.literal("§7추적 중인 " + label + "이(가) 없습니다."));
+            return out;
+        }
+        for (Fight f : fights) {
+            boolean engaged = f.boss.getTarget() != null;
+            out.add(Component.literal(String.format(Locale.ROOT,
+                "§7%s §8(%.0f, %.0f, %.0f)%s §8· §7%d페이즈 §8· %s",
+                label, f.boss.getX(), f.boss.getY(), f.boss.getZ(),
+                f.boss.getTags().contains(testTag) ? " §8[시험]" : "",
+                f.phase,
+                engaged ? String.format(Locale.ROOT, "§c교전 중 §7— 다음 시전 §e%.1f초", f.next / 20.0f)
+                        : "§8대기(비교전)")));
+        }
+        return out;
+    }
+}

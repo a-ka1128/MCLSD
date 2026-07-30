@@ -131,27 +131,121 @@ public final class LSCommands {
                     }
                     return 1;
                 }))
+                // 취약 창(초록 띠)을 2.9초 강제로 켠다. 진짜 창은 보스가 도끼를 내려찍을 때만
+                // 열려서, 그걸 기다려서는 «띠가 제대로 보이는가»를 확인할 수 없다.
+                .then(Commands.literal("window").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    if (!WroughtnautGimmick.forceWindow(p)) {
+                        ctx.getSource().sendFailure(Component.literal("근처에 강철거인이 없다. 먼저 /lsgimmick summon"));
+                        return 0;
+                    }
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§a취약 창 2.9초 §7— 초록 띠 안에 서야 딜이 들어간다. §8(표시만 — 실제 무적은 모드 소관)"), false);
+                    return 1;
+                }))
                 // 보스 없이 어휘만 눈으로 본다 — 셰이더·밤·군중 속에서 색이 읽히는지 확인용.
                 .then(Commands.literal("test")
                     .then(Commands.argument("kind", StringArgumentType.word())
                         .suggests((c, b) -> { b.suggest("danger"); b.suggest("stack"); b.suggest("spread"); return b.buildFuture(); })
                         .executes(ctx -> testTelegraph(ctx.getSource(), StringArgumentType.getString(ctx, "kind")))))
                 .then(Commands.literal("clear").executes(ctx -> {
-                    int n = WroughtnautGimmick.clearTest();
+                    int n = WroughtnautGimmick.clearTest() + IgnisGimmick.clearTest() + GauntletGimmick.clearTest();
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§7시험 소환분 " + n + "기 제거 §8(세계에서 만난 거인은 건드리지 않는다)"), false);
+                        "§7시험 소환분 " + n + "기 제거 §8(세계에서 만난 개체는 건드리지 않는다)"), false);
                     return 1;
                 }))
+                // ── T2 이그니스 「업화의 결계」 (노랑 = 뭉쳐라) ──
+                .then(Commands.literal("ignis")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!IgnisGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — Cataclysm 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a이그니스 소환 §7— 교전이 시작되면 §e" + (IgnisGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 결계. §8(/lsgimmick ignis now 로 즉시)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!IgnisGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 이그니스가 없다. 먼저 /lsgimmick ignis summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§6◆ 이그니스 §e「업화의 결계」 §8— 파티에서 "
+                            + (int) IgnisGimmick.CAST_MIN + "~" + (int) IgnisGimmick.CAST_MAX
+                            + "칸 떨어진 곳, 반경 " + IgnisGimmick.RADIUS
+                            + ", §7원 밖 §8피해 " + IgnisGimmick.DAMAGE + " + 화상"), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§8  주기 " + (IgnisGimmick.INTERVAL_P1 / 20) + "초 → 2페이즈("
+                            + (int) (IgnisGimmick.PHASE2_HP * 100) + "%) "
+                            + (IgnisGimmick.INTERVAL_P2 / 20) + "초 + 연속 시전"), false);
+                        for (Component line : IgnisGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
+                // ── T3 건틀렛 「분쇄 파문」 (보라 = 흩어져라) ──
+                .then(Commands.literal("gauntlet")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!GauntletGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — Bosses of Mass Destruction 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a건틀렛 소환 §7— 교전이 시작되면 §e" + (GauntletGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 파문. §8(/lsgimmick gauntlet now 로 즉시)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!GauntletGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 건틀렛이 없다. 먼저 /lsgimmick gauntlet summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§6◆ 건틀렛 §d「분쇄 파문」 §8— 사람마다 원 하나(반경 "
+                            + GauntletGimmick.RADIUS + "), 둘 이상 겹치면 피해 "
+                            + GauntletGimmick.DAMAGE), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§8  주기 " + (GauntletGimmick.INTERVAL_P1 / 20) + "초 → 2페이즈("
+                            + (int) (GauntletGimmick.PHASE2_HP * 100) + "%) "
+                            + (GauntletGimmick.INTERVAL_P2 / 20) + "초 + 보스 발밑 빨강"), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§8  ※ 1인 시험에서는 원만 뜨고 피해가 없다 — 보라는 정의상 2인 이상 기믹이다"), false);
+                        for (Component line : GauntletGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
                 .executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§6◆ 강철거인 기믹 §7「대지 가르기」 §8— 무작위 플레이어 발밑, 반경 "
+                        "§6◆ 강철거인 기믹 §c「대지 가르기」 §8— 무작위 플레이어 발밑, 반경 "
                         + WroughtnautGimmick.RADIUS + ", 피해 " + WroughtnautGimmick.DAMAGE
                         + ", 주기 " + (WroughtnautGimmick.INTERVAL / 20) + "초"), false);
                     for (Component line : WroughtnautGimmick.status()) {
                         ctx.getSource().sendSuccess(() -> line, false);
                     }
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§8/lsgimmick summon · now · test <danger|stack|spread> · clear"), false);
+                        "§7T1 §c빨강§7 강철거인 · T2 §e노랑§7 이그니스 · T3 §d보라§7 건틀렛 §8| §a초록§7 지금 쳐라(취약 창)"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§8/lsgimmick summon · now · window · test <danger|stack|spread> · clear"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§8/lsgimmick ignis <summon|now> · /lsgimmick gauntlet <summon|now>"), false);
                     return 1;
                 }));
 

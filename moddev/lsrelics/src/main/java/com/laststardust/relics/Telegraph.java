@@ -46,9 +46,14 @@ public final class Telegraph {
     public static final int WARN_TICKS = 30;   // 1.5초
 
     public enum Kind {
-        DANGER(new Vector3f(1.00f, 0.15f, 0.15f), "피해라"),
-        STACK (new Vector3f(1.00f, 0.85f, 0.20f), "뭉쳐라"),
-        SPREAD(new Vector3f(0.70f, 0.30f, 1.00f), "흩어져라");
+        DANGER (new Vector3f(1.00f, 0.15f, 0.15f), "피해라"),
+        STACK  (new Vector3f(1.00f, 0.85f, 0.20f), "뭉쳐라"),
+        SPREAD (new Vector3f(0.70f, 0.30f, 1.00f), "흩어져라"),
+        // ── 초록만 성격이 다르다 ──
+        // 위 셋은 «곧 온다»는 예고고, 이건 «지금 열려 있다»는 상태다. 그래서 cast() 가 아니라
+        // band() 로 그린다 — 예고 시간도 판정도 없고, 열려 있는 동안 호출한 쪽이 매 틱 부른다.
+        // 어휘를 한 파일에 모아 두는 게 목적이라 여기 둔다. 색 하나가 두 뜻을 가지면 안 된다.
+        OPENING(new Vector3f(0.25f, 1.00f, 0.35f), "지금 쳐라");
 
         final Vector3f color;
         final String label;
@@ -89,9 +94,54 @@ public final class Telegraph {
 
     private static String colorCode(Kind k) {
         switch (k) {
-            case DANGER: return "§c";
-            case STACK:  return "§e";
-            default:     return "§d";
+            case DANGER:  return "§c";
+            case STACK:   return "§e";
+            case OPENING: return "§a";
+            default:      return "§d";
+        }
+    }
+
+    // ── 지속 상태 표시 ──
+    // cast() 가 «곧 온다»를 그린다면 이쪽은 «지금 여기다»를 그린다. 판정도 예고 시간도 없고,
+    // 상태가 유지되는 동안 호출한 쪽이 계속 부른다.
+    //
+    // 부채꼴을 채우지 않고 - 안쪽·바깥쪽 두 호 + 양 끝 빗금 - 으로 테두리만 두른다.
+    // 채우면 그 위에 선 보스가 안 보이는데, 이 표시는 «보스 뒤로 가라»는 뜻이라
+    // 정작 보스를 가리면 말이 안 된다.
+    //
+    // fromYaw/toYaw 는 마인크래프트 야우(0=남쪽/+Z, 시계 반대로 증가). 보스 몸통 각도에
+    // 상대 오프셋을 더해 넘기면 보스가 돌 때 표시도 같이 돈다.
+    public static void band(ServerLevel level, Vec3 center, Kind kind,
+                            float fromYaw, float toYaw, double rInner, double rOuter, int steps) {
+        ParticleOptions dust = new DustParticleOptions(kind.color, 1.3f);
+        for (int i = 0; i <= steps; i++) {
+            double yaw = Math.toRadians(fromYaw + (toYaw - fromYaw) * ((double) i / steps));
+            double dx = -Math.sin(yaw), dz = Math.cos(yaw);
+            level.sendParticles(dust, center.x + dx * rInner, center.y + 0.15, center.z + dz * rInner, 1, 0, 0, 0, 0);
+            level.sendParticles(dust, center.x + dx * rOuter, center.y + 0.15, center.z + dz * rOuter, 1, 0, 0, 0, 0);
+        }
+        // 양 끝을 이어 닫는다 — 안 그으면 부채꼴이 어디서 끝나는지 안 읽힌다.
+        for (float edge : new float[] { fromYaw, toYaw }) {
+            double yaw = Math.toRadians(edge);
+            double dx = -Math.sin(yaw), dz = Math.cos(yaw);
+            for (int i = 0; i <= 4; i++) {
+                double r = rInner + (rOuter - rInner) * (i / 4.0);
+                level.sendParticles(dust, center.x + dx * r, center.y + 0.15, center.z + dz * r, 1, 0, 0, 0, 0);
+            }
+        }
+    }
+
+    // 상태가 - 바뀐 순간 - 만 알린다. 매 틱 부르면 소리가 겹쳐 소음이 된다.
+    // 열릴 때는 올라가는 음, 닫힐 때는 내려가는 음 — 화면을 안 보고 있어도 창을 안다.
+    public static void announce(ServerLevel level, Vec3 center, double radius, Kind kind, boolean opening) {
+        level.playSound(null, center.x, center.y, center.z,
+            opening ? SoundEvents.NOTE_BLOCK_CHIME.value() : SoundEvents.NOTE_BLOCK_BASS.value(),
+            SoundSource.HOSTILE, 1.0f, opening ? 1.8f : 0.8f);
+        if (!opening) return;   // 닫힘은 소리로 충분하다. 글자까지 띄우면 «놓쳤다»만 강조된다.
+        for (ServerPlayer p : level.players()) {
+            if (p.position().distanceToSqr(center) <= radius * radius) {
+                p.displayClientMessage(Component.literal(colorCode(kind) + "◆ " + kind.label), true);
+            }
         }
     }
 

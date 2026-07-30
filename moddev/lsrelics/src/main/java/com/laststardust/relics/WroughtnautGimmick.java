@@ -19,6 +19,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -76,10 +77,92 @@ public final class WroughtnautGimmick {
         int next = FIRST_DELAY;
         int idle = 0;
         boolean taught = false;   // 이번 전투에서 어휘를 이미 안내했는가
+        boolean wasOpen = false;  // 직전 틱에 취약 창이 열려 있었는가 (전이 감지용)
+        long forcedUntil = 0;     // /lsgimmick window 로 강제로 켜둔 시각
         Fight(Mob boss) { this.boss = boss; }
     }
 
     private static final List<Fight> FIGHTS = new ArrayList<>();
+
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
+    // ── 취약 창: 이 보스는 «언제·어디서»가 전부다 ──
+    //
+    // Mowzie's 의 EntityWroughtnaut.hurt() 에는 게이트가 셋 있다:
+    //   ① public boolean vulnerable — 세로 내려찍기 애니메이션 27~84틱(2.9초) 동안만 true.
+    //      그 밖에는 근접·원거리·스킬 전부 hurt() 가 false 를 돌려주고 «깡» 소리만 난다.
+    //   ② 각도 — 정면 220° 는 갑옷이 막고 뒤쪽 140° 만 유효.
+    //      기준은 - 공격자 엔티티의 위치 - 다(화살이 아니라 쏜 사람). 그래서 원거리도 등 뒤로 가야 한다.
+    //   ③ 공격자 엔티티가 없는 피해는 BYPASSES_INVULNERABILITY 태그가 없으면 통째로 무효.
+    //
+    // 즉 «도끼를 땅에 박은 직후 2.9초, 등 뒤에서»만 맞는 패링형 보스인데,
+    // - 그걸 알려주는 신호가 게임 안에 하나도 없었다 - . 막혔을 때 나는 소리만 있고 열렸다는
+    // 신호가 없으니 플레이어에겐 그냥 «안 들어가는 보스»다. 여기서 그 창을 눈에 보이게 만든다.
+    //
+    // ※ ls_config.js 의 T1 절대 체력 3900 은 uptime 0.45 를 가정한 값이다.
+    //   창이 안 보이면 그 가정이 안 지켜지므로, 이 표시는 체력 수치의 전제이기도 하다.
+    private static final double BAND_INNER = 1.8;
+    private static final double BAND_OUTER = 3.6;
+
+    private static java.lang.reflect.Field VULNERABLE;
+    private static boolean vulnBroken = false;
+
+    // 애니메이션 틱을 세는 대신 필드를 직접 읽는다 — 모드가 틱 번호를 바꿔도 따라간다.
+    // 리플렉션인 이유는 Mowzie's 가 컴파일 의존이 아니기 때문이다.
+    private static boolean isOpen(Mob boss) {
+        if (vulnBroken) return false;
+        try {
+            if (VULNERABLE == null) VULNERABLE = boss.getClass().getField("vulnerable");
+            return VULNERABLE.getBoolean(boss);
+        } catch (Exception e) {
+            // 한 번 실패하면 매 틱 예외를 만들지 않는다. 표시만 꺼지고 기믹은 계속 돈다.
+            vulnBroken = true;
+            LOG.warn("[강철거인] vulnerable 필드를 못 읽는다 — 취약 창 표시가 꺼진다. Mowzie's 버전이 바뀌었나?", e);
+            return false;
+        }
+    }
+
+    // ── 실제로 딜이 들어가는 상대 각도 ──
+    // 그냥 «뒤쪽 110~250°»가 아니다. Mowzie's 의 각도 비교에 랩어라운드 처리가 빠져 있어서,
+    // - 보스가 어느 방향을 보고 있느냐에 따라 뒤쪽 140° 중 일부가 실제로는 안 들어간다 - .
+    // (attackerAngle < bodyAngle 로 차가 음수가 되는 구간에서 판정식이 달라진다)
+    //
+    // 그 구멍까지 그대로 그린다. 편한 쪽으로 뭉뚱그려 «뒤쪽 전부»를 초록으로 칠하면
+    // «초록에 서 있는데 안 들어간다»가 되는데, 그건 신호가 없는 것보다 나쁘다.
+    private static float[][] damageArcs(float bodyRot) {
+        float b = ((bodyRot % 360f) + 360f) % 360f;
+        float t = 360f - b;                                   // 여기서부터 모드 계산이 음수로 넘어간다
+        // 부등호가 t > 185 인 이유: t == 185 일 때 상대각 185° 는 모드 쪽에서 d == -175 가 되어
+        // - 딱 그 점만 - 배제된다(그쪽 조건이 d > -175). >= 로 두면 그 한 점을 초록으로 칠한다.
+        // 실제로 밟을 일은 거의 없지만, 아래 canHit 과 집합이 정확히 같아야 한 규칙이라고 말할 수 있다.
+        if (t > 185f)  return new float[][] { { 110f, 250f } };
+        if (t <= 110f) return new float[][] { { 185f, 250f } };
+        return new float[][] { { 110f, t }, { 185f, 250f } };  // 가운데가 뚫린다
+    }
+
+    // 위 판정을 그대로 옮긴 것. 그리는 각도와 안내 문구가 갈리면 안 되므로 한 규칙만 쓴다.
+    private static boolean canHit(Mob boss, ServerPlayer p) {
+        double a = Math.toDegrees(Math.atan2(p.getZ() - boss.getZ(), p.getX() - boss.getX())) - 90.0;
+        float att = (float) (((a % 360) + 360) % 360);
+        float body = ((boss.yBodyRot % 360f) + 360f) % 360f;
+        float d = att - body;
+        return d >= 0 ? (d > 110f && d < 250f) : (d > -175f && d < -110f);
+    }
+
+    private static void drawWindow(ServerLevel level, Fight f, long tick) {
+        boolean open = isOpen(f.boss) || tick < f.forcedUntil;
+        if (open != f.wasOpen) {
+            f.wasOpen = open;
+            Telegraph.announce(level, f.boss.position(), RANGE, Telegraph.Kind.OPENING, open);
+        }
+        // 2틱마다면 충분하다. 매 틱 그리면 파티클만 두 배가 되고 눈에 보이는 차이는 없다.
+        if (!open || tick % 2 != 0) return;
+        float body = f.boss.yBodyRot;
+        for (float[] arc : damageArcs(body)) {
+            Telegraph.band(level, f.boss.position(), Telegraph.Kind.OPENING,
+                body + arc[0], body + arc[1], BAND_INNER, BAND_OUTER, 20);
+        }
+    }
 
     // 스폰뿐 아니라 **청크 로드에서도 부른다** — 서버를 껐다 켜도 세계에 남아 있던
     // 거인이 다시 추적된다. 목록을 주기적으로 훑는 방식보다 싸고 빠짐이 없다.
@@ -103,6 +186,10 @@ public final class WroughtnautGimmick {
             if (f.boss.isRemoved() || !f.boss.isAlive()) { it.remove(); continue; }
             if (!(f.boss.level() instanceof ServerLevel level)) continue;
 
+            // 취약 창은 - 교전 판정보다 먼저 - 본다. 창은 보스의 상태이지 우리 시계와 무관하고,
+            // 애초에 교전 중이 아니면 내려찍기 애니메이션 자체가 안 나온다.
+            drawWindow(level, f, event.getServer().getTickCount());
+
             List<ServerPlayer> near = nearby(level, f.boss);
             // 교전 전에는 시계가 흐르지 않는다. 잠든 거인 옆을 지나갔다고 도끼가 떨어지면
             // 그건 예고가 아니라 함정이다.
@@ -115,6 +202,28 @@ public final class WroughtnautGimmick {
             f.next = INTERVAL;
             cast(level, f, near);
         }
+    }
+
+    // ── 왜 안 들어가는지 말해준다 ──
+    // hurt() 가 false 를 돌려줄 때는 super 를 안 부르므로 NeoForge 의 피해 이벤트가 아예 안 열린다.
+    // «막혔다»를 피해 쪽에서 잡을 방법이 없다는 뜻이다. 대신 - 때리려는 순간 - 을 잡는다.
+    // 초록 띠가 «어디»는 이미 말해주지만, 창이 닫혀 있을 때 헛스윙하는 사람에게는
+    // 그게 타이밍 문제라는 걸 알려줄 것이 아무것도 없다.
+    @SubscribeEvent
+    public static void onAttack(AttackEntityEvent event) {
+        if (!(event.getTarget() instanceof Mob mob)) return;
+        if (!BOSS_ID.equals(EntityType.getKey(mob.getType()))) return;
+        if (!(event.getEntity() instanceof ServerPlayer p)) return;
+        boolean rear = canHit(mob, p);
+        if (rear && isOpen(mob)) return;   // 제대로 치고 있다 — 방해하지 않는다
+
+        // 휘두를 때마다 띄우면 소음이 된다. 2초에 한 번.
+        long now = p.level().getGameTime();
+        if (now - p.getPersistentData().getLong("lsWnHint") < 40) return;
+        p.getPersistentData().putLong("lsWnHint", now);
+        p.displayClientMessage(Component.literal(rear
+            ? "§7도끼가 땅에 박히기 전에는 튕긴다. §8초록이 뜨면 그때."
+            : "§7정면은 갑옷이 막는다. §8등 뒤로 돌아라."), true);
     }
 
     // 서버가 멈추면 목록을 비운다. 죽은 레벨의 엔티티를 붙들고 있으면
@@ -173,8 +282,20 @@ public final class WroughtnautGimmick {
 
     public static int tracked() { return FIGHTS.size(); }
 
-    // 가장 가까운 강철거인이 지금 시전한다. 8초+14초를 기다리며 검증할 수는 없다.
-    public static boolean forceNear(ServerPlayer player) {
+    // 취약 창을 2.9초 동안 강제로 켠다 (표시만 — 실제 무적은 모드 소관이라 안 건드린다).
+    // 진짜 창은 보스가 내려찍을 때만 열리는데, 그걸 기다려서는 «띠가 제대로 보이는가»를
+    // 검증할 수 없다. 색·위치·소리는 이걸로 보고, 타이밍은 실전에서 본다.
+    public static boolean forceWindow(ServerPlayer player) {
+        Fight best = nearestTo(player);
+        if (best == null || player.getServer() == null) return false;
+        // ※ 반드시 drawWindow 와 - 같은 시계 - 를 써야 한다. getGameTime()(월드 시간)과
+        //   getTickCount()(서버 기동 후 틱)는 서로 다른 수라, 섞으면 창이 영영 안 열리거나
+        //   영영 안 닫힌다.
+        best.forcedUntil = player.getServer().getTickCount() + 58;   // 27~84틱 = 2.9초
+        return true;
+    }
+
+    private static Fight nearestTo(ServerPlayer player) {
         Fight best = null;
         double bestDist = Double.MAX_VALUE;
         for (Fight f : FIGHTS) {
@@ -183,6 +304,12 @@ public final class WroughtnautGimmick {
             double d = f.boss.distanceToSqr(player);
             if (d < bestDist) { bestDist = d; best = f; }
         }
+        return best;
+    }
+
+    // 가장 가까운 강철거인이 지금 시전한다. 8초+14초를 기다리며 검증할 수는 없다.
+    public static boolean forceNear(ServerPlayer player) {
+        Fight best = nearestTo(player);
         if (best == null || !(best.boss.level() instanceof ServerLevel level)) return false;
         List<ServerPlayer> near = nearby(level, best.boss);
         if (near.isEmpty()) near = List.of(player);   // 사거리 밖에서 불러도 시전자는 본다
