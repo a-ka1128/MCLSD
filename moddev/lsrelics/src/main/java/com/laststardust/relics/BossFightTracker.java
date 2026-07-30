@@ -52,7 +52,11 @@ public final class BossFightTracker {
     public interface Handler {
         // 호출 시점에 f.next 는 이미 「그 페이즈의 주기」로 채워져 있다 —
         // 연속 시전처럼 다음 간격을 바꾸려면 이 안에서 f.next 를 덮어쓴다.
-        void cast(ServerLevel level, Fight f, List<ServerPlayer> near);
+        //
+        // 기본이 «아무것도 안 함»인 이유: 기믹에 따라서는 - 우리가 일으키는 일이 없다 - .
+        // 탐험 보스(ExplorerGimmicks)는 모드가 이미 가진 규칙을 보이게 만들 뿐이라
+        // onTickAlways 만 쓰고 여기는 안 쓴다. 그런 트래커는 firstDelay 를 0 이하로 준다.
+        default void cast(ServerLevel level, Fight f, List<ServerPlayer> near) {}
 
         // 페이즈가 올라간 직후 1회. 연출만 하고 실제 시전은 다음 주기에 온다.
         default void onPhaseChange(ServerLevel level, Fight f, List<ServerPlayer> near) {}
@@ -85,6 +89,9 @@ public final class BossFightTracker {
     private final float[] phaseHpFrac;      // [0]=2페이즈 진입 체력 비율(0.5 = 50%)
     private final double range;
     private final Handler handler;
+    // firstDelay 가 0 이하 = 주기 시전 없음. 탐험 보스처럼 «이미 있는 규칙을 보이게만»
+    // 하는 기믹이 그렇다. 시계를 안 돌리므로 status 의 「다음 시전」도 뜨지 않는다.
+    private final boolean periodic;
 
     private final List<Fight> fights = new ArrayList<>();
 
@@ -99,6 +106,14 @@ public final class BossFightTracker {
         this.phaseHpFrac = phaseHpFrac;
         this.range = range;
         this.handler = handler;
+        this.periodic = firstDelay > 0;
+    }
+
+    // 신호만 내는 트래커를 만드는 짧은 길. 주기·페이즈·시험 태그가 전부 없다 —
+    // 그런 기믹은 «우리가 일으키는 일»이 없어서 소환해 볼 것도, 앞당길 것도 없다.
+    public static BossFightTracker signalOnly(ResourceLocation bossId, String label,
+                                              double range, Handler handler) {
+        return new BossFightTracker(bossId, label, "", 0, new int[] { 1 }, new float[] {}, range, handler);
     }
 
     public int interval(int phase) {
@@ -140,6 +155,7 @@ public final class BossFightTracker {
             f.engagedTicks++;
             if (near.size() > f.peakParty) f.peakParty = near.size();
             handler.onTick(level, f, near);
+            if (!periodic) continue;   // 신호만 내는 기믹 — 주기 시전이 없다
 
             // 페이즈 전환은 시전 주기와 무관하게 즉시 본다 — 체력이 넘어간 순간에 알려야
             // "무엇 때문에 달라졌는지"가 이어진다.
@@ -199,6 +215,9 @@ public final class BossFightTracker {
             p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                 "§6▣ %s 처치 §8· §e%.1f초 §8· §7%d명 §8· 체력 %.0f (실측 DPS %.0f)",
                 label, secs, f.peakParty, maxHp, maxHp / secs)));
+            // 권장 체력은 «4명·60초» 목표를 가진 보스에게만 뜻이 있다. 탐험 보스(신호만 내는
+            // 트래커)는 그 목표를 안 갖는다 — 거기에 같은 줄을 띄우면 없는 기준을 있는 것처럼 만든다.
+            if (!periodic) continue;
             p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                 "§7목표 %d초 → 권장 체력 §e%d§7  §8/bossdiff abs %s %d",
                 TARGET_SECONDS, suggest, id, suggest)));
@@ -301,9 +320,10 @@ public final class BossFightTracker {
                 label, f.boss.getX(), f.boss.getY(), f.boss.getZ(),
                 f.boss.getTags().contains(testTag) ? " §8[시험]" : "",
                 phase,
-                engaged ? String.format(Locale.ROOT, "§c교전 중 §7— 다음 시전 §e%.1f초 §8· 경과 %.0f초",
-                                        f.next / 20.0f, f.engagedTicks / 20.0)
-                        : "§8대기(비교전)")));
+                !engaged ? "§8대기(비교전)"
+                    : periodic ? String.format(Locale.ROOT, "§c교전 중 §7— 다음 시전 §e%.1f초 §8· 경과 %.0f초",
+                                               f.next / 20.0f, f.engagedTicks / 20.0)
+                               : String.format(Locale.ROOT, "§c교전 중 §8· 경과 %.0f초", f.engagedTicks / 20.0))));
         }
         return out;
     }

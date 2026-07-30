@@ -308,6 +308,25 @@ public final class LSCommands {
                         }
                         return 1;
                     }))
+                // ── 탐험 보스: 모드가 이미 가진 규칙을 보이게 만든 것들 ──
+                // 소환·즉시시전이 없다(ExplorerGimmicks 주석 참고). 규칙표와 추적 현황만.
+                .then(Commands.literal("explorer").executes(ctx -> {
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§6◆ 탐험 보스의 숨은 규칙 §8— 전부 모드가 원래 가진 것. 우리는 보이게만 했다"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7프로스트모 §8— 불 ×1.25 · §c화살은 피해 0§8 (시리우스가 통째로 막힌다)"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7히드라 §8— §a벌린 입§8만 온전한 피해, 나머지는 1/8 · "
+                        + (int) ExplorerGimmicks.HYDRA_MAX_DIST + "칸 밖은 피해 0"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7유령기사 §8— 돌진 중이 아니면 §a방어도 5배§8 (돌진 때만 딜이 들어간다)"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7우르가스트 §8— 발작 중 피해 1/10 · 누적 18 이면 페이즈 전환"), false);
+                    for (Component line : ExplorerGimmicks.status()) {
+                        ctx.getSource().sendSuccess(() -> line, false);
+                    }
+                    return 1;
+                }))
                 .executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§6◆ 강철거인 기믹 §c「대지 가르기」 §8— 무작위 플레이어 발밑, 반경 "
@@ -324,6 +343,8 @@ public final class LSCommands {
                         "§8/lsgimmick summon · now · window · test <danger|stack|spread> · clear"), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§8/lsgimmick ignis · gauntlet · monstrosity · lich  <summon|now>"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§8/lsgimmick explorer §8— 탐험 보스 4종의 숨은 규칙"), false);
                     return 1;
                 }));
 
