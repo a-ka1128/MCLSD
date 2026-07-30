@@ -299,6 +299,15 @@ function sgDirName(angDeg) {
 const PARTY_PER_EXTRA = 0.5   // 추가 인원 1명당 +50%
 const PARTY_HARD_CAP = 40     // 서버 보호 — 이 이상은 안 뽑는다
 
+// ── 마지막 웨이브의 선봉 (관문 기믹의 연습장) ──
+// 종류와 표식은 모드의 SiegeVanguardGimmick 과 - 반드시 같아야 한다 - .
+// 한쪽만 바꾸면 소환은 되는데 장판이 안 깔리고, 오류도 안 난다.
+const SIEGE_BOSS_ID = 'cataclysm:ignited_berserker'
+const SIEGE_BOSS_TAG = 'ls_siege_boss'
+// 체력만 올린다. 공격력은 광전사 원본이 이미 충분히 아프고, 여기서 배워야 하는 건
+// «붉은 원을 피하는 것»이라 - 오래 서 있을 이유 - 를 주는 쪽이 맞다.
+const SIEGE_BOSS_HP_MUL = 2.5
+
 // 전투에 설 수 있는 인원 (관전자 제외)
 function partyCount(server) {
   var n = 0
@@ -351,7 +360,29 @@ function spawnWave(server, waveNo) {
     var sy = surfaceY(server, x, z, c.y)
     server.runCommandSilent(`summon ${wave[i]} ${x} ${sy} ${z} {Tags:["ls_siege"],PersistenceRequired:1b,Glowing:1b}`)
   }
-  sfSetI(server, 'ls_siege_remaining', n)
+  // ── 마지막 웨이브의 선봉 ──
+  // 공성이 «관문 기믹의 연습장»이 되는 자리다(RESEARCH 2). 이게 없으면 플레이어가
+  // 빨강 장판을 - 태어나서 처음 보는 순간 - 이 T1 관문 안이 된다 — 연습 없이 시험부터다.
+  // 기믹 본체는 모드의 SiegeVanguardGimmick 이 표식 `ls_siege_boss` 로 찾아 붙인다.
+  //
+  // 표식으로 거르는 이유: 광전사는 4단계 웨이브의 - 평범한 구성원이기도 하다 - .
+  // 종류만 보고 걸면 웨이브 전체에 장판이 깔린다.
+  var sbSpawned = 0
+  if (sfGetI(server, 'ls_siege_waves') === 0) {
+    var sbAng = baseDeg * Math.PI / 180
+    var sbX = Math.floor(c.x + Math.cos(sbAng) * SPAWN_RING) + 0.5
+    var sbZ = Math.floor(c.z + Math.sin(sbAng) * SPAWN_RING) + 0.5
+    var sbY = surfaceY(server, sbX, sbZ, c.y)
+    server.runCommandSilent(
+      `summon ${SIEGE_BOSS_ID} ${sbX} ${sbY} ${sbZ} {Tags:["ls_siege","ls_siege_boss"],`
+      + `PersistenceRequired:1b,Glowing:1b,CustomNameVisible:1b,`
+      + `CustomName:'{"text":"균열의 선봉","color":"dark_red","bold":true}'}`)
+    sbSpawned = 1
+    server.runCommandSilent('title @a subtitle {"text":"\\uadf8\\ub9ac\\uace0 \\uc120\\ubd09\\uc774 \\uc628\\ub2e4","color":"dark_red"}')
+    playAll(server, 'minecraft:entity.ravager.roar', 1, 0.7)
+  }
+
+  sfSetI(server, 'ls_siege_remaining', n + sbSpawned)
   sfSetI(server, 'ls_siege_wave_no', waveNo)
   if (waveNo === 1) {
     if (grand) {
@@ -527,6 +558,20 @@ EntityEvents.spawned(event => {
     tgt = nearestPlayer(e.server, e.x, e.z)
     if (tgt) e.setTarget(tgt)
   } catch (err) { lsWarn('ls_siege:477', err) }
+
+  // ── 선봉만 체력을 더 준다 ──
+  // 곱셈이라 ls_mobscale 과 순서가 갈려도 결과가 같다(둘 다 base × k 를 하고 setHealth 한다).
+  // 나중에 도는 쪽이 최종값으로 체력을 채우므로 어느 쪽이 먼저든 상관없다.
+  if (!(`${e.tags}`).includes(SIEGE_BOSS_TAG)) return
+  var sbAttr = null
+  try {
+    sbAttr = e.getAttribute('minecraft:generic.max_health')
+    if (sbAttr) {
+      var sbHp = sbAttr.getBaseValue() * SIEGE_BOSS_HP_MUL
+      sbAttr.setBaseValue(sbHp)
+      e.setHealth(sbHp)
+    }
+  } catch (err) { lsWarn('ls_siege:vanguard-hp', err) }
 })
 
 // ── 공성 몹 사망 추적 ──

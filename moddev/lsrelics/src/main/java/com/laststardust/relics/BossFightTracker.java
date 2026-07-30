@@ -84,6 +84,10 @@ public final class BossFightTracker {
     private final ResourceLocation bossId;
     private final String label;             // 표시용 이름 ("이그니스")
     private final String testTag;
+    // 비어 있지 않으면 - 이 표식을 단 개체만 - 추적한다. 같은 종류의 몹이 기믹 없이도
+    // 돌아다니는 경우가 있어서다 — 공성 선봉이 그렇다(광전사는 4단계 웨이브의 평범한
+    // 구성원이기도 하다). 종류만으로 거르면 웨이브 전체에 장판이 깔린다.
+    private String requireTag = "";
     private final int firstDelay;
     private final int[] intervalByPhase;    // [0]=1페이즈, [1]=2페이즈 …
     private final float[] phaseHpFrac;      // [0]=2페이즈 진입 체력 비율(0.5 = 50%)
@@ -116,6 +120,13 @@ public final class BossFightTracker {
         return new BossFightTracker(bossId, label, "", 0, new int[] { 1 }, new float[] {}, range, handler);
     }
 
+    // 종류에 더해 표식까지 맞아야 추적한다. 생성자가 아니라 별도 메서드인 이유는
+    // 이걸 쓰는 트래커가 하나뿐이라, 나머지 다섯의 생성자에 빈 문자열을 늘어놓지 않으려는 것이다.
+    public BossFightTracker onlyTagged(String tag) {
+        this.requireTag = tag;
+        return this;
+    }
+
     public int interval(int phase) {
         int i = Math.min(phase, intervalByPhase.length) - 1;
         return intervalByPhase[Math.max(0, i)];
@@ -127,6 +138,7 @@ public final class BossFightTracker {
         Entity e = event.getEntity();
         if (!(e instanceof Mob mob)) return;
         if (!bossId.equals(EntityType.getKey(e.getType()))) return;
+        if (!requireTag.isEmpty() && !mob.getTags().contains(requireTag)) return;
         for (Fight f : fights) if (f.boss == mob) return;   // 중복 등록 방지
         fights.add(new Fight(mob, firstDelay));
     }
@@ -283,10 +295,16 @@ public final class BossFightTracker {
         Vec3 look = player.getViewVector(1.0f);
         double x = player.getX() + look.x * 8.0;
         double z = player.getZ() + look.z * 8.0;
+        // 추적 조건(requireTag)이 따로 있으면 시험 소환분에도 같이 달아야 한다 —
+        // 안 그러면 소환은 되는데 기믹이 안 붙어서 «왜 아무 일도 안 일어나지»가 된다.
+        // 그렇다고 두 표식을 하나로 합칠 수는 없다: clearTest 가 지우는 건 - 시험 표식 - 이고,
+        // 공성 선봉처럼 추적 표식이 실전 개체에도 붙는 경우엔 그 하나로 실전 개체가 지워진다.
+        String tags = requireTag.isEmpty() ? "\"" + testTag + "\""
+                                           : "\"" + testTag + "\",\"" + requireTag + "\"";
         // Locale.ROOT 고정 — 소수점이 쉼표인 지역 설정에서는 "12,34" 가 되어 명령이 통째로 깨진다.
         String cmd = String.format(Locale.ROOT,
-            "summon %s %.2f %.2f %.2f {Tags:[\"%s\"],PersistenceRequired:1b}",
-            bossId, x, player.getY(), z, testTag);
+            "summon %s %.2f %.2f %.2f {Tags:[%s],PersistenceRequired:1b}",
+            bossId, x, player.getY(), z, tags);
         server.getCommands().performPrefixedCommand(
             player.createCommandSourceStack().withPermission(2).withSuppressedOutput(), cmd);
         return true;

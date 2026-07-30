@@ -155,7 +155,7 @@ public final class LSCommands {
                     // 청크를 벗어나도 안 사라진다 — 빠뜨리면 체력 1만짜리가 세계에 영구히 남는다.
                     int n = WroughtnautGimmick.clearTest() + IgnisGimmick.clearTest()
                           + GauntletGimmick.clearTest() + MonstrosityGimmick.clearTest()
-                          + LichGimmick.clearTest();
+                          + LichGimmick.clearTest() + SiegeVanguardGimmick.clearTest();
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§7시험 소환분 " + n + "기 제거 §8(세계에서 만난 개체는 건드리지 않는다)"), false);
                     return 1;
@@ -308,6 +308,36 @@ public final class LSCommands {
                         }
                         return 1;
                     }))
+                // ── 공성 선봉 「무너지는 땅」 — 관문 전에 빨강을 처음 만나는 자리 ──
+                .then(Commands.literal("vanguard")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!SiegeVanguardGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — Cataclysm 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a균열의 선봉 소환 §7— 교전 후 §e" + (SiegeVanguardGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 장판. §8(피해 " + SiegeVanguardGimmick.DAMAGE
+                            + " — T1 의 " + WroughtnautGimmick.DAMAGE + " 보다 약하다. 연습이니까)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!SiegeVanguardGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 선봉이 없다. 먼저 /lsgimmick vanguard summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        for (Component line : SiegeVanguardGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
                 // ── 탐험 보스: 모드가 이미 가진 규칙을 보이게 만든 것들 ──
                 // 소환·즉시시전이 없다(ExplorerGimmicks 주석 참고). 규칙표와 추적 현황만.
                 .then(Commands.literal("explorer").executes(ctx -> {
@@ -343,6 +373,8 @@ public final class LSCommands {
                         "§8/lsgimmick summon · now · window · test <danger|stack|spread> · clear"), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§8/lsgimmick ignis · gauntlet · monstrosity · lich  <summon|now>"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§8/lsgimmick vanguard <summon|now> §8— 공성 선봉(관문 전 연습)"), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§8/lsgimmick explorer §8— 탐험 보스 4종의 숨은 규칙"), false);
                     return 1;
