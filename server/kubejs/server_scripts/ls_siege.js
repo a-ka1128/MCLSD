@@ -490,6 +490,10 @@ function finishSiege(server, outcome) {
     var reward = accrued + 10 + threat * 2
     if (grand) reward *= 2
     if (townLvl(server, 'workshop') >= 2) reward = Math.round(reward * 1.2) // 공방 Lv2: 방어 보상 +20%
+    // 희망 단계 보너스 (ls_hope.js). 그 파일이 없어도 공성은 그대로 돈다 —
+    // 로드 순서상(h < s) 정상이면 항상 있지만, 없을 때 조용히 1 이 되는 편이 낫다.
+    try { if (typeof hoRewardMult === 'function') reward = Math.round(reward * hoRewardMult(server)) }
+    catch (e) { lsWarn('ls_siege:hope-mult', e) }
     reward = Math.round(reward * REWARD_MULT)
     addTreasury(server, reward)
     // 공성이 3일에 한 번이므로 승리 한 번이 3일치 상승분을 되돌린다
@@ -529,6 +533,9 @@ function finishSiege(server, outcome) {
     say(server, `§4성역이 밀렸다... §c위협도↑(${getThreat(server)}) · 공동 금고 -5`)
     console.log(`[LS-SIEGE] GIVE_UP`)
   }
+  // 희망 장부에 결과를 적는다 (ls_hope.js). 승리는 빚을 하나 갚고, 패배는 하나 더 쌓는다.
+  try { if (typeof hoOnSiege === 'function') hoOnSiege(server, outcome) }
+  catch (e) { lsWarn('ls_siege:hope-record', e) }
   // 첫 공세는 "버텨내기만" 하면 된다(격퇴/아침) — 유물 해금이 여기 걸려 있어 밀리면 안 되기 때문
   if (wasFirst && (outcome === 'win' || outcome === 'dawn')) {
     firstSiegeCleared(server)
