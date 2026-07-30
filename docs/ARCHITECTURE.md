@@ -191,8 +191,8 @@ python tools/scan_try_decls.py --write    # var 로 일괄 변환
 
 | 위치 | 무엇 | 왜 안 남기나 |
 |---|---|---|
-| `ls_enrage.js:36` | `attribute ... modifier remove` 실패를 무시 | 첫 호출엔 그 모디파이어가 없는 게 정상이다. 격노 단계마다 찍히면 로그가 무의미해진다 |
-| `ls_siege.js:737` | 공격력 속성을 못 읽으면 `bangDmg += 3` | 성벽을 때리는 몹마다 매 틱 도는 자리다. 속성 없는 몹은 흔하고, 대체값이 곧 정답이다 |
+| `ls_enrage.js` `enApply` | `attribute ... modifier remove` 실패를 무시 | 첫 호출엔 그 모디파이어가 없는 게 정상이다. 격노 단계마다 찍히면 로그가 무의미해진다 |
+| `ls_siege.js` `bangDmg` 계산 | 공격력 속성을 못 읽으면 `+= 3` | 성벽을 때리는 몹마다 매 틱 도는 자리다. 속성 없는 몹은 흔하고, 대체값이 곧 정답이다 |
 
 넷 중 위 2줄 말고 뭐가 잡히면 그게 새 함정이다.
 

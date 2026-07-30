@@ -22,6 +22,12 @@ SEARCH = [
 ]
 RE_REF = re.compile(r'([A-Za-z_][A-Za-z_0-9]*\.(?:js|java)):(\d+)(?:-(\d+))?')
 
+# 스택 트레이스는 참조가 아니라 - 그때 일어난 일의 기록 - 이다. 코드가 바뀌면 당연히
+# 어긋나고, 어긋난 채로 두는 게 맞다(고치면 그건 거짓 기록이 된다).
+# 이걸 안 걸러서 `상용화_비교_리뷰` 의 붙여넣은 트레이스가 영구 오탐으로 남아 있었다.
+# 상시로 울리는 경보는 무시하게 되고, 그러면 진짜 낡은 참조가 같이 묻힌다.
+RE_STACK = re.compile(r'^\s*at [A-Za-z_$][\w.$]*\(')
+
 
 def find(fname):
     for d in SEARCH:
@@ -42,6 +48,8 @@ def main():
     for doc in docs:
         rows = []
         for i, line in enumerate(open(doc, encoding='utf-8'), 1):
+            if RE_STACK.match(line):
+                continue
             for m in RE_REF.finditer(line):
                 fname, ln = m.group(1), int(m.group(2))
                 total += 1
