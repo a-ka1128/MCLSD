@@ -29,10 +29,11 @@ function stTop(server, cat) {
 //   남아서 전원 0점으로 읽혔고, bv 가 -1 에서 시작하니 - CSV 첫 사람이 항상 1위 - 였다.
 //   조용히 틀린 값을 내보내는 종류의 고장이라 아무도 눈치채지 못했다.
 function stTopContrib(server) {
+  // var + 고유 접두사 — try 블록 안의 const/let 은 Rhino 가 재선언으로 터뜨린다(tools/scan_try_decls.py).
   try {
-    const name = String(LS.topContributorName(server) || '')
-    if (!name) return null
-    return { name: name, v: LS.topContributorPoints(server) }
+    var stTcName = String(LS.topContributorName(server) || '')
+    if (!stTcName) return null
+    return { name: stTcName, v: LS.topContributorPoints(server) }
   } catch (err) { lsWarn('ls_stats:topContrib', err); return null }
 }
 

@@ -70,6 +70,25 @@ public class LSKubeBridge implements KubeJSPlugin {
             data.dirty();
         }
 
+        // ── 기여도 읽기 ──
+        // 쓰기만 있고 읽기가 없어서 ls_stats.js 가 옛 persistentData 키(town_c_<name>)를 계속 읽고 있었다.
+        // 그 키를 채우던 ls_town.js 는 이관되며 .disabled 됐으므로 값은 늘 0 — 명예 보드가
+        // "CSV 첫 사람, 0점"을 항상 1위로 내보내고 있었다. 장부가 여기 하나뿐이니 읽기도 여기서 준다.
+        //
+        // Map.Entry 리스트를 그대로 넘기지 않는 이유: Rhino 쪽에서 다루기 번거롭고,
+        // 스크립트가 필요한 건 "1위가 누구고 몇 점인가" 둘뿐이다.
+        public String topContributorName(MinecraftServer server) {
+            if (server == null) return "";
+            var top = LSData.get(server).town().topContributors(1);
+            return top.isEmpty() ? "" : top.get(0).getKey();
+        }
+
+        public int topContributorPoints(MinecraftServer server) {
+            if (server == null) return 0;
+            var top = LSData.get(server).town().topContributors(1);
+            return top.isEmpty() ? 0 : top.get(0).getValue();
+        }
+
         public boolean townFlag(MinecraftServer server, String key) {
             return server != null && LSData.get(server).town().flag(key);
         }

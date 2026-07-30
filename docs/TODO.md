@@ -49,6 +49,11 @@
       `ls_town.js`·`ls_income.js` → `.disabled`. 구조·이관 순서는 `docs/ARCHITECTURE.md`
 - [x] **금고 이음새 차단** · `LSKubeBridge` 가 전역 `LS` 바인딩 등록 → 아직 스크립트인 `siege`·`rift`·`beacon`·`bounty`·`rescue`·`stats` 가 **모드의 금고 하나**를 본다.
       안 했으면 공성 보상이 옛 키에 쌓여 마을 창에 영영 안 보였다. 이관 완료 후 이 다리는 제거
+- [x] **이관 잔재 청소 (2026-07-30)** · 주석 훑다가 나온 것들
+  - **명예 보드가 조용히 틀린 값을 내보내고 있었다.** `ls_stats.js stTopContrib` 가 `town_c_<name>` 을 읽는데, 그 키를 쓰던 `ls_town.js` 는 이관되며 `.disabled` — **쓰는 쪽만 사라지고 읽는 쪽이 남았다.** 전원 0점으로 읽혀 `bv=-1` 탓에 **CSV 첫 사람이 항상 1위**. 예외도 로그도 없어서 아무도 몰랐다.
+    → `LSKubeBridge.Api.topContributorName/Points` 추가(장부는 `TownData` 하나뿐이니 읽기도 거기서). `ls_bounty.js` 의 `town_cnames` 쓰기도 제거 — 읽는 사람이 없어졌다.
+    ※ **교훈: 이관은 "쓰는 쪽을 옮겼다"로 안 끝난다. 읽는 쪽을 같이 안 옮기면 조용히 0을 읽는다.** 남은 이관에서 매번 확인할 것.
+  - **`TownState.java` 삭제(138줄)** · 참조 0. `TownScreen`·`/townui` 와 함께 쓰이던 «KubeJS가 JSON 보내면 모드가 그리기만» 구조인데, A안(창고형) `TownMenu`/`TownService`/`TownView` 로 대체되며 통째로 남겨져 있었다. 위 A절 마을 화면 항목의 「신규」 목록은 그 시절 기록이라 지금 코드와 다르다.
 - [ ] **이관 계속 (순서: 성역좌표 → 진행도 → 가호/유물/각성 → 공성 → 나머지, `ls_voice` 최후)** · `docs/ARCHITECTURE.md` 참고 · 🔴
 
 ## B. 이번 반복 (P1 — 시그니처를 완성하는 중간 작업)
