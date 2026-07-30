@@ -10,11 +10,13 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -100,6 +102,56 @@ public final class LSCommands {
                         "§7표적 방어도 §e%.0f§7 · 견고함 §e%.0f", DummyManager.armor(), DummyManager.toughness())), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§8/dummy spawn · start [초] · stop · clear · armor <값> [견고함] · calc <피해>"), false);
+                    return 1;
+                }));
+
+        // ── T1 관문 기믹 시험 ──
+        // 실전 검증이 8분짜리 보스전을 요구하면 아무도 검증하지 않는다. 소환·즉시시전·정리를
+        // 한 명령에 묶어 "고치고 30초 안에 다시 본다"가 되게 한다.
+        event.getDispatcher().register(
+            Commands.literal("lsgimmick")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.literal("summon").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    if (!WroughtnautGimmick.summon(p)) {
+                        ctx.getSource().sendFailure(Component.literal("소환 실패 — Mowzie's Mobs 가 설치되어 있는지 확인."));
+                        return 0;
+                    }
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§a강철거인 소환 §7— 때려서 교전이 시작되면 §e8초§7 뒤 첫 「대지 가르기」. §8(/lsgimmick now 로 즉시)"), false);
+                    return 1;
+                }))
+                .then(Commands.literal("now").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    if (!WroughtnautGimmick.forceNear(p)) {
+                        ctx.getSource().sendFailure(Component.literal("근처에 강철거인이 없다. 먼저 /lsgimmick summon"));
+                        return 0;
+                    }
+                    return 1;
+                }))
+                // 보스 없이 어휘만 눈으로 본다 — 셰이더·밤·군중 속에서 색이 읽히는지 확인용.
+                .then(Commands.literal("test")
+                    .then(Commands.argument("kind", StringArgumentType.word())
+                        .suggests((c, b) -> { b.suggest("danger"); b.suggest("stack"); b.suggest("spread"); return b.buildFuture(); })
+                        .executes(ctx -> testTelegraph(ctx.getSource(), StringArgumentType.getString(ctx, "kind")))))
+                .then(Commands.literal("clear").executes(ctx -> {
+                    int n = WroughtnautGimmick.clearTest();
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7시험 소환분 " + n + "기 제거 §8(세계에서 만난 거인은 건드리지 않는다)"), false);
+                    return 1;
+                }))
+                .executes(ctx -> {
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§6◆ 강철거인 기믹 §7「대지 가르기」 §8— 무작위 플레이어 발밑, 반경 "
+                        + WroughtnautGimmick.RADIUS + ", 피해 " + WroughtnautGimmick.DAMAGE
+                        + ", 주기 " + (WroughtnautGimmick.INTERVAL / 20) + "초"), false);
+                    for (Component line : WroughtnautGimmick.status()) {
+                        ctx.getSource().sendSuccess(() -> line, false);
+                    }
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§8/lsgimmick summon · now · test <danger|stack|spread> · clear"), false);
                     return 1;
                 }));
 
@@ -206,6 +258,31 @@ public final class LSCommands {
         DummyManager.setArmor(armor, toughness);
         src.sendSuccess(() -> Component.literal(String.format(
             "§a표적 방어도 §e%d§a · 견고함 §e%d §7— 이제 측정값이 감쇄를 반영한다", armor, toughness)), false);
+        return 1;
+    }
+
+    // 어휘 확인 — 판정은 하지 않는다. "저 색이 저 뜻으로 읽히는가"만 본다.
+    private static int testTelegraph(CommandSourceStack src, String kind) {
+        ServerPlayer player = src.getPlayer();
+        if (player == null) {
+            src.sendFailure(Component.literal("플레이어만 사용할 수 있다."));
+            return 0;
+        }
+        Telegraph.Kind k;
+        switch (kind.toLowerCase(java.util.Locale.ROOT)) {
+            case "danger": k = Telegraph.Kind.DANGER; break;
+            case "stack":  k = Telegraph.Kind.STACK;  break;
+            case "spread": k = Telegraph.Kind.SPREAD; break;
+            default:
+                src.sendFailure(Component.literal("danger · stack · spread 중 하나"));
+                return 0;
+        }
+        ServerLevel level = player.serverLevel();
+        Vec3 center = player.position();
+        double r = WroughtnautGimmick.RADIUS;
+        Telegraph.cast(level, k, center, r, () -> player.sendSystemMessage(Component.literal(
+            "§8… 판정 시점 §7— 안쪽 " + Telegraph.inside(level, center, r).size()
+            + "명 · 바깥 " + Telegraph.outside(level, center, r).size() + "명")));
         return 1;
     }
 
