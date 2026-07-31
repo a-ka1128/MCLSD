@@ -37,15 +37,20 @@ KubeJS 는 붙이기 빨랐지만, 하루 동안 **문법 검사로는 안 잡�
 | 유물 8종·스킬·각성 새김 | `item/`, `RelicSkills`, `LSCommands` |
 | 가호 선택 화면 | `client/FateSelectScreen`, `FateCatalog` |
 
-### 아직 스크립트 (`server/kubejs/server_scripts`) — 23파일 4,917줄 (2026-07-31)
+### 아직 스크립트 (`server/kubejs/server_scripts`) — 24파일 5,868줄 (2026-07-31 저녁)
 
-`ls_siege`(1082) · `ls_voice`(538) · `ls_fate`(333) · `ls_rift`(327) · `ls_ascend`(283) ·
-`ls_rescue`(275) · `ls_bossdiff`(265) · `ls_casino`(245) · `ls_bounty`(192) · `ls_relic`(175) ·
-`ls_stats`(164) · `ls_mobscale`(133) · `ls_util`(126) · `ls_title`(119) · `ls_enrage`(118) ·
-`ls_config`(117) · `ls_beacon`(106) · `ls_towneffect`(94) · `ls_daynight`(93) · `ls_revive`(53) ·
-`ls_keys`(53) · `last_stardust_rules`(23) · `main`(3)
+`ls_siege`(1238) · `ls_voice`(542) · `ls_rift`(434) · `ls_fate`(323) · `ls_ascend`(281) ·
+`ls_rescue`(275) · `ls_enrage`(265) · `ls_bossdiff`(265) · `ls_casino`(245) · `ls_migrate`(237) ·
+`ls_beacon`(203) · `ls_relic`(200) · `ls_bounty`(192) · `ls_hope`(191) · `ls_stats`(166) ·
+`ls_mobscale`(133) · `ls_util`(126) · `ls_title`(119) · `ls_config`(117) · `ls_towneffect`(94) ·
+`ls_daynight`(93) · `ls_revive`(53) · `ls_keys`(53) · `last_stardust_rules`(23)
 
 > 줄 수는 세는 순간 낡는다. 갱신하려면 `wc -l server/kubejs/server_scripts/*.js`.
+>
+> **줄었을 것 같지만 늘었다** — 이관 4단계로 `ls_siege` 의 저장 코드가 빠졌는데도 1082 → 1238 이다.
+> 이관은 «스크립트를 줄이는 일»이 아니라 «데이터의 주인을 하나로 만드는 일»이라서 그렇다.
+> 판정·연출·명령은 그대로 남고, 오히려 그 자리에 «왜 이렇게 했나»가 주석으로 붙는다.
+> 줄 수로 이관 진척을 재면 안 된다 — `LSData` 섹션 개수와 B절 스캐너가 진짜 지표다.
 
 ### 은퇴
 
