@@ -512,6 +512,23 @@ public class LSKubeBridge implements KubeJSPlugin {
             return axis == 0 ? p.getX() : axis == 1 ? p.getY() : p.getZ();
         }
 
+        // ── 몹이 「몬스터」인가 (2026-07-31 유저 결정: DECISIONS 2절 C안) ──
+        // `ls_mobscale.js` 가 여태 «공격력 속성이 있으면 적대» 로 판별하고 있었다.
+        // 원래는 MobCategory 를 보려 했는데, KubeJS 의 `e.getType()` 은 EntityType 이 아니라
+        // **id 문자열**이라 `.getCategory()` 가 처음부터 예외만 던졌다 — 그래서 판별이
+        // 계속 예비 경로로 떨어졌고, 결과적으로 철골렘·눈사람·늑대·벌까지 세지고 있었다.
+        //
+        // 자바에서는 EntityType 을 그대로 들고 있으니 한 줄이다. 스크립트가 못 하던 걸
+        // 모드가 하는 전형적인 자리라 다리를 놓는다.
+        //
+        // ※ 이 판정은 **늑대·북극곰도 뺀다.** 「실제로 덤비는데 안 세지는」 경우가 생긴다는 걸
+        //   알고 고른 값이다(DECISIONS 2절에 A/B/C 를 비교해 뒀다). 규칙이 한 문장으로
+        //   설명되는 쪽을 택한 것이다 — «몬스터만 세진다».
+        public boolean isMonster(net.minecraft.world.entity.Entity entity) {
+            return entity != null
+                && entity.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER;
+        }
+
         // 화면을 열어둔 사람에게 갱신을 밀어준다 (스크립트가 금고를 바꾼 직후 등)
         // ── 부활 규칙 ──
         // 리스폰 직후 ls_revive.js 가 부른다. 무적 창과 「별빛 쇠약」의 피해 감소는

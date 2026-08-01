@@ -44,14 +44,21 @@ function msForced(server) { return msStore(server).getInt('ms_force') > 0 }
 //   적대로 본다 — 철골렘·늑대·벌·눈사람도 스케일링을 받는다. 여태 이렇게 돌아왔으니
 //   동작을 바꾸지 않고 그대로 두되, 좁힐지는 밸런스 판단이라 TODO 로 올린다.
 function msIsHostile(e) {
-  // 살아 있는 것만 속성을 가진다. 화살·아이템(ItemEntity)·경험치 구슬까지 들어오는데
-  // 그쪽엔 getAttribute 자체가 없어 매번 예외가 났다 — 결과는 어차피 false 라 동작은
-  // 맞았지만, 스폰마다 예외를 만들고 경고 로그를 채웠다. 부르기 전에 거른다.
-  if (!e || typeof e.getAttribute !== 'function') return false
+  if (!e) return false
+  // ── 2026-07-31: MobCategory == monster 로 좁혔다 (유저 결정, DECISIONS 2절 C안) ──
+  // 스크립트에서는 이 판정을 할 수 없다 — KubeJS 의 `e.getType()` 이 EntityType 이 아니라
+  // id 문자열이라 `.getCategory()` 가 없다. 그래서 모드에 다리를 놓고 그쪽에 물었다.
+  //
+  // **늑대·북극곰도 빠진다.** 「실제로 덤비는데 안 세지는」 경우가 생기는 걸 알고 고른 값이다.
+  // 규칙이 한 문장으로 설명되는 쪽을 택했다 — «몬스터만 세진다».
+  try { return LS.isMonster(e) } catch (err) { lsWarn('ls_mobscale:isMonster', err) }
+
+  // 예비 경로 — 다리가 없을 때(모드 없이 스크립트만 돌릴 때)만 온다.
   // ※ ID 는 반드시 `minecraft:generic.attack_damage` 다. `generic.` 을 빼면 null 이 돌아와
   //   **모든 몹이 "비적대"로 판정되어 스케일링이 통째로 사라진다** — 예외도 안 나서 몇 달을 몰랐다.
   //   확인법: /attribute <대상> minecraft:generic.attack_damage base get
-  try { return e.getAttribute('minecraft:generic.attack_damage') != null } catch (err) { lsWarn('ls_mobscale:attack-attr', err); return false }
+  if (typeof e.getAttribute !== 'function') return false
+  try { return e.getAttribute('minecraft:generic.attack_damage') != null } catch (err) { return false }
 }
 
 EntityEvents.spawned(event => {
