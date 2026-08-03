@@ -524,9 +524,45 @@ public class LSKubeBridge implements KubeJSPlugin {
         // ※ 이 판정은 **늑대·북극곰도 뺀다.** 「실제로 덤비는데 안 세지는」 경우가 생긴다는 걸
         //   알고 고른 값이다(DECISIONS 2절에 A/B/C 를 비교해 뒀다). 규칙이 한 문장으로
         //   설명되는 쪽을 택한 것이다 — «몬스터만 세진다».
-        public boolean isMonster(net.minecraft.world.entity.Entity entity) {
-            return entity != null
-                && entity.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER;
+        // ⚠️ 인자를 Object 로 받는 이유 — 처음엔 `Entity` 로 받았는데, 그러면
+        // **「엔티티가 아니다」와 「몬스터가 아니다」가 둘 다 false 로 뭉개진다.**
+        // 실제로 그 상태로 넣었더니 좀비가 스케일링을 못 받았고, 예외도 로그도 안 나서
+        // 원인을 못 찾을 뻔했다(Rhino 가 변환 못 하는 인자를 null 로 넘긴다).
+        // 여기서는 **못 알아본 타입이면 던진다** — 호출부의 catch 가 경고를 찍고 예비 경로로
+        // 내려가므로, 조용히 틀리는 대신 시끄럽게 틀린다.
+        public boolean isMonster(Object entity) {
+            if (entity instanceof net.minecraft.world.entity.Entity e) {
+                return e.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER;
+            }
+            throw new IllegalArgumentException(
+                "LS.isMonster: 엔티티가 아니다 — " + (entity == null ? "null" : entity.getClass().getName()));
+        }
+
+        // ── 그 몹 종류의 «공장 출고» 속성값 (2026-07-31) ──
+        // 몹 스케일링이 재시작마다 복리로 붙던 걸 막으려고 만들었다. 원인은 두 겹이었다:
+        //   ① `EntityEvents.spawned` 는 디스크에서 다시 로드될 때도 온다
+        //   ② 이 모드팩은 로드 시 속성 모디파이어를 base 에 구워 넣는다
+        // 그래서 «태그로 표식» 도 «이름 붙은 모디파이어» 도 안 통했다. 전자는 태그가 아직
+        // 안 붙은 시점에 이벤트가 오고, 후자는 구워지면서 다음 로드의 새 base 가 된다.
+        // 실측: 좀비 하나가 재시작 한 번에 20 → 34.56 (20×1.2³) 이 됐다.
+        //
+        // **그래서 현재값을 아예 안 읽는다.** 엔티티 «종류»의 기본값에서 곱하면 몇 번을
+        // 다시 돌려도 결과가 하나다 — 탐지가 필요 없어진다.
+        // 없는 속성이면 -1 (0 이 아니다 — 0 은 «값이 0» 과 구분이 안 된다).
+        public double defaultAttrBase(Object entity, String attrId) {
+            if (!(entity instanceof net.minecraft.world.entity.LivingEntity le)) return -1;
+            try {
+                var loc = net.minecraft.resources.ResourceLocation.parse(attrId);
+                var holder = net.minecraft.core.registries.BuiltInRegistries.ATTRIBUTE.getHolder(loc);
+                if (holder.isEmpty()) return -1;
+                @SuppressWarnings("unchecked")
+                var type = (net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>) le.getType();
+                var supplier = net.minecraft.world.entity.ai.attributes.DefaultAttributes.getSupplier(type);
+                if (!supplier.hasAttribute(holder.get())) return -1;
+                return supplier.getBaseValue(holder.get());
+            } catch (Exception e) {
+                return -1;
+            }
         }
 
         // 화면을 열어둔 사람에게 갱신을 밀어준다 (스크립트가 금고를 바꾼 직후 등)

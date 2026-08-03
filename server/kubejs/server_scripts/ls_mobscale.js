@@ -61,6 +61,31 @@ function msIsHostile(e) {
   try { return e.getAttribute('minecraft:generic.attack_damage') != null } catch (err) { return false }
 }
 
+// ── 다시 적용돼도 결과가 같아야 한다 (2026-07-31) ──
+// **`EntityEvents.spawned` 는 «새로 태어날 때»만 오지 않는다.** 디스크에서 다시 로드될 때도
+// 온다. 그래서 여태 **서버를 껐다 켤 때마다 살아 있던 몹 전부가 다시 곱해졌다.**
+//
+// 실측: 태그를 붙인 좀비를 진행도 1에서 소환 → 24.0(20×1.2) → 재시작 → **28.8(20×1.2²)**.
+// 재시작 10번이면 ×6.2 다. 백업·업데이트로 서버를 내렸다 올릴 때마다 조용히 쌓여 왔고,
+// 아무 오류도 안 났다.
+//
+// ── 엔티티 태그로 막으려다 실패한 기록 ──
+// 처음엔 `ls_scaled` 태그를 붙이고 «있으면 건너뛰기»로 막으려 했다. **안 된다.**
+// 재로드 때 이 이벤트가 **NBT 태그가 붙기 전에** 온다 — 그 시점의 `e.tags` 는 비어 있다.
+// (확인법: 재시작 후 그 개체를 보면 태그는 멀쩡히 있는데 체력은 또 곱해져 있다.)
+// 로드 순서에 기대는 표식은 여기서 쓸 수 없다.
+//
+// ── 이름 붙은 모디파이어로도 실패했다 ──
+// 두 번째 시도는 `ls_enrage.js` 방식이었다 — 같은 ID 로 add 하면 «중복»이 아니라 «교체»라
+// 몇 번을 걸어도 하나만 남는다. 소환 직후에는 정확히 그렇게 됐다(base 20 + modifier 0.2 = 24).
+// **그런데 재시작하면 그 모디파이어가 base 에 구워진다.** 이 모드팩 어딘가가 그렇게 한다.
+// 구워진 34.56 이 다음 로드의 새 base 가 되고, 거기에 또 붙는다. 같은 복리다.
+//
+// ── 그래서 세 번째: 현재값을 아예 안 읽는다 ──
+// `LS.defaultAttrBase(e, id)` 가 그 **몹 종류의 공장 출고값**을 준다. 개체가 지금 얼마든
+// 상관없이 늘 같은 수라, `출고값 × 배율` 도 늘 같다. **탐지가 필요 없다 — 몇 번을 돌려도
+// 결과가 하나다.** 덤으로 이미 망가진 개체도 다음 로드에서 제 값으로 돌아온다.
+
 EntityEvents.spawned(event => {
   const e = event.entity
   if (!e) return
@@ -80,17 +105,29 @@ EntityEvents.spawned(event => {
   const hpMul = cfg.hp[tier] || 1.0
   const dmgMul = cfg.dmg[tier] || 1.0
 
+  // ── 현재값을 읽지 않는다 ──
+  // `LS.defaultAttrBase` 는 그 «몹 종류»의 공장 출고값을 준다. 지금 이 개체가 몇 번
+  // 스케일링됐든 상관없이 늘 같은 수가 나오므로, 여기서 나온 결과도 늘 같다.
+  // 없으면 -1 (0 과 구분된다). 다리가 없거나 속성이 없는 몹은 **건너뛴다** —
+  // 옛 방식으로 되돌아가면 조용히 복리가 다시 붙는다.
   if (hpMul !== 1.0) {
-    var a = e.getAttribute('minecraft:generic.max_health')
-    if (a) { var nb = a.getBaseValue() * hpMul; a.setBaseValue(nb); e.setHealth(nb) }
+    var defHp = -1
+    try { defHp = LS.defaultAttrBase(e, 'minecraft:generic.max_health') } catch (err) { lsWarn('ls_mobscale:defHp', err) }
+    var a = defHp > 0 ? e.getAttribute('minecraft:generic.max_health') : null
+    if (a) {
+      var target = defHp * hpMul
+      a.setBaseValue(target)
+      // 다친 채로 재로드된 개체를 꽉 채우면 «재시작하면 몹이 회복된다»가 된다.
+      // 넘칠 때(또는 아직 0일 때)만 맞춘다.
+      if (Number(e.health) > target || Number(e.health) <= 0.0) e.setHealth(target)
+    }
   }
   if (dmgMul !== 1.0) {
-    var d = e.getAttribute('minecraft:generic.attack_damage')
-    if (d) {
-      var base = d.getBaseValue()
-      // 원래 센 몹이 배율만으로 즉사기를 갖지 않게 절대 상한을 씌운다
-      d.setBaseValue(Math.min(base * dmgMul, base + cfg.dmgCapAdd))
-    }
+    var defDmg = -1
+    try { defDmg = LS.defaultAttrBase(e, 'minecraft:generic.attack_damage') } catch (err) { lsWarn('ls_mobscale:defDmg', err) }
+    var d = defDmg > 0 ? e.getAttribute('minecraft:generic.attack_damage') : null
+    // 원래 센 몹이 배율만으로 즉사기를 갖지 않게 절대 상한을 씌운다
+    if (d) d.setBaseValue(Math.min(defDmg * dmgMul, defDmg + cfg.dmgCapAdd))
   }
 })
 
