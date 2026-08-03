@@ -171,6 +171,51 @@ ServerEvents.commandRegistry(event => {
       msStore(s).putInt('ms_force', 0)
       ctx.source.sendSystemMessage(Text.of(`§a관문 진행도 연동으로 복귀 §7(현재 티어 ${msTier(s)})`))
       return 1
+    }))
+    // ── 이미 부풀어 있는 몹을 제 값으로 되돌린다 ──
+    // 스폰 훅의 자동 복구에는 구멍이 셋 있어서, 손으로 한 번 쓸어야 하는 경우가 남는다:
+    //   ① 티어 0 이면 훅이 일찍 return 한다 — 관문을 하나도 안 깬 상태에서는 아무것도 안 고쳐진다
+    //   ② 늑대·철골렘·벌·눈사람은 **옛 넓은 판정 시절에 부풀었는데** 이제 비적대라 훅이 건너뛴다
+    //      → 그것들은 영원히 부푼 채로 남는다. 이 명령만이 되돌릴 수 있다
+    //   ③ 청크가 로드돼야 훅이 온다 — 안 가본 곳의 몹은 그대로다
+    // 그래서 이건 «가끔 돌리는 청소»다. 로드된 청크만 훑으므로 여러 번 돌려도 안전하다(멱등).
+    .then(Commands.literal('fix').requires(s => s.hasPermission(2)).executes(ctx => {
+      const s = ctx.source.server
+      const cfg = msCfg(); const tier = msTier(s)
+      var mfSeen = 0, mfFixed = 0
+      try {
+        s.overworld().getEntities().forEach(en => {
+          try {
+            if (!en || !en.getAttribute) return
+            var mfId = String(en.type)
+            if (mfId === 'minecraft:player') return
+            if (typeof BOSS_SET !== 'undefined' && BOSS_SET[mfId]) return   // 보스는 ls_bossdiff 담당
+            var mfDef = LS.defaultAttrBase(en, 'minecraft:generic.max_health')
+            if (mfDef <= 0) return
+            mfSeen++
+            // 지금 이 몹이 «받아야 할» 배율. 비적대면 1.0 — 즉 출고값으로 되돌린다.
+            var mfMul = msIsHostile(en) ? (cfg.hp[tier] || 1.0) : 1.0
+            var mfWant = mfDef * mfMul
+            var mfAttr = en.getAttribute('minecraft:generic.max_health')
+            if (!mfAttr) return
+            if (Math.abs(mfAttr.getBaseValue() - mfWant) < 0.01) return
+            mfAttr.setBaseValue(mfWant)
+            if (Number(en.health) > mfWant) en.setHealth(mfWant)
+            // 공격력도 같이 — 여기도 출고값에서 다시 계산한다
+            var mfDefD = LS.defaultAttrBase(en, 'minecraft:generic.attack_damage')
+            var mfD = mfDefD > 0 ? en.getAttribute('minecraft:generic.attack_damage') : null
+            if (mfD) {
+              var mfDMul = msIsHostile(en) ? (cfg.dmg[tier] || 1.0) : 1.0
+              mfD.setBaseValue(Math.min(mfDefD * mfDMul, mfDefD + cfg.dmgCapAdd))
+            }
+            mfFixed++
+          } catch (err) { lsWarn('ls_mobscale:fix-one', err) }
+        })
+      } catch (err) { lsWarn('ls_mobscale:fix', err) }
+      ctx.source.sendSystemMessage(Text.of(
+        `§a몹 스케일 정리 §7— 살펴본 ${mfSeen}기 중 §e${mfFixed}기§7를 되돌렸다 §8(티어 ${tier})`))
+      ctx.source.sendSystemMessage(Text.of('§8로드된 청크만 훑는다. 멀리 다녀온 뒤 한 번 더 돌릴 것.'))
+      return 1
     })))
 })
 
