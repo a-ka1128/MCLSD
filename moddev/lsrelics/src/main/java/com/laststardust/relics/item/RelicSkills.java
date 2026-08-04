@@ -146,7 +146,24 @@ public final class RelicSkills {
             arrow.setBaseDamage(2.54); // 1.32 -> ... -> 2.91 -> 2.54 (x0.874)
             if (sl.getRandom().nextFloat() < 0.6f) arrow.setCritArrow(true); // 화살 크리
             arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
-            arrow.getPersistentData().putFloat("lsExplode", dmg(stack, 12.71f)); // ... -> 14.54 -> 12.71 (x0.874)
+            // ── 12.71 → 9.53 (×0.75, 2026-08-04) ──
+            // **이 값은 그날까지 한 번도 실제로 적용된 적이 없다.** 폭발이 착탄 이벤트에 걸려
+            // 있었는데 그 경로가 죽어 있어서(RelicEventHandlers 머리말), 유성 사격은 화살 직격만
+            // 들어가고 있었다 — 실측 「18타 평균 9.9」. 위 4판 기록(379/361/338/418)도 전부
+            // 그 상태의 값이다. 즉 이 상수는 «가정하고 만든 값»이었지 검증된 적이 없다.
+            //
+            // 훅을 살리고 재니 18타 평균 99.3 / 103.0 — **10배**. 시리우스가 8종 꼴찌(78.9)에서
+            // 지속 104.8 로 튀어 압도적 1위가 됐고, 유성 사격 혼자 전체의 31% 를 먹었다.
+            //
+            // ×0.75 는 «원거리 동료와 동급» 을 겨냥한 값이다(유저 결정 2026-08-04):
+            //     지속 97.9 — 솔라리스 97.0 · 셀레스티아 99.1 사이
+            //     유성 사격 24% — 존재감은 있되 혼자 판을 정하진 않는다
+            // 전체 평균(90.1)에 맞추는 5.72 안도 있었지만, 그러면 시리우스가 다시 «원거리 셋 중
+            // 꼴찌» 가 된다 — 방금 고친 바로 그 모양으로 되돌아간다.
+            //
+            // ⚠️ 지속 97.9 의 궁극기 몫(15.9)은 한 판씩의 추정이다. 이 무기는 궁극기가 ±20% 로
+            //    흔들려 «4판 이상 모아서 판단» 이 원칙이다(StarBow 주석). 다시 잴 때 같이 볼 것.
+            arrow.getPersistentData().putFloat("lsExplode", dmg(stack, 9.53f)); // ... -> 14.54 -> 12.71 -> 9.53
             arrow.getPersistentData().putFloat("lsExplodeR", 2.5f); // 폭발 반경
             // 계측용 — 화살 직격은 바닐라 피해라 이름표를 화살에 실어 보낸다(DummyManager 가 읽는다)
             arrow.getPersistentData().putString("lsLabel", "유성 사격");
