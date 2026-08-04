@@ -32,7 +32,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
-import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
@@ -42,60 +42,93 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 //  · 바람의 발걸음(활 패시브): 처치 시 이동속도 상승
 //
 // ╔══════════════════════════════════════════════════════════════════════════╗
-// ║ ⚠️ ProjectileImpactEvent 는 이 모드팩에서 **한 번도 안 불린다** (2026-08-04) ║
+// ║ ⚠️ ProjectileImpactEvent 를 쓰지 마라 — 이 모드팩에서 한 번도 안 불린다      ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
-// 아래 셋은 전부 그 이벤트에 걸려 있고, 따라서 **전부 죽어 있다**:
-//     onArrowSplash        — 별빛 폭풍 착탄 확산
-//     onRelicArrowPierce   — 유물 화살의 무적 프레임 무시
-//     onProjectileImpact   — 유성 사격 폭발
-// (`ExplorerGimmicks.onProjectileImpact` — 프로스트모 화살 경고 — 도 같은 이유로 죽어 있다)
+// (2026-08-04 확인 · 그날 이 파일의 셋을 전부 다른 이벤트로 옮겼다)
 //
 // ── 어떻게 알았나 ──
-// 유저가 8종 DPS 를 재는데 유성 사격이 «18타 평균 9.9» 로 나왔다. 화살 직격만의 값이고
-// 폭발(5성 약 69)이 0회였다. 훅 진입점에 로그를 박고 확인했다:
-//   · 손으로 소환한 화살(lsExplode 실림, NBT 로 확인) 착탄 → 로그 0
-//   · `receiveCanceled = true` 로 바꿔도 → 로그 0  (취소가 원인이 아니다)
-//   · **스켈레톤이 실제로 쏜 화살**이 골렘을 맞춰 피해까지 들어갔는데도 → 로그 0
-// 즉 이벤트 자체가 발화하지 않는다. 어느 모드가 화살 착탄 경로를 갈아친 것으로 보이며
+// 8종 DPS 실측에서 유성 사격이 «18타 평균 9.9» 로 나왔다. 18타는 정확히 6시전 × 3발이고
+// 9.9 는 화살 직격만의 값이다 — 폭발(5성 약 69)이 0회였다. 훅 진입점에 로그를 박고 세 번 갈랐다:
+//   · 손으로 소환한 화살(NBT 로 `lsExplode` 실린 것 확인) 착탄 → 로그 0
+//   · `receiveCanceled = true` 로 바꿔도                      → 로그 0  (취소가 원인이 아니다)
+//   · **스켈레톤이 실제로 쏜 화살**이 골렘을 맞춰 피해까지 들어갔는데 → 로그 0
+// 이벤트 자체가 발화하지 않는다. 어느 모드가 화살 착탄 경로를 갈아친 것으로 보이며
 // (화살 NBT 에 `apothic_attributes.arrow.done` 이 붙는다) 범인은 아직 못 좁혔다.
 //
-// ── 왜 이게 큰가 ──
-// 시리우스가 8종 중 꼴찌(78.9)인 이유가 여기서 전부 설명된다. 폭발이 없어 유성 사격이
-// 평타보다 약하고, 무적 프레임을 못 뚫어 평타 상당수가 막히고, 궁극기 확산도 없다.
-// **세 기능이 «구현됐다»고 문서에 적힌 채로 한 번도 돈 적이 없다.**
+// ── 무엇이 죽어 있었나 ──
+// 세 기능이 «구현됐다»고 문서에 적힌 채로 한 번도 돈 적이 없다. 시리우스가 8종 중
+// 꼴찌(78.9)였던 이유가 여기서 전부 설명된다 — 배율 문제가 아니었다.
 //
-// ── 고치는 방향 ──
-// 이 이벤트를 믿지 말고 `LivingIncomingDamageEvent` 로 옮긴다 — 그쪽은 확실히 돈다
-// (`onSanctuaryProtect` 등이 같은 파일에서 정상 동작한다). 「별빛 쇠약」이 속성 모디파이어로
-// 반쪽만 돌다가 같은 이벤트로 옮겨서 해결된 것과 **정확히 같은 처방**이다.
-// 착수 전 `docs/TODO.md` D절을 볼 것.
+// ── 어디로 옮겼나 (아래 각 훅의 주석에 이유가 있다) ──
+//     별빛 폭풍 확산 · 유성 사격 폭발  →  LivingIncomingDamageEvent  (맞았을 때 얹는다)
+//     유물 화살의 무적 프레임 무시     →  LivingDamageEvent.Post     (박힌 뒤에 걷는다)
+//     프로스트모 화살 경고            →  ExplorerGimmicks 의 보스 틱 (거기 주석 참조)
+// 둘 다 확실히 도는 이벤트다 — 아래 `onSanctuaryProtect` 와 DummyManager 의 집계가 쓴다.
+//
+// **교훈: 「구현했다」와 「도는 걸 봤다」는 다르다.** 셋 다 정교한 주석까지 달려 있었다.
 @EventBusSubscriber(modid = LSRelics.MODID)
 public final class RelicEventHandlers {
     private RelicEventHandlers() {}
 
-    // ── 별빛 폭풍: 착탄 소폭 확산 ──
-    // 3초에 ~90발이 떨어지므로 유성 사격 같은 큰 연출·사운드를 쓰면 화면과 귀가 남아나지 않는다.
-    // 살짝 빗나간 화살도 들어가게 해 주는 게 목적이라 판정만 조용히 처리한다.
+    // ── 화살 착탄 효과 (별빛 폭풍 확산 · 유성 사격 폭발) ──
+    //
+    // **2026-08-04: ProjectileImpactEvent → LivingIncomingDamageEvent 로 옮겼다.**
+    // 앞의 이벤트는 이 모드팩에서 한 번도 발화하지 않는다(위 머리말의 증거 참조).
+    // 여기 쓰는 이벤트는 확실히 돈다 — 같은 파일의 `onSanctuaryProtect` 와 DummyManager 의
+    // 집계가 이 계열로 멀쩡히 동작해 왔다.
+    //
+    // ── 바뀐 것: «빗나간 화살은 안 터진다» ──
+    // 예전 이벤트는 블록에 박혀도 왔지만, 피해 이벤트는 **맞았을 때만** 온다.
+    // 표적을 겨냥해 쏘는 스킬이라 실전에서 중요한 쪽은 남는다(한 발만 맞아도 주변까지 퍼진다).
+    // 빗나간 자리의 광역까지 살리려면 화살을 매 틱 훑어야 하는데, 모든 화살에 그 비용을
+    // 물리는 건 얻는 것에 비해 비싸다.
+    //
+    // ── 직격 대상만 처리가 다르다 ──
+    // 지금 이 순간 그 대상은 `hurt()` 한가운데라 무적 창이 이미 서 있다. 거기에 `LsDamage.hit`
+    // 을 또 부르면 **조용히 튕긴다.** 그래서 직격 대상은 이번 피해에 더하고(`setAmount`),
+    // 주변만 별도 판정으로 때린다. 계측 이름표는 화살에 실린 `lsLabel` 이 그대로 따라온다.
     @SubscribeEvent
-    public static void onArrowSplash(ProjectileImpactEvent event) {
-        if (!(event.getProjectile() instanceof AbstractArrow arrow)) return;
+    public static void onArrowHitEffects(LivingIncomingDamageEvent event) {
+        if (!(event.getSource().getDirectEntity() instanceof AbstractArrow arrow)) return;
         if (!(arrow.level() instanceof ServerLevel level)) return;
-        float dmg = arrow.getPersistentData().getFloat("lsSplash");
-        if (dmg <= 0) return;
-        float radius = arrow.getPersistentData().getFloat("lsSplashR");
-        if (radius <= 0) radius = 1.5f;
-        arrow.getPersistentData().putFloat("lsSplash", 0); // 1회만
+
+        float splash = arrow.getPersistentData().getFloat("lsSplash");
+        if (splash > 0) {
+            arrow.getPersistentData().putFloat("lsSplash", 0); // 1회만
+            float r = arrow.getPersistentData().getFloat("lsSplashR");
+            arrowAoe(level, arrow, event, r <= 0 ? 1.5f : r, splash, "별빛 폭풍");
+            level.sendParticles(ParticleTypes.END_ROD, arrow.getX(), arrow.getY(), arrow.getZ(),
+                6, 0.25, 0.15, 0.25, 0.03);
+        }
+
+        float boom = arrow.getPersistentData().getFloat("lsExplode");
+        if (boom > 0) {
+            arrow.getPersistentData().putFloat("lsExplode", 0); // 1회만
+            float r = arrow.getPersistentData().getFloat("lsExplodeR");
+            if (r <= 0) r = 2.5f;
+            // 폭발도 크리 가능 (60% 확률 ×1.5)
+            float finalDmg = level.getRandom().nextFloat() < 0.6f ? boom * 1.5f : boom;
+            arrowAoe(level, arrow, event, r, finalDmg, "유성 사격");
+            meteorFx(level, arrow.getX(), arrow.getY(), arrow.getZ(), r);
+        }
+    }
+
+    // 직격 대상은 이번 피해에 더하고, 반경 안의 나머지는 따로 때린다.
+    private static void arrowAoe(ServerLevel level, AbstractArrow arrow,
+                                 LivingIncomingDamageEvent event, float radius, float dmg, String label) {
+        LivingEntity direct = event.getEntity();
+        event.setAmount(event.getAmount() + dmg);
 
         Entity owner = arrow.getOwner();
         double x = arrow.getX(), y = arrow.getY(), z = arrow.getZ();
         AABB box = new AABB(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius);
         for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
                 en -> en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            if (e == direct) continue;                     // 위에서 이미 얹었다
             if (e.distanceToSqr(x, y, z) > radius * radius) continue;
             com.laststardust.relics.LsDamage.hit(e, owner instanceof Player p
-                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), dmg, "별빛 폭풍");
+                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), dmg, label);
         }
-        level.sendParticles(ParticleTypes.END_ROD, x, y, z, 6, 0.25, 0.15, 0.25, 0.03);
     }
 
     // ── 유물 화살은 무적 프레임을 무시한다 ──
@@ -113,39 +146,24 @@ public final class RelicEventHandlers {
     //
     // ※ 유물 화살에만 적용한다. 바닐라 활·다른 모드 화살은 그대로 둔다 —
     //   전역으로 풀면 몹의 원거리 공격까지 무적을 무시해 수성전이 불가능해진다.
+    //
+    // **2026-08-04: ProjectileImpactEvent → LivingDamageEvent.Post 로 옮겼다.**
+    // 방향이 뒤집혔다. 예전엔 «맞기 직전에 무적을 0 으로 만들어» 이번 화살을 통과시켰다.
+    // 지금은 «박히고 난 직후에 0 으로 되돌려» **다음** 화살을 통과시킨다.
+    // 결과는 같다 — 연사 중 화살이 무적 창에 막히지 않는다. 첫 발만 창을 만나는데,
+    // 그 창은 어차피 직전 공격이 만든 것이라 원래도 못 뚫었다.
+    //
+    // Post 여야 하는 이유: `hurt()` 는 피해를 넣으면서 `invulnerableTime = 20` 을 세운다.
+    // 그 전에 0 으로 만들어봐야 곧바로 덮인다. 실제로 박힌 뒤에 걷어야 남는다.
     @SubscribeEvent
-    public static void onRelicArrowPierce(ProjectileImpactEvent event) {
-        if (!(event.getProjectile() instanceof AbstractArrow arrow)) return;
+    public static void onRelicArrowPierce(LivingDamageEvent.Post event) {
+        if (!(event.getSource().getDirectEntity() instanceof AbstractArrow arrow)) return;
         if (!arrow.getPersistentData().getBoolean(LsArrows.TAG)) return;
-        if (!(event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult hit)) return;
-        if (hit.getEntity() instanceof LivingEntity target) {
-            target.invulnerableTime = 0;
-        }
+        event.getEntity().invulnerableTime = 0;
     }
 
-    // ── 유성 사격: 폭발 화살 ──
-    @SubscribeEvent
-    public static void onProjectileImpact(ProjectileImpactEvent event) {
-        if (!(event.getProjectile() instanceof AbstractArrow arrow)) return;
-        if (!(arrow.level() instanceof ServerLevel level)) return;
-        float dmg = arrow.getPersistentData().getFloat("lsExplode");
-        if (dmg <= 0) return;
-        float radius = arrow.getPersistentData().getFloat("lsExplodeR");
-        if (radius <= 0) radius = 2.5f;
-        arrow.getPersistentData().putFloat("lsExplode", 0); // 1회만
-
-        // 폭발도 크리 가능 (60% 확률 ×1.5)
-        float finalDmg = level.getRandom().nextFloat() < 0.6f ? dmg * 1.5f : dmg;
-        Entity owner = arrow.getOwner();
-        double x = arrow.getX(), y = arrow.getY(), z = arrow.getZ();
-        AABB box = new AABB(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius);
-        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
-                en -> en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
-            if (e.distanceToSqr(x, y, z) > radius * radius) continue;
-            com.laststardust.relics.LsDamage.hit(e, owner instanceof Player p
-                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), finalDmg, "유성 사격");
-        }
-        // ── 폭발 연출 ──
+    // 유성 사격의 폭발 연출. 판정은 위 `onArrowHitEffects` 가 한다.
+    private static void meteorFx(ServerLevel level, double x, double y, double z, float radius) {
         level.sendParticles(ParticleTypes.FLASH, x, y, z, 2, 0, 0, 0, 0);
         level.sendParticles(ParticleTypes.EXPLOSION, x, y, z, 5, 0.4, 0.4, 0.4, 0.0);
         level.sendParticles(ParticleTypes.FIREWORK, x, y, z, 55, radius * 0.5, radius * 0.5, radius * 0.5, 0.25);

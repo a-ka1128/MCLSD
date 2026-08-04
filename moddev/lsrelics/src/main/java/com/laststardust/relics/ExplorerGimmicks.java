@@ -99,19 +99,35 @@ public final class ExplorerGimmicks {
                         "§b◆ 프로스트모 §7— §c불§7이 더 잘 든다(×1.25). §8그리고 화살은 통하지 않는다."));
                 }
             }
+
+            // 교전 여부와 무관하게 본다 — 멀리서 쏘는 사람에게도 알려야 한다.
+            // 그 사람은 «맞고 있는데 체력이 안 준다»를 보고 있는 중이다.
+            @Override
+            public void onTickAlways(ServerLevel level, BossFightTracker.Fight f) {
+                frostmawArrowHint(level, f.boss);
+            }
         });
 
-    // 화살이 프로스트모에 닿는 순간. 피해 이벤트로는 못 잡는다 — hurt() 가 false 를 돌려주면
-    // super 를 안 부르므로 NeoForge 의 피해 이벤트가 아예 안 열린다(강철거인과 같은 사정).
-    @SubscribeEvent
-    public static void onProjectileImpact(ProjectileImpactEvent event) {
-        if (!(event.getProjectile() instanceof AbstractArrow arrow)) return;
-        if (!(event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult hit)) return;
-        if (!FROSTMAW.equals(EntityType.getKey(hit.getEntity().getType()))) return;
-        if (!(arrow.getOwner() instanceof ServerPlayer p)) return;
-        if (!hintReady(p, "lsFmArrow")) return;
-        p.displayClientMessage(Component.literal(
-            "§7화살은 이 짐승에게 통하지 않는다. §8불을 쓰거나 붙어라."), true);
+    // ── 화살이 프로스트모에 닿는 순간 ──
+    //
+    // 피해 이벤트로는 못 잡는다 — `hurt()` 가 false 를 돌려주면 super 를 안 부르므로
+    // NeoForge 의 피해 이벤트가 아예 안 열린다. **그게 바로 알리려는 사실이다**(피해가 0이다).
+    //
+    // **2026-08-04: ProjectileImpactEvent 를 버렸다.** 그 이벤트는 이 모드팩에서 한 번도
+    // 발화하지 않는다(`RelicEventHandlers` 머리말에 증거). 07-31 에 이걸로 만들어 두고
+    // 「미검증」으로 넘겼는데, 검증했다면 아무것도 안 뜨는 걸 봤을 것이다.
+    //
+    // 그래서 이벤트를 기다리지 않고 **보스 곁을 직접 본다.** 트래커가 이 보스를 좇는 동안
+    // 매 틱 반경 3칸 안의 화살을 훑는다. 비싸 보이지만 이 보스가 교전 중일 때만 도는 데다
+    // 범위가 좁아, 다른 화살 훅처럼 «모든 화살»에 비용을 물리지 않는다.
+    private static void frostmawArrowHint(ServerLevel level, Entity boss) {
+        for (AbstractArrow arrow : level.getEntitiesOfClass(AbstractArrow.class,
+                boss.getBoundingBox().inflate(1.5))) {
+            if (!(arrow.getOwner() instanceof ServerPlayer p)) continue;
+            if (!hintReady(p, "lsFmArrow")) continue;
+            p.displayClientMessage(Component.literal(
+                "§7화살은 이 짐승에게 통하지 않는다. §8불을 쓰거나 붙어라."), true);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
