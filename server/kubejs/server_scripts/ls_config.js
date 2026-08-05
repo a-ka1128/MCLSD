@@ -88,10 +88,17 @@ const LS_CONFIG = {
     //
     // ※ T1 강철거인(Mowzie's) · T3 건틀렛 · 최종 리치(BOMD) 는 캡이 없다. 아래 값 그대로 유효.
     perBoss: {
-      'mowziesmobs:ferrous_wroughtnaut': { absHp: 3650, dmg: 100 },
-      'cataclysm:ignis':                 { absHp: 7000, dmg: 100 },
-      'bosses_of_mass_destruction:gauntlet': { absHp: 6250, dmg: 100 },
-      'cataclysm:netherite_monstrosity': { absHp: 10400, dmg: 100 }
+      // ── 2026-08-05: 넷 다 ×1.09 ──
+      // 유물 8종 총량 조정으로 **파티 평균이 88.7 → 96.7 로 올랐다**(`RelicEventHandlers.relicScale`).
+      // 보스가 그만큼 빨리 죽으므로 체력도 같이 올린다. 안 올리면 「4명·60초」 목표가
+      // 55초짜리가 되고, 그건 이 값들이 존재하는 이유가 사라지는 것이다.
+      //   3650 → 3980 · 7000 → 7630 · 6250 → 6810 · 10400 → 11340
+      // ⚠️ **대략치다.** 정확한 값은 실전 한 판이 낸다 — 보스가 죽으면 전투 기록계가
+      //    「목표 60초 → 권장 체력 N」과 붙여넣을 명령을 스스로 낸다(`/bossdiff abs`).
+      'mowziesmobs:ferrous_wroughtnaut': { absHp: 3980, dmg: 100 },
+      'cataclysm:ignis':                 { absHp: 7630, dmg: 100 },
+      'bosses_of_mass_destruction:gauntlet': { absHp: 6810, dmg: 100 },
+      'cataclysm:netherite_monstrosity': { absHp: 11340, dmg: 100 }
     }
   },
 

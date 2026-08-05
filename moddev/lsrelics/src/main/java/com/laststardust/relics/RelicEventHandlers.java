@@ -264,6 +264,47 @@ public final class RelicEventHandlers {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  유물별 총량 배율 — 밸런스 조정의 단일 손잡이 (2026-08-05)
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    // ── 왜 여기 한 곳인가 ──
+    // 유물 하나의 DPS 는 여러 자리에 흩어져 있다. 평타만 해도 근접 넷은 아이템 공격력
+    // 속성(`weapon(...)`·`guardianAttrs(...)`), 시리우스는 `StarBow.ARROW_DMG`, 솔라리스는
+    // `SolarMusket.RIFLE_DMG`, 셀레스티아는 아예 상수가 없고 `RelicSkills` 안에 있다.
+    // 거기에 스킬 상수가 유물마다 3~5개씩 더 붙는다. **총량을 ×1.1 하려면 여덟 군데를
+    // 각자 다른 방식으로 고쳐야 하고, 다음 조정 때 그걸 그대로 반복해야 한다.**
+    //
+    // 그래서 «피해가 실제로 들어가는 순간»에 한 번 곱한다. 평타·스킬·화살·도트가 전부
+    // 이 이벤트를 지나므로 한 숫자가 그 유물의 총량이 된다. 아래 `onStyxStrike` 가 같은
+    // 이벤트에서 같은 방식으로 도는 게 실측으로 확인됐다(정면 68.0 vs 풀딜 97.0 = ×1.43).
+    //
+    // ── 2026-08-05 실측 기반 목표 (유저 결정) ──
+    //   시리우스·셀레스티아·솔라리스 100 · 스틱스 정면 90 · 타이탄·게볼그 96 · 이지스 90
+    //   파나케이아는 유지 — 더미 87.8 이지만 힐 10 HPS + 성역 경감 20% + 소생이 안 잡힌다.
+    // 기준 실측은 `docs/DECISIONS.md` 「그날의 8종 실측」 표.
+    //
+    // ※ 배율을 바꾸면 **보스 체력도 같이 봐야 한다** — 파티 평균이 88.7 → 96.7 로 올라
+    //   보스가 9% 빨리 죽는다. `ls_config.js` perBoss 를 함께 고쳤다.
+    private static float relicScale(ItemStack stack) {
+        Item i = stack.getItem();
+        if (i == LSRelics.GUARDIAN.get()) return 1.118f;   // 이지스   80.5 → 90
+        if (i == LSRelics.PIONEER.get())  return 1.096f;   // 타이탄   87.6 → 96
+        if (i == LSRelics.LANCER.get())   return 1.179f;   // 게볼그   81.4 → 96  ← 폭이 제일 크다
+        if (i == LSRelics.ASSASSIN.get()) return 1.324f;   // 스틱스   정면 68.0 → 90
+        if (i == LSRelics.SAGE.get())     return 1.009f;   // 셀레스티아 99.1 → 100
+        if (i == LSRelics.GUNNER.get())   return 1.031f;   // 솔라리스  97.0 → 100
+        return 1.0f;                                       // 시리우스·파나케이아는 그대로
+    }
+
+    @SubscribeEvent
+    public static void onRelicDamageScale(LivingIncomingDamageEvent event) {
+        if (event.getEntity().level().isClientSide) return;
+        if (!(event.getSource().getEntity() instanceof ServerPlayer p)) return;
+        float s = relicScale(p.getMainHandItem());
+        if (s != 1.0f) event.setAmount(event.getAmount() * s);
+    }
+
     public static boolean isRelic(ItemStack stack) {
         Item i = stack.getItem();
         return i == LSRelics.GUARDIAN.get() || i == LSRelics.HUNTER.get()
@@ -359,9 +400,39 @@ public final class RelicEventHandlers {
     //   스틱스는 숙련도로 보상받는 무기로 두기로 했다(사용자 결정).
     // ※ 상단을 조이려면 CriticalHitEvent.setDamageMultiplier() 로 스틱스만 크리 배수를
     //    낮추는 게 맞다. BACKSTAB_BONUS 를 깎으면 기본값 대비 백어택 이득만 사라진다.
-    private static final float BACKSTAB_BONUS = 1.20f;
+    // ── 1.20 → 1.17 (2026-08-05) ──
+    // 바닥을 90 으로 올리면서 천장을 같이 조였다. 스틱스는 «등 뒤로 돌아야 나오는 무기»라
+    // 숙련 배수가 정체성인데, 바닥만 올리면 천장이 그대로 따라 뛴다(정면 90 → 풀딜 128.4,
+    // 2위 대비 +28%). 그래서 배율 자체를 줄였다 — 숙련 배수 ×1.43 → **×1.27**.
+    //
+    //     정면 90.0 (7위) · 백어택만 103.5 (1위) · 풀딜 113.9 (2위 대비 +14%)
+    //
+    // 상수가 1.15 가 아니라 1.17 인 이유: 백어택은 **근접 직접 타격에만** 붙는다
+    // (`getDirectEntity() != attacker` 면 빠진다). 정면 68.0 의 구성에서 평타 35.7 ·
+    // 그림자 도약 13.1 · 급소 11.6 = 89% 만 대상이고 출혈 7.6 은 도트라 빠진다.
+    // 전체 ×1.15 를 내려면 1 + 0.89x = 1.15 → x ≈ 0.17.
+    private static final float BACKSTAB_BONUS = 1.17f;
     private static final float ABYSS_BONUS = 1.30f;
     private static final float AMBUSH_BONUS = 2.0f;
+
+    // ── 스틱스만 크리 배수를 낮춘다 (2026-08-05) ──
+    // 바닐라 크리는 ×1.5 이고, 실측상 전체 기여가 ×1.19 였다(낙하 중에만 터져 상시가 아니다).
+    // 목표는 전체 기여 ×1.10 이라 1 + p(c−1) 로 역산했다: 1.19 = 1 + 0.38×0.5 에서 p = 0.38,
+    // 1.10 = 1 + 0.38(c−1) → c ≈ 1.26.
+    //
+    // **`BACKSTAB_BONUS` 가 아니라 여기를 건드리는 게 맞다** — 이 파일 위쪽 주석이 원래
+    // 그렇게 적어뒀다. 백어택을 깎으면 «등 뒤로 도는 이득»이 사라져 정체성이 죽고,
+    // 크리를 깎으면 «운 좋게 터지는 상단»만 눌린다. 조여야 하는 건 후자다.
+    private static final float STYX_CRIT = 1.26f;
+
+    @SubscribeEvent
+    public static void onStyxCrit(net.neoforged.neoforge.event.entity.player.CriticalHitEvent event) {
+        if (event.getEntity().level().isClientSide) return;
+        if (event.getEntity().getMainHandItem().getItem() != LSRelics.ASSASSIN.get()) return;
+        // 크리가 아닌 타격(배수 1.0)은 건드리지 않는다 — 건드리면 평타가 오히려 세진다.
+        if (event.getDamageMultiplier() <= 1.0f) return;
+        event.setDamageMultiplier(STYX_CRIT);
+    }
 
     @SubscribeEvent
     public static void onStyxStrike(LivingIncomingDamageEvent event) {
