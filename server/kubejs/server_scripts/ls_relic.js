@@ -71,7 +71,14 @@ function rlGrant(server, player, force) {
   }
   const r = RELICS[fate]
   rlCmd(server, `give ${uname} ${r.id}`)
-  // 스틱스는 쌍단검 — 보조손에도 한 자루 쥐여준다 (Better Combat 쌍수). 각성 별은 asStamp가 양손 모두 새긴다.
+  // 스틱스는 쌍단검 — 보조손에도 한 자루 쥐여준다. 각성 별은 asStamp 가 양손 모두 새긴다.
+  //
+  // ⚠️ **이 줄에 「Better Combat 쌍수」라고 적혀 있었는데 사실이 아니다 (2026-08-05 확인).**
+  // BC 의 쌍수 보너스(공속 ×1.2)를 받으려면 무기가 BC 에 등록돼야 하는데, 폴백 규칙이
+  // 아이템 id 정규식이라 `dagger|knife` 는 있어도 **`lsrelics:assassin` 은 어디에도 안 걸린다.**
+  // 그래서 **두 번째 칼은 딜에 영향이 없다** — 외형과 은신 연출(`StealthRenderHandler`)뿐이다.
+  //
+  // 등록할지 검토했고 **안 하기로 했다(유저 결정)**. 이유는 `docs/DECISIONS.md` 1-C.
   if (fate === 'assassin') { rlCmd(server, `item replace entity ${uname} weapon.offhand with ${r.id}`) }
   LS.setHasRelic(server, uname, true)
   // 저장된 각성 단계를 새 유물에 다시 새긴다 (ls_ascend.js — 공유 스코프).
