@@ -286,14 +286,27 @@ public final class RelicEventHandlers {
     //
     // ※ 배율을 바꾸면 **보스 체력도 같이 봐야 한다** — 파티 평균이 88.7 → 96.7 로 올라
     //   보스가 9% 빨리 죽는다. `ls_config.js` perBoss 를 함께 고쳤다.
+    // ── 2026-08-05 2차 보정 (1차 적용 후 실측으로 되잡음) ──
+    // 1차는 08-04 «한 판씩» 기준선에 배율을 곱한 값이었다. 재보니 **원거리 셋은 정확히
+    // 착지했는데 근접이 다 초과**했다:
+    //     셀레스티아 100.5 · 솔라리스 102.2 · 시리우스 98.2(지속)   ← 목표 100
+    //     타이탄 103.5 (목표 96) · 게볼그 105.7 (목표 96) · 이지스 86.3 (목표 90)
+    //
+    // 원인은 **근접의 판간 흔들림**이다. 게볼그 평타 평균이 08-04 32.3 → 42.4 로 ×1.31 인데
+    // 건 배율은 ×1.179 였다. 점프 크리 빈도가 판마다 달라 한 판으로 잡으면 어긋난다 —
+    // `RiftAxe` 주석이 이미 «근접이라 4% 정도 흔들려서 한 판에 맞추면 다음 판에 어긋난다»
+    // 고 적어뒀고, 실제로는 4% 보다 크게 흔들렸다.
+    //
+    // ⚠️ **이번 보정도 한 판씩 기준이다.** 원칙(2판 이상)을 아직 못 지켰으니 근접 셋은
+    //    다시 재면 또 어긋날 수 있다. 다음엔 근접만이라도 2판씩 모을 것.
     private static float relicScale(ItemStack stack) {
         Item i = stack.getItem();
-        if (i == LSRelics.GUARDIAN.get()) return 1.118f;   // 이지스   80.5 → 90
-        if (i == LSRelics.PIONEER.get())  return 1.096f;   // 타이탄   87.6 → 96
-        if (i == LSRelics.LANCER.get())   return 1.179f;   // 게볼그   81.4 → 96  ← 폭이 제일 크다
-        if (i == LSRelics.ASSASSIN.get()) return 1.324f;   // 스틱스   정면 68.0 → 90
-        if (i == LSRelics.SAGE.get())     return 1.009f;   // 셀레스티아 99.1 → 100
-        if (i == LSRelics.GUNNER.get())   return 1.031f;   // 솔라리스  97.0 → 100
+        if (i == LSRelics.GUARDIAN.get()) return 1.166f;   // 이지스   86.3 → 90   (1.118 에서 올림)
+        if (i == LSRelics.PIONEER.get())  return 1.017f;   // 타이탄  103.5 → 96   (1.096 에서 내림)
+        if (i == LSRelics.LANCER.get())   return 1.071f;   // 게볼그  105.7 → 96   (1.179 에서 내림)
+        if (i == LSRelics.ASSASSIN.get()) return 1.398f;   // 스틱스  풀딜 107.9 → 113.9 (정면 90)
+        if (i == LSRelics.SAGE.get())     return 1.004f;   // 셀레스티아 100.5 → 100
+        if (i == LSRelics.GUNNER.get())   return 1.009f;   // 솔라리스  102.2 → 100
         return 1.0f;                                       // 시리우스·파나케이아는 그대로
     }
 
