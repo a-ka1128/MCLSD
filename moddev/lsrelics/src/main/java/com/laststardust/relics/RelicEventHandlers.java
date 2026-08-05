@@ -301,10 +301,13 @@ public final class RelicEventHandlers {
     //    다시 재면 또 어긋날 수 있다. 다음엔 근접만이라도 2판씩 모을 것.
     private static float relicScale(ItemStack stack) {
         Item i = stack.getItem();
-        if (i == LSRelics.GUARDIAN.get()) return 1.166f;   // 이지스   86.3 → 90   (1.118 에서 올림)
-        if (i == LSRelics.PIONEER.get())  return 1.017f;   // 타이탄  103.5 → 96   (1.096 에서 내림)
-        if (i == LSRelics.LANCER.get())   return 1.071f;   // 게볼그  105.7 → 96   (1.179 에서 내림)
-        if (i == LSRelics.ASSASSIN.get()) return 1.398f;   // 스틱스  풀딜 107.9 → 113.9 (정면 90)
+        // 이지스만 3차 보정 — 나머지 셋은 2차에서 ±2% 안에 들어와 그대로 둔다(건드리면 과적합).
+        // 배율로 정규화한 세 판이 80.5 / 77.2 / 81.6 (평균 79.8) 로 흩어져 있어, 한쪽 끝이 아니라
+        // 중간에 맞춘다. 최근 판(95.2)에만 맞추면 1.102, 평균에 맞추면 1.128 — 그 사이다.
+        if (i == LSRelics.GUARDIAN.get()) return 1.115f;   // 이지스  95.2 → 90
+        if (i == LSRelics.PIONEER.get())  return 1.017f;   // 타이탄  97.4 (목표 96, +1.5%)  ✅
+        if (i == LSRelics.LANCER.get())   return 1.071f;   // 게볼그  95.5 / 95.9 (목표 96)  ✅ 2판 ±0.2%
+        if (i == LSRelics.ASSASSIN.get()) return 1.398f;   // 스틱스  풀딜 112.1 (목표 113.9) ✅
         if (i == LSRelics.SAGE.get())     return 1.004f;   // 셀레스티아 100.5 → 100
         if (i == LSRelics.GUNNER.get())   return 1.009f;   // 솔라리스  102.2 → 100
         return 1.0f;                                       // 시리우스·파나케이아는 그대로
