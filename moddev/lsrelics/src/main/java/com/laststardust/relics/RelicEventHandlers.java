@@ -32,7 +32,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
-import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
@@ -40,33 +40,105 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 //  · 유성 사격: 표식된 화살이 착탄 시 폭발
 //  · 방벽의 수호자(방패 패시브): 근처 아군 받는 피해 -5%
 //  · 바람의 발걸음(활 패시브): 처치 시 이동속도 상승
+//
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║ 화살 착탄 훅은 ProjectileImpactEvent 를 안 쓴다 (2026-08-04)               ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+//
+// ── 확실한 사실 ──
+// 8종 DPS 실측에서 유성 사격이 «18타 평균 9.9» 로 나왔다. 18타는 정확히 6시전 × 3발이고
+// 9.9 는 화살 직격만의 값이다 — **폭발(5성 약 69)이 0회였다.** 시리우스가 8종 중
+// 꼴찌(78.9)인 것과 무관하지 않다.
+//
+// ── 확실하지 않은 것 (내가 한때 단정했다가 물린 것) ──
+// 원인을 «ProjectileImpactEvent 가 아예 안 불린다» 로 단정하고 그렇게 적었다. **근거가 약했다.**
+//   · 훅 진입점에 로그를 박고 화살을 쐈더니 로그가 0 이었다 → 그렇게 결론냈다
+//   · 그런데 그 뒤 **mixin 적용 후 최종 바이트코드를 뽑아 보니** `AbstractArrow.tick()` 안에
+//     `EventHooks.onProjectileImpact` 호출이 **멀쩡히 남아 있다.**
+//   · 게다가 그때 쓴 «손으로 소환한 화살» 시험이 못 믿을 물건이었다 — 같은 조건에서 6발을
+//     쏘고 표적 체력이 100 → 100 이었다(한 발도 안 맞았다). 앞서 본 7/0/3 피해도 화살이
+//     아니었을 수 있다.
+// 두 증거가 충돌하고, 아직 못 갈랐다. **범인 모드도 못 찾았다** — 화살/투사체 mixin 을 가진
+// 모드 9개를 훑었지만 착탄 경로를 취소하는 것은 없었다.
+//
+// ── 그래도 옮긴 이유 ──
+// 원인이 무엇이든 **폭발이 0회였다는 사실은 실측이다.** 그리고 여기 쓰는 이벤트는
+// «도는 게 증명된» 쪽이다 — 아래 `onStyxStrike` 가 같은 이벤트를 쓰고, 그 백어택 ×1.20 은
+// 실측(정면 68.0 vs 풀딜 97.0 = ×1.43)으로 확인됐다. 나빠질 일이 없는 이동이다.
+//
+//     별빛 폭풍 확산 · 유성 사격 폭발  →  LivingIncomingDamageEvent  (맞았을 때 얹는다)
+//     유물 화살의 무적 프레임 무시     →  LivingDamageEvent.Post     (박힌 뒤에 걷는다)
+//     프로스트모 화살 경고            →  ExplorerGimmicks 의 보스 틱 (거기 주석 참조)
+//
+// ⚠️ **아직 도는 걸 못 봤다.** 시리우스로 `/dummy` 60초를 재서 «유성 사격 평균»이
+//    9.9 → 50~70 대로 가는지 보면 갈린다(`docs/TEST-PLAN.md` 5-3 맨 위).
+//
+// **교훈 둘.** 「구현했다」와 「도는 걸 봤다」는 다르다 — 셋 다 정교한 주석까지 달려 있었다.
+// 그리고 **못 믿을 계측으로 내린 결론을 «확인했다»고 적으면, 그 거짓 확신이 코드에 굳는다.**
+// 위 문단을 지우지 말 것. 다음 사람이 같은 함정에 다시 들어가지 않게 하는 게 이 주석의 값이다.
 @EventBusSubscriber(modid = LSRelics.MODID)
 public final class RelicEventHandlers {
     private RelicEventHandlers() {}
 
-    // ── 별빛 폭풍: 착탄 소폭 확산 ──
-    // 3초에 ~90발이 떨어지므로 유성 사격 같은 큰 연출·사운드를 쓰면 화면과 귀가 남아나지 않는다.
-    // 살짝 빗나간 화살도 들어가게 해 주는 게 목적이라 판정만 조용히 처리한다.
+    // ── 화살 착탄 효과 (별빛 폭풍 확산 · 유성 사격 폭발) ──
+    //
+    // **2026-08-04: ProjectileImpactEvent → LivingIncomingDamageEvent 로 옮겼다.**
+    // 앞의 이벤트는 이 모드팩에서 한 번도 발화하지 않는다(위 머리말의 증거 참조).
+    // 여기 쓰는 이벤트는 확실히 돈다 — 같은 파일의 `onSanctuaryProtect` 와 DummyManager 의
+    // 집계가 이 계열로 멀쩡히 동작해 왔다.
+    //
+    // ── 바뀐 것: «빗나간 화살은 안 터진다» ──
+    // 예전 이벤트는 블록에 박혀도 왔지만, 피해 이벤트는 **맞았을 때만** 온다.
+    // 표적을 겨냥해 쏘는 스킬이라 실전에서 중요한 쪽은 남는다(한 발만 맞아도 주변까지 퍼진다).
+    // 빗나간 자리의 광역까지 살리려면 화살을 매 틱 훑어야 하는데, 모든 화살에 그 비용을
+    // 물리는 건 얻는 것에 비해 비싸다.
+    //
+    // ── 직격 대상만 처리가 다르다 ──
+    // 지금 이 순간 그 대상은 `hurt()` 한가운데라 무적 창이 이미 서 있다. 거기에 `LsDamage.hit`
+    // 을 또 부르면 **조용히 튕긴다.** 그래서 직격 대상은 이번 피해에 더하고(`setAmount`),
+    // 주변만 별도 판정으로 때린다. 계측 이름표는 화살에 실린 `lsLabel` 이 그대로 따라온다.
     @SubscribeEvent
-    public static void onArrowSplash(ProjectileImpactEvent event) {
-        if (!(event.getProjectile() instanceof AbstractArrow arrow)) return;
+    public static void onArrowHitEffects(LivingIncomingDamageEvent event) {
+        if (!(event.getSource().getDirectEntity() instanceof AbstractArrow arrow)) return;
         if (!(arrow.level() instanceof ServerLevel level)) return;
-        float dmg = arrow.getPersistentData().getFloat("lsSplash");
-        if (dmg <= 0) return;
-        float radius = arrow.getPersistentData().getFloat("lsSplashR");
-        if (radius <= 0) radius = 1.5f;
-        arrow.getPersistentData().putFloat("lsSplash", 0); // 1회만
+
+        float splash = arrow.getPersistentData().getFloat("lsSplash");
+        if (splash > 0) {
+            arrow.getPersistentData().putFloat("lsSplash", 0); // 1회만
+            float r = arrow.getPersistentData().getFloat("lsSplashR");
+            arrowAoe(level, arrow, event, r <= 0 ? 1.5f : r, splash, "별빛 폭풍");
+            level.sendParticles(ParticleTypes.END_ROD, arrow.getX(), arrow.getY(), arrow.getZ(),
+                6, 0.25, 0.15, 0.25, 0.03);
+        }
+
+        float boom = arrow.getPersistentData().getFloat("lsExplode");
+        if (boom > 0) {
+            arrow.getPersistentData().putFloat("lsExplode", 0); // 1회만
+            float r = arrow.getPersistentData().getFloat("lsExplodeR");
+            if (r <= 0) r = 2.5f;
+            // 폭발도 크리 가능 (60% 확률 ×1.5)
+            float finalDmg = level.getRandom().nextFloat() < 0.6f ? boom * 1.5f : boom;
+            arrowAoe(level, arrow, event, r, finalDmg, "유성 사격");
+            meteorFx(level, arrow.getX(), arrow.getY(), arrow.getZ(), r);
+        }
+    }
+
+    // 직격 대상은 이번 피해에 더하고, 반경 안의 나머지는 따로 때린다.
+    private static void arrowAoe(ServerLevel level, AbstractArrow arrow,
+                                 LivingIncomingDamageEvent event, float radius, float dmg, String label) {
+        LivingEntity direct = event.getEntity();
+        event.setAmount(event.getAmount() + dmg);
 
         Entity owner = arrow.getOwner();
         double x = arrow.getX(), y = arrow.getY(), z = arrow.getZ();
         AABB box = new AABB(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius);
         for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
                 en -> en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            if (e == direct) continue;                     // 위에서 이미 얹었다
             if (e.distanceToSqr(x, y, z) > radius * radius) continue;
             com.laststardust.relics.LsDamage.hit(e, owner instanceof Player p
-                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), dmg, "별빛 폭풍");
+                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), dmg, label);
         }
-        level.sendParticles(ParticleTypes.END_ROD, x, y, z, 6, 0.25, 0.15, 0.25, 0.03);
     }
 
     // ── 유물 화살은 무적 프레임을 무시한다 ──
@@ -84,39 +156,24 @@ public final class RelicEventHandlers {
     //
     // ※ 유물 화살에만 적용한다. 바닐라 활·다른 모드 화살은 그대로 둔다 —
     //   전역으로 풀면 몹의 원거리 공격까지 무적을 무시해 수성전이 불가능해진다.
+    //
+    // **2026-08-04: ProjectileImpactEvent → LivingDamageEvent.Post 로 옮겼다.**
+    // 방향이 뒤집혔다. 예전엔 «맞기 직전에 무적을 0 으로 만들어» 이번 화살을 통과시켰다.
+    // 지금은 «박히고 난 직후에 0 으로 되돌려» **다음** 화살을 통과시킨다.
+    // 결과는 같다 — 연사 중 화살이 무적 창에 막히지 않는다. 첫 발만 창을 만나는데,
+    // 그 창은 어차피 직전 공격이 만든 것이라 원래도 못 뚫었다.
+    //
+    // Post 여야 하는 이유: `hurt()` 는 피해를 넣으면서 `invulnerableTime = 20` 을 세운다.
+    // 그 전에 0 으로 만들어봐야 곧바로 덮인다. 실제로 박힌 뒤에 걷어야 남는다.
     @SubscribeEvent
-    public static void onRelicArrowPierce(ProjectileImpactEvent event) {
-        if (!(event.getProjectile() instanceof AbstractArrow arrow)) return;
+    public static void onRelicArrowPierce(LivingDamageEvent.Post event) {
+        if (!(event.getSource().getDirectEntity() instanceof AbstractArrow arrow)) return;
         if (!arrow.getPersistentData().getBoolean(LsArrows.TAG)) return;
-        if (!(event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult hit)) return;
-        if (hit.getEntity() instanceof LivingEntity target) {
-            target.invulnerableTime = 0;
-        }
+        event.getEntity().invulnerableTime = 0;
     }
 
-    // ── 유성 사격: 폭발 화살 ──
-    @SubscribeEvent
-    public static void onProjectileImpact(ProjectileImpactEvent event) {
-        if (!(event.getProjectile() instanceof AbstractArrow arrow)) return;
-        if (!(arrow.level() instanceof ServerLevel level)) return;
-        float dmg = arrow.getPersistentData().getFloat("lsExplode");
-        if (dmg <= 0) return;
-        float radius = arrow.getPersistentData().getFloat("lsExplodeR");
-        if (radius <= 0) radius = 2.5f;
-        arrow.getPersistentData().putFloat("lsExplode", 0); // 1회만
-
-        // 폭발도 크리 가능 (60% 확률 ×1.5)
-        float finalDmg = level.getRandom().nextFloat() < 0.6f ? dmg * 1.5f : dmg;
-        Entity owner = arrow.getOwner();
-        double x = arrow.getX(), y = arrow.getY(), z = arrow.getZ();
-        AABB box = new AABB(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius);
-        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
-                en -> en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
-            if (e.distanceToSqr(x, y, z) > radius * radius) continue;
-            com.laststardust.relics.LsDamage.hit(e, owner instanceof Player p
-                ? level.damageSources().playerAttack(p) : level.damageSources().generic(), finalDmg, "유성 사격");
-        }
-        // ── 폭발 연출 ──
+    // 유성 사격의 폭발 연출. 판정은 위 `onArrowHitEffects` 가 한다.
+    private static void meteorFx(ServerLevel level, double x, double y, double z, float radius) {
         level.sendParticles(ParticleTypes.FLASH, x, y, z, 2, 0, 0, 0, 0);
         level.sendParticles(ParticleTypes.EXPLOSION, x, y, z, 5, 0.4, 0.4, 0.4, 0.0);
         level.sendParticles(ParticleTypes.FIREWORK, x, y, z, 55, radius * 0.5, radius * 0.5, radius * 0.5, 0.25);
@@ -205,6 +262,63 @@ public final class RelicEventHandlers {
             event.setAmount(event.getAmount() * 0.95f);
             return;
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  유물별 총량 배율 — 밸런스 조정의 단일 손잡이 (2026-08-05)
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    // ── 왜 여기 한 곳인가 ──
+    // 유물 하나의 DPS 는 여러 자리에 흩어져 있다. 평타만 해도 근접 넷은 아이템 공격력
+    // 속성(`weapon(...)`·`guardianAttrs(...)`), 시리우스는 `StarBow.ARROW_DMG`, 솔라리스는
+    // `SolarMusket.RIFLE_DMG`, 셀레스티아는 아예 상수가 없고 `RelicSkills` 안에 있다.
+    // 거기에 스킬 상수가 유물마다 3~5개씩 더 붙는다. **총량을 ×1.1 하려면 여덟 군데를
+    // 각자 다른 방식으로 고쳐야 하고, 다음 조정 때 그걸 그대로 반복해야 한다.**
+    //
+    // 그래서 «피해가 실제로 들어가는 순간»에 한 번 곱한다. 평타·스킬·화살·도트가 전부
+    // 이 이벤트를 지나므로 한 숫자가 그 유물의 총량이 된다. 아래 `onStyxStrike` 가 같은
+    // 이벤트에서 같은 방식으로 도는 게 실측으로 확인됐다(정면 68.0 vs 풀딜 97.0 = ×1.43).
+    //
+    // ── 2026-08-05 실측 기반 목표 (유저 결정) ──
+    //   시리우스·셀레스티아·솔라리스 100 · 스틱스 정면 90 · 타이탄·게볼그 96 · 이지스 90
+    //   파나케이아는 유지 — 더미 87.8 이지만 힐 10 HPS + 성역 경감 20% + 소생이 안 잡힌다.
+    // 기준 실측은 `docs/DECISIONS.md` 「그날의 8종 실측」 표.
+    //
+    // ※ 배율을 바꾸면 **보스 체력도 같이 봐야 한다** — 파티 평균이 88.7 → 96.7 로 올라
+    //   보스가 9% 빨리 죽는다. `ls_config.js` perBoss 를 함께 고쳤다.
+    // ── 2026-08-05 2차 보정 (1차 적용 후 실측으로 되잡음) ──
+    // 1차는 08-04 «한 판씩» 기준선에 배율을 곱한 값이었다. 재보니 **원거리 셋은 정확히
+    // 착지했는데 근접이 다 초과**했다:
+    //     셀레스티아 100.5 · 솔라리스 102.2 · 시리우스 98.2(지속)   ← 목표 100
+    //     타이탄 103.5 (목표 96) · 게볼그 105.7 (목표 96) · 이지스 86.3 (목표 90)
+    //
+    // 원인은 **근접의 판간 흔들림**이다. 게볼그 평타 평균이 08-04 32.3 → 42.4 로 ×1.31 인데
+    // 건 배율은 ×1.179 였다. 점프 크리 빈도가 판마다 달라 한 판으로 잡으면 어긋난다 —
+    // `RiftAxe` 주석이 이미 «근접이라 4% 정도 흔들려서 한 판에 맞추면 다음 판에 어긋난다»
+    // 고 적어뒀고, 실제로는 4% 보다 크게 흔들렸다.
+    //
+    // ⚠️ **이번 보정도 한 판씩 기준이다.** 원칙(2판 이상)을 아직 못 지켰으니 근접 셋은
+    //    다시 재면 또 어긋날 수 있다. 다음엔 근접만이라도 2판씩 모을 것.
+    private static float relicScale(ItemStack stack) {
+        Item i = stack.getItem();
+        // 이지스만 3차 보정 — 나머지 셋은 2차에서 ±2% 안에 들어와 그대로 둔다(건드리면 과적합).
+        // 배율로 정규화한 세 판이 80.5 / 77.2 / 81.6 (평균 79.8) 로 흩어져 있어, 한쪽 끝이 아니라
+        // 중간에 맞춘다. 최근 판(95.2)에만 맞추면 1.102, 평균에 맞추면 1.128 — 그 사이다.
+        if (i == LSRelics.GUARDIAN.get()) return 1.115f;   // 이지스  95.2 → 90
+        if (i == LSRelics.PIONEER.get())  return 1.017f;   // 타이탄  97.4 (목표 96, +1.5%)  ✅
+        if (i == LSRelics.LANCER.get())   return 1.071f;   // 게볼그  95.5 / 95.9 (목표 96)  ✅ 2판 ±0.2%
+        if (i == LSRelics.ASSASSIN.get()) return 1.398f;   // 스틱스  풀딜 112.1 (목표 113.9) ✅
+        if (i == LSRelics.SAGE.get())     return 1.004f;   // 셀레스티아 100.5 → 100
+        if (i == LSRelics.GUNNER.get())   return 1.009f;   // 솔라리스  102.2 → 100
+        return 1.0f;                                       // 시리우스·파나케이아는 그대로
+    }
+
+    @SubscribeEvent
+    public static void onRelicDamageScale(LivingIncomingDamageEvent event) {
+        if (event.getEntity().level().isClientSide) return;
+        if (!(event.getSource().getEntity() instanceof ServerPlayer p)) return;
+        float s = relicScale(p.getMainHandItem());
+        if (s != 1.0f) event.setAmount(event.getAmount() * s);
     }
 
     public static boolean isRelic(ItemStack stack) {
@@ -302,9 +416,39 @@ public final class RelicEventHandlers {
     //   스틱스는 숙련도로 보상받는 무기로 두기로 했다(사용자 결정).
     // ※ 상단을 조이려면 CriticalHitEvent.setDamageMultiplier() 로 스틱스만 크리 배수를
     //    낮추는 게 맞다. BACKSTAB_BONUS 를 깎으면 기본값 대비 백어택 이득만 사라진다.
-    private static final float BACKSTAB_BONUS = 1.20f;
+    // ── 1.20 → 1.17 (2026-08-05) ──
+    // 바닥을 90 으로 올리면서 천장을 같이 조였다. 스틱스는 «등 뒤로 돌아야 나오는 무기»라
+    // 숙련 배수가 정체성인데, 바닥만 올리면 천장이 그대로 따라 뛴다(정면 90 → 풀딜 128.4,
+    // 2위 대비 +28%). 그래서 배율 자체를 줄였다 — 숙련 배수 ×1.43 → **×1.27**.
+    //
+    //     정면 90.0 (7위) · 백어택만 103.5 (1위) · 풀딜 113.9 (2위 대비 +14%)
+    //
+    // 상수가 1.15 가 아니라 1.17 인 이유: 백어택은 **근접 직접 타격에만** 붙는다
+    // (`getDirectEntity() != attacker` 면 빠진다). 정면 68.0 의 구성에서 평타 35.7 ·
+    // 그림자 도약 13.1 · 급소 11.6 = 89% 만 대상이고 출혈 7.6 은 도트라 빠진다.
+    // 전체 ×1.15 를 내려면 1 + 0.89x = 1.15 → x ≈ 0.17.
+    private static final float BACKSTAB_BONUS = 1.17f;
     private static final float ABYSS_BONUS = 1.30f;
     private static final float AMBUSH_BONUS = 2.0f;
+
+    // ── 스틱스만 크리 배수를 낮춘다 (2026-08-05) ──
+    // 바닐라 크리는 ×1.5 이고, 실측상 전체 기여가 ×1.19 였다(낙하 중에만 터져 상시가 아니다).
+    // 목표는 전체 기여 ×1.10 이라 1 + p(c−1) 로 역산했다: 1.19 = 1 + 0.38×0.5 에서 p = 0.38,
+    // 1.10 = 1 + 0.38(c−1) → c ≈ 1.26.
+    //
+    // **`BACKSTAB_BONUS` 가 아니라 여기를 건드리는 게 맞다** — 이 파일 위쪽 주석이 원래
+    // 그렇게 적어뒀다. 백어택을 깎으면 «등 뒤로 도는 이득»이 사라져 정체성이 죽고,
+    // 크리를 깎으면 «운 좋게 터지는 상단»만 눌린다. 조여야 하는 건 후자다.
+    private static final float STYX_CRIT = 1.26f;
+
+    @SubscribeEvent
+    public static void onStyxCrit(net.neoforged.neoforge.event.entity.player.CriticalHitEvent event) {
+        if (event.getEntity().level().isClientSide) return;
+        if (event.getEntity().getMainHandItem().getItem() != LSRelics.ASSASSIN.get()) return;
+        // 크리가 아닌 타격(배수 1.0)은 건드리지 않는다 — 건드리면 평타가 오히려 세진다.
+        if (event.getDamageMultiplier() <= 1.0f) return;
+        event.setDamageMultiplier(STYX_CRIT);
+    }
 
     @SubscribeEvent
     public static void onStyxStrike(LivingIncomingDamageEvent event) {

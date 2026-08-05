@@ -9,13 +9,12 @@
 // ※ 체력 증가폭은 직업(가호)마다 다르다 — AS_HEALTH_BY_FATE 참고.
 //
 // 실제 별을 아이템에 새기는 건 lsrelics 모드(/lsrelic star <n>)가 한다.
-// 진행도가 전부 여기 persistentData에 있어서 자격 판정은 이쪽이 맡는 게 자연스럽다.
+// 자격 판정(정수·관문 진행도·성급 상한)은 이쪽이 맡는다 — 조건이 여러 시스템에 걸쳐 있어서다.
 //
-// 저장(공유 persistentData): star_<user>(현재 성급) · relic_<user>
+// 저장: 모드가 소유한다 (이관 3단계) — LS.star / LS.setStar / LS.hasRelic.
 // ※ 관문 진행도와 금고는 모드(LSData)가 소유한다 — `LS.progress()` / `LS.treasury()` 로 읽는다.
 //   ※ 별은 아이템 NBT에도 새겨지지만, 유물을 잃고 다시 받는 경우를 위해 여기가 원본이다.
 
-function asStore(server) { return server.overworld().persistentData }
 function asCmd(server, s) { return server.runCommandSilent(s) }
 function asSay(server, text) { server.players.forEach(p => p.tell(Text.of(text))) }
 
@@ -56,8 +55,8 @@ const AS_HEALTH_BY_FATE = {
 const AS_HEALTH_DEFAULT = { 1: 0, 2: 10, 3: 20, 4: 30, 5: 40 }
 const AS_HP_MOD = 'last_stardust:ascend_health'
 
-// 가호(직업) 조회 — ls_fate.js가 같은 persistentData에 fate_<user>로 저장한다.
-function asFate(server, uname) { return String(asStore(server).getString('fate_' + uname) || '') }
+// 가호(직업) 조회 — 장부는 모드가 갖는다(ls_fate.js 도 같은 곳을 본다).
+function asFate(server, uname) { return String(LS.fate(server, uname) || '') }
 function asHealthTable(server, uname) { return AS_HEALTH_BY_FATE[asFate(server, uname)] || AS_HEALTH_DEFAULT }
 // 해당 성급의 총 하트 칸수 (표시용) — 기본 10칸 + 보너스÷2. 가호 패시브 체력은 미포함.
 function asHearts(server, uname, star) { return 10 + (asHealthTable(server, uname)[star] || 0) / 2 }
@@ -75,7 +74,7 @@ function asHealth(server, uname) {
 }
 
 function asStar(server, uname) {
-  const v = asStore(server).getInt('star_' + uname)
+  const v = LS.star(server, uname)
   return v < 1 ? 1 : Math.min(v, AS_MAX)
 }
 
@@ -103,9 +102,8 @@ function asEssence(server, uname) {
 // ── 각성 실행 ──
 function asAscend(server, player) {
   const uname = player.username
-  const st = asStore(server)
 
-  if (!st.getBoolean('relic_' + uname)) {
+  if (!LS.hasRelic(server, uname)) {
     player.tell(Text.of('§c아직 유물을 손에 넣지 못했다. §7제단에서 §e/relic'))
     return 0
   }
@@ -143,7 +141,7 @@ function asAscend(server, player) {
   }
 
   // ③ 각성
-  st.putInt('star_' + uname, next)
+  LS.setStar(server, uname, next)
   asStamp(server, uname)
 
   // 최대 체력이 늘면 새 하트가 빈 칸으로 남는다 — 각성 보상이 손해처럼 보이지 않게 가득 채운다.
@@ -185,7 +183,7 @@ function asAscend(server, player) {
 }
 
 // ── 접속 시 저장된 성급을 다시 새긴다 ──
-// 유물을 잃고 /relic 으로 재지급받으면 NBT의 별이 초기화되므로 원본(persistentData)에서 복원한다.
+// 유물을 잃고 /relic 으로 재지급받으면 NBT 의 별이 초기화되므로 장부(모드)에서 복원한다.
 PlayerEvents.loggedIn(event => {
   const p = event.player
   if (!p) return
@@ -251,7 +249,7 @@ ServerEvents.commandRegistry(event => {
         const s = ctx.source.server; const p = ctx.source.player
         if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만 §7(대상 지정: /ascend set <이름> <n>)')); return 0 }
         const n = Math.max(1, Math.min(AS_MAX, Arguments.INTEGER.getResult(ctx, 'n')))
-        asStore(s).putInt('star_' + p.username, n)
+        LS.setStar(s, p.username, n)
         asStamp(s, p.username)
         ctx.source.sendSystemMessage(Text.of(`§a각성 §e${n}성§a으로 설정했다.`))
         return 1
@@ -268,7 +266,7 @@ ServerEvents.commandRegistry(event => {
           const s = ctx.source.server
           const target = Arguments.STRING.getResult(ctx, 'target')
           const n = Math.max(1, Math.min(AS_MAX, Arguments.INTEGER.getResult(ctx, 'n')))
-          asStore(s).putInt('star_' + target, n)
+          LS.setStar(s, target, n)
           // 손에 든 유물 NBT 에 성급을 다시 새긴다 — 접속 중이어야 가능하다.
           var p = lsPlayerByName(s, target)
           if (p) asStamp(s, target)

@@ -92,6 +92,30 @@ public final class IgnisGimmick {
             }
 
             @Override
+            public void onTick(ServerLevel level, BossFightTracker.Fight f, List<ServerPlayer> near) {
+                java.util.UUID id = f.boss.getUUID();
+                boolean hold = inCounterWindow(f.boss);
+                boolean was = HOLDING.contains(id);
+
+                if (hold != was) {
+                    if (hold) HOLDING.add(id); else HOLDING.remove(id);
+                    Telegraph.announce(level, f.boss.position(), RANGE, Telegraph.Kind.HOLD, hold);
+                    if (hold && !TAUGHT_HOLD.contains(id)) {
+                        TAUGHT_HOLD.add(id);
+                        for (ServerPlayer p : near) {
+                            p.sendSystemMessage(Component.literal(
+                                "§9◆ 반격 자세 §7— §9파란 기운§7이 감돌 때 때리면 §c피해가 0이고 반격을 맞는다§7. "
+                                + "§8(파랑은 언제나 '멈춰라'다)"));
+                        }
+                    }
+                }
+                if (!hold) return;
+                // 2틱마다면 충분하다. 매 틱 그리면 파티클만 두 배가 되고 차이는 안 보인다.
+                if (level.getServer().getTickCount() % 2 != 0) return;
+                Telegraph.aura(level, f.boss.position(), Telegraph.Kind.HOLD, 1.9, 3.2, 5);
+            }
+
+            @Override
             public void onPhaseChange(ServerLevel level, BossFightTracker.Fight f, List<ServerPlayer> near) {
                 level.playSound(null, f.boss.getX(), f.boss.getY(), f.boss.getZ(),
                     SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 0.8f, 1.4f);
@@ -101,6 +125,55 @@ public final class IgnisGimmick {
                 }
             }
         });
+
+    // ── 반격 자세: 언제 «때리면 안 되는가» ──
+    //
+    // 이그니스는 막는 자세(blockingProgress/swordProgress 가 최대)에서 맞으면 12% 확률로
+    // 반격 애니메이션에 들어간다(쿨 18초 · 15칸 이내). 그리고 - 그 애니메이션의 유효 구간에
+    // 다시 맞으면 hurt() 가 false 를 돌려주고 그 타격이 반격(STRIKE)으로 바뀐다 - .
+    // 즉 그 구간에 때리면 «피해 0 + 반격을 맞음»이라는 순손해다.
+    //   COUNTER              틱 17~46
+    //   SHIELD_BREAK_COUNTER 틱 9~38   (방패가 깨진 뒤 버전)
+    //
+    // 강철거인과 같은 종류의 문제였다 — 규칙은 있는데 게임 안에 신호가 없다.
+    // 그래서 초록(지금 쳐라)의 짝으로 파랑(멈춰라)을 붙인다.
+    //
+    // ※ 방패 내구도(getShieldDurability)는 일부러 안 건드렸다. 투사체가 그 값을 올리는 것까지는
+    //   읽었지만 그게 실제로 무엇을 여는지 확인 못 했고, 방패 파괴 자체는 페이즈 전환에서
+    //   보스가 스스로 한다(BREAK_THE_SHIELD 틱 79). 확인 안 된 걸 신호로 만들면
+    //   «신호대로 했는데 안 된다»가 되어 없느니만 못하다.
+    private static final java.util.Set<java.util.UUID> HOLDING = new java.util.HashSet<>();
+    private static final java.util.Set<java.util.UUID> TAUGHT_HOLD = new java.util.HashSet<>();
+
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+    private static java.lang.reflect.Method GET_ANIM, GET_TICK;
+    private static Object ANIM_COUNTER, ANIM_SHIELD_COUNTER;
+    private static boolean reflectBroken = false;
+
+    // Cataclysm 은 컴파일 의존이 아니라 리플렉션으로 읽는다(강철거인과 같은 이유).
+    // 애니메이션 객체는 public static final 이라 - 동일성 비교 - 로 충분하다.
+    private static boolean inCounterWindow(net.minecraft.world.entity.Mob boss) {
+        if (reflectBroken) return false;
+        try {
+            if (GET_ANIM == null) {
+                Class<?> c = boss.getClass();
+                GET_ANIM = c.getMethod("getAnimation");
+                GET_TICK = c.getMethod("getAnimationTick");
+                ANIM_COUNTER = c.getField("COUNTER").get(null);
+                ANIM_SHIELD_COUNTER = c.getField("SHIELD_BREAK_COUNTER").get(null);
+            }
+            Object a = GET_ANIM.invoke(boss);
+            int t = (Integer) GET_TICK.invoke(boss);
+            if (a == ANIM_COUNTER)        return t > 16 && t <= 46;
+            if (a == ANIM_SHIELD_COUNTER) return t > 8  && t <= 38;
+            return false;
+        } catch (Exception e) {
+            // 한 번 실패하면 매 틱 예외를 만들지 않는다. 표시만 꺼지고 결계 기믹은 계속 돈다.
+            reflectBroken = true;
+            LOG.warn("[이그니스] 반격 상태를 못 읽는다 — 파랑 표시가 꺼진다. Cataclysm 버전이 바뀌었나?", e);
+            return false;
+        }
+    }
 
     // Y 는 무게중심 그대로 쓴다 — 지형을 따라가면 계단·경사에서 원이 땅에 묻힌다.
     private static Vec3 pickCenter(ServerLevel level, List<ServerPlayer> near) {
@@ -118,8 +191,7 @@ public final class IgnisGimmick {
 
         // near 기준으로 도는 이유는 BossFightTracker.nearby() 주석 참고 (Telegraph.outside() 는 월드 전체다).
         for (ServerPlayer p : near) {
-            if (p.isSpectator() || !p.isAlive()) continue;
-            if (p.level() != level) continue;          // 그 사이 차원을 옮겼을 수 있다
+            if (!Telegraph.hittable(p, level)) continue;   // 관전자·사망·차원 이동을 한 번에 거른다
             if (in.contains(p)) continue;              // 결계 안 = 무사
 
             // 무적 프레임에 씹히면 "피했다/안 피했다"의 인과가 끊긴다. 예고형은 결정적이어야 배운다.
@@ -139,7 +211,12 @@ public final class IgnisGimmick {
     public static void onServerTick(ServerTickEvent.Post event) { TRACKER.tick(); }
 
     @SubscribeEvent
-    public static void onServerStopped(ServerStoppedEvent event) { TRACKER.stop(); }
+    public static void onServerStopped(ServerStoppedEvent event) {
+        TRACKER.stop();
+        // 죽은 서버의 UUID 를 들고 있을 이유가 없다. 싱글에서 월드를 갈아탈 때 새 세계로 샌다.
+        HOLDING.clear();
+        TAUGHT_HOLD.clear();
+    }
 
     // ── 시험용 ──
 

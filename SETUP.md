@@ -42,9 +42,12 @@
    - `max-players=8`
    - `allow-nether=true`, `spawn-protection=0` (허브 보호는 청구/op로 대체)
    - `motd=Last Stardust`
-6. **RAM:** `user_jvm_args.txt` 편집 → `-Xmx10G` 와 `-Xms10G` 설정 (콘텐츠 무거운 팩이라 3–6인엔 10 GB로
-   시작, 필요하면 12 G까지).
-7. 생성된 **`run.bat`** 으로 실행. 콘솔에 "Done" 뜰 때까지 확인.
+6. **RAM:** `user_jvm_args.txt` 편집. **현재 설정값은 `-Xms16G -Xmx16G`** + G1GC 튜닝 옵션
+   (10 G로 시작했다가 올렸다). 61 GB 중 16 GB면 여유 있다.
+7. **`run.bat`** 으로 실행. 콘솔에 "Done" 뜰 때까지 확인.
+   ※ 이 파일은 `java` 를 PATH 에서 찾지 않고 **JDK 21 절대경로를 박아 뒀다.** PATH 의 java 가
+   JDK 21 이 아니면 서버가 제대로 못 뜨면서도 프로세스는 남아, JVM 이 둘 뜬 채 하나만 포트를
+   잡는 상태가 된다(실제 발생). 경로가 없으면 그 자리에서 멈추고 이유를 찍는다.
 
 ## Phase 5 — 친구 접속
 하나 선택:

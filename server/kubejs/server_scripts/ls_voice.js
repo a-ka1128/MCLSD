@@ -78,8 +78,9 @@ function vGuideTo(player, text) {
   player.tell(Text.of(`§6✧ §e호데고스 §8│ §f${text}`))
   vcPlayTo(player, 'minecraft:entity.allay.ambient_without_item', 0.6, 0.7)
 }
-// 이어지는 말(이름표 없이 들여쓰기) — 두 줄 이상 말할 때 화면이 덜 시끄럽다.
-function vGuideCont(server, text) { vcTellAll(server, `§8  │ §7${text}`) }
+// ※ 「이어지는 말」 헬퍼(vGuideCont)는 2026-07-31 삭제했다. 대사 10종 중 두 줄짜리가
+//   하나도 없어 한 번도 불린 적이 없다. 필요해지면 한 줄이라 그때 다시 쓰는 게 낫다 —
+//   «언젠가 쓸 것»으로 남겨두면 스캐너가 매번 지적하고, 그 소음이 진짜 죽은 코드를 가린다.
 
 // ③ 지문 — 3인칭 문어체. 기울임 + 어두운 회색으로 "목소리가 아님"을 표시.
 function vWorld(server, text) {
@@ -318,7 +319,10 @@ function vcWatch(server) {
   // ② 첫 공세 격퇴 — ls_siege 의 ls_first_siege_done
   // 예약 표식을 먼저 세운다. 감시는 1초마다 도는데 발화는 80틱 뒤라, 표식이 없으면
   // 그 사이 네 번 더 예약되어 같은 대사가 겹쳐 나간다.
-  if (vcGetB(server, 'ls_first_siege_done') && !vcGetB(server, 'vc_once_first_siege') && !vcGetB(server, 'vc_pend_first_siege')) {
+  // ※ 공성 상태 넷(첫격퇴·위협·성벽·진행)은 모드가 소유한다 (이관 4단계, 2026-07-31).
+  //   여기가 옛 키를 계속 읽으면 전부 «없음/0» 이 되어 **호데고스가 영원히 침묵한다.**
+  //   이 파일은 다른 시스템의 상태 전이를 감시하는 구조라, 감시 대상이 옮겨가면 같이 따라가야 한다.
+  if (LS.firstSiegeDone(server) && !vcGetB(server, 'vc_once_first_siege') && !vcGetB(server, 'vc_pend_first_siege')) {
     vcSetB(server, 'vc_pend_first_siege', true)
     server.scheduleInTicks(80, () => {
       try { if (!vSpeak(server, 'first_siege')) vcSetB(server, 'vc_pend_first_siege', false) } catch (e) { lsWarn('ls_voice:321', e) }
@@ -326,7 +330,7 @@ function vcWatch(server) {
   }
 
   // ③ 위협도 — 밴드가 올라갈 때만 (내려갈 땐 조용히)
-  const band = vcThreatBand(vcGetI(server, 'ls_threat'))
+  const band = vcThreatBand(LS.threat(server))
   const bandPrev = vcGetI(server, 'vc_seen_band')
   if (band !== bandPrev) {
     vcSetI(server, 'vc_seen_band', band)
@@ -337,8 +341,8 @@ function vcWatch(server) {
   }
 
   // ④ 성벽 — 멀쩡(1) → 붕괴(2) 전이에서만. 0 = 아직 본 적 없음
-  if (vcGetB(server, 'wall_init')) {
-    var vcWallSt = vcGetI(server, 'wall_hp') <= 0 ? 2 : 1
+  if (LS.wallInit(server)) {
+    var vcWallSt = LS.wallHpRaw(server) <= 0 ? 2 : 1
     var vcWallPrev = vcGetI(server, 'vc_seen_wall')
     if (vcWallSt !== vcWallPrev) {
       vcSetI(server, 'vc_seen_wall', vcWallSt)
@@ -352,7 +356,7 @@ function vcWatch(server) {
   const wasNight = vcGetB(server, 'vc_seen_night')
   if (isNight !== wasNight) {
     vcSetB(server, 'vc_seen_night', isNight)
-    if (isNight && !vcGetB(server, 'ls_siege_active') && !vcGetB(server, 'ls_time_locked')) {
+    if (isNight && !LS.siegeActive(server) && !vcGetB(server, 'ls_time_locked')) {
       vSpeak(server, 'night')
     }
   }
@@ -427,7 +431,7 @@ PlayerEvents.loggedIn(event => {
         if (gap >= VC_ABSENT_DAYS && !vcGetB(server, 'vc_mute')) {
           var bits = []
           if (rf > lastRf) bits.push(`뿌리가 ${rf - lastRf}개 더 탔고`)
-          var threat = vcGetI(server, 'ls_threat')
+          var threat = LS.threat(server)
           if (threat >= 10) bits.push('밖이 꽤 짙어졌어')
           else if (threat >= 7) bits.push('어둠이 조금 쌓였고')
           else bits.push('큰일은 없었네')

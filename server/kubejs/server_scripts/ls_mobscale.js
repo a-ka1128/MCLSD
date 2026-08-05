@@ -44,15 +44,47 @@ function msForced(server) { return msStore(server).getInt('ms_force') > 0 }
 //   적대로 본다 — 철골렘·늑대·벌·눈사람도 스케일링을 받는다. 여태 이렇게 돌아왔으니
 //   동작을 바꾸지 않고 그대로 두되, 좁힐지는 밸런스 판단이라 TODO 로 올린다.
 function msIsHostile(e) {
-  // 살아 있는 것만 속성을 가진다. 화살·아이템(ItemEntity)·경험치 구슬까지 들어오는데
-  // 그쪽엔 getAttribute 자체가 없어 매번 예외가 났다 — 결과는 어차피 false 라 동작은
-  // 맞았지만, 스폰마다 예외를 만들고 경고 로그를 채웠다. 부르기 전에 거른다.
-  if (!e || typeof e.getAttribute !== 'function') return false
+  if (!e) return false
+  // ── 2026-07-31: MobCategory == monster 로 좁혔다 (유저 결정, DECISIONS 2절 C안) ──
+  // 스크립트에서는 이 판정을 할 수 없다 — KubeJS 의 `e.getType()` 이 EntityType 이 아니라
+  // id 문자열이라 `.getCategory()` 가 없다. 그래서 모드에 다리를 놓고 그쪽에 물었다.
+  //
+  // **늑대·북극곰도 빠진다.** 「실제로 덤비는데 안 세지는」 경우가 생기는 걸 알고 고른 값이다.
+  // 규칙이 한 문장으로 설명되는 쪽을 택했다 — «몬스터만 세진다».
+  try { return LS.isMonster(e) } catch (err) { lsWarn('ls_mobscale:isMonster', err) }
+
+  // 예비 경로 — 다리가 없을 때(모드 없이 스크립트만 돌릴 때)만 온다.
   // ※ ID 는 반드시 `minecraft:generic.attack_damage` 다. `generic.` 을 빼면 null 이 돌아와
   //   **모든 몹이 "비적대"로 판정되어 스케일링이 통째로 사라진다** — 예외도 안 나서 몇 달을 몰랐다.
   //   확인법: /attribute <대상> minecraft:generic.attack_damage base get
-  try { return e.getAttribute('minecraft:generic.attack_damage') != null } catch (err) { lsWarn('ls_mobscale:attack-attr', err); return false }
+  if (typeof e.getAttribute !== 'function') return false
+  try { return e.getAttribute('minecraft:generic.attack_damage') != null } catch (err) { return false }
 }
+
+// ── 다시 적용돼도 결과가 같아야 한다 (2026-07-31) ──
+// **`EntityEvents.spawned` 는 «새로 태어날 때»만 오지 않는다.** 디스크에서 다시 로드될 때도
+// 온다. 그래서 여태 **서버를 껐다 켤 때마다 살아 있던 몹 전부가 다시 곱해졌다.**
+//
+// 실측: 태그를 붙인 좀비를 진행도 1에서 소환 → 24.0(20×1.2) → 재시작 → **28.8(20×1.2²)**.
+// 재시작 10번이면 ×6.2 다. 백업·업데이트로 서버를 내렸다 올릴 때마다 조용히 쌓여 왔고,
+// 아무 오류도 안 났다.
+//
+// ── 엔티티 태그로 막으려다 실패한 기록 ──
+// 처음엔 `ls_scaled` 태그를 붙이고 «있으면 건너뛰기»로 막으려 했다. **안 된다.**
+// 재로드 때 이 이벤트가 **NBT 태그가 붙기 전에** 온다 — 그 시점의 `e.tags` 는 비어 있다.
+// (확인법: 재시작 후 그 개체를 보면 태그는 멀쩡히 있는데 체력은 또 곱해져 있다.)
+// 로드 순서에 기대는 표식은 여기서 쓸 수 없다.
+//
+// ── 이름 붙은 모디파이어로도 실패했다 ──
+// 두 번째 시도는 `ls_enrage.js` 방식이었다 — 같은 ID 로 add 하면 «중복»이 아니라 «교체»라
+// 몇 번을 걸어도 하나만 남는다. 소환 직후에는 정확히 그렇게 됐다(base 20 + modifier 0.2 = 24).
+// **그런데 재시작하면 그 모디파이어가 base 에 구워진다.** 이 모드팩 어딘가가 그렇게 한다.
+// 구워진 34.56 이 다음 로드의 새 base 가 되고, 거기에 또 붙는다. 같은 복리다.
+//
+// ── 그래서 세 번째: 현재값을 아예 안 읽는다 ──
+// `LS.defaultAttrBase(e, id)` 가 그 **몹 종류의 공장 출고값**을 준다. 개체가 지금 얼마든
+// 상관없이 늘 같은 수라, `출고값 × 배율` 도 늘 같다. **탐지가 필요 없다 — 몇 번을 돌려도
+// 결과가 하나다.** 덤으로 이미 망가진 개체도 다음 로드에서 제 값으로 돌아온다.
 
 EntityEvents.spawned(event => {
   const e = event.entity
@@ -73,17 +105,29 @@ EntityEvents.spawned(event => {
   const hpMul = cfg.hp[tier] || 1.0
   const dmgMul = cfg.dmg[tier] || 1.0
 
+  // ── 현재값을 읽지 않는다 ──
+  // `LS.defaultAttrBase` 는 그 «몹 종류»의 공장 출고값을 준다. 지금 이 개체가 몇 번
+  // 스케일링됐든 상관없이 늘 같은 수가 나오므로, 여기서 나온 결과도 늘 같다.
+  // 없으면 -1 (0 과 구분된다). 다리가 없거나 속성이 없는 몹은 **건너뛴다** —
+  // 옛 방식으로 되돌아가면 조용히 복리가 다시 붙는다.
   if (hpMul !== 1.0) {
-    var a = e.getAttribute('minecraft:generic.max_health')
-    if (a) { var nb = a.getBaseValue() * hpMul; a.setBaseValue(nb); e.setHealth(nb) }
+    var defHp = -1
+    try { defHp = LS.defaultAttrBase(e, 'minecraft:generic.max_health') } catch (err) { lsWarn('ls_mobscale:defHp', err) }
+    var a = defHp > 0 ? e.getAttribute('minecraft:generic.max_health') : null
+    if (a) {
+      var target = defHp * hpMul
+      a.setBaseValue(target)
+      // 다친 채로 재로드된 개체를 꽉 채우면 «재시작하면 몹이 회복된다»가 된다.
+      // 넘칠 때(또는 아직 0일 때)만 맞춘다.
+      if (Number(e.health) > target || Number(e.health) <= 0.0) e.setHealth(target)
+    }
   }
   if (dmgMul !== 1.0) {
-    var d = e.getAttribute('minecraft:generic.attack_damage')
-    if (d) {
-      var base = d.getBaseValue()
-      // 원래 센 몹이 배율만으로 즉사기를 갖지 않게 절대 상한을 씌운다
-      d.setBaseValue(Math.min(base * dmgMul, base + cfg.dmgCapAdd))
-    }
+    var defDmg = -1
+    try { defDmg = LS.defaultAttrBase(e, 'minecraft:generic.attack_damage') } catch (err) { lsWarn('ls_mobscale:defDmg', err) }
+    var d = defDmg > 0 ? e.getAttribute('minecraft:generic.attack_damage') : null
+    // 원래 센 몹이 배율만으로 즉사기를 갖지 않게 절대 상한을 씌운다
+    if (d) d.setBaseValue(Math.min(defDmg * dmgMul, defDmg + cfg.dmgCapAdd))
   }
 })
 
@@ -126,6 +170,51 @@ ServerEvents.commandRegistry(event => {
       const s = ctx.source.server
       msStore(s).putInt('ms_force', 0)
       ctx.source.sendSystemMessage(Text.of(`§a관문 진행도 연동으로 복귀 §7(현재 티어 ${msTier(s)})`))
+      return 1
+    }))
+    // ── 이미 부풀어 있는 몹을 제 값으로 되돌린다 ──
+    // 스폰 훅의 자동 복구에는 구멍이 셋 있어서, 손으로 한 번 쓸어야 하는 경우가 남는다:
+    //   ① 티어 0 이면 훅이 일찍 return 한다 — 관문을 하나도 안 깬 상태에서는 아무것도 안 고쳐진다
+    //   ② 늑대·철골렘·벌·눈사람은 **옛 넓은 판정 시절에 부풀었는데** 이제 비적대라 훅이 건너뛴다
+    //      → 그것들은 영원히 부푼 채로 남는다. 이 명령만이 되돌릴 수 있다
+    //   ③ 청크가 로드돼야 훅이 온다 — 안 가본 곳의 몹은 그대로다
+    // 그래서 이건 «가끔 돌리는 청소»다. 로드된 청크만 훑으므로 여러 번 돌려도 안전하다(멱등).
+    .then(Commands.literal('fix').requires(s => s.hasPermission(2)).executes(ctx => {
+      const s = ctx.source.server
+      const cfg = msCfg(); const tier = msTier(s)
+      var mfSeen = 0, mfFixed = 0
+      try {
+        s.overworld().getEntities().forEach(en => {
+          try {
+            if (!en || !en.getAttribute) return
+            var mfId = String(en.type)
+            if (mfId === 'minecraft:player') return
+            if (typeof BOSS_SET !== 'undefined' && BOSS_SET[mfId]) return   // 보스는 ls_bossdiff 담당
+            var mfDef = LS.defaultAttrBase(en, 'minecraft:generic.max_health')
+            if (mfDef <= 0) return
+            mfSeen++
+            // 지금 이 몹이 «받아야 할» 배율. 비적대면 1.0 — 즉 출고값으로 되돌린다.
+            var mfMul = msIsHostile(en) ? (cfg.hp[tier] || 1.0) : 1.0
+            var mfWant = mfDef * mfMul
+            var mfAttr = en.getAttribute('minecraft:generic.max_health')
+            if (!mfAttr) return
+            if (Math.abs(mfAttr.getBaseValue() - mfWant) < 0.01) return
+            mfAttr.setBaseValue(mfWant)
+            if (Number(en.health) > mfWant) en.setHealth(mfWant)
+            // 공격력도 같이 — 여기도 출고값에서 다시 계산한다
+            var mfDefD = LS.defaultAttrBase(en, 'minecraft:generic.attack_damage')
+            var mfD = mfDefD > 0 ? en.getAttribute('minecraft:generic.attack_damage') : null
+            if (mfD) {
+              var mfDMul = msIsHostile(en) ? (cfg.dmg[tier] || 1.0) : 1.0
+              mfD.setBaseValue(Math.min(mfDefD * mfDMul, mfDefD + cfg.dmgCapAdd))
+            }
+            mfFixed++
+          } catch (err) { lsWarn('ls_mobscale:fix-one', err) }
+        })
+      } catch (err) { lsWarn('ls_mobscale:fix', err) }
+      ctx.source.sendSystemMessage(Text.of(
+        `§a몹 스케일 정리 §7— 살펴본 ${mfSeen}기 중 §e${mfFixed}기§7를 되돌렸다 §8(티어 ${tier})`))
+      ctx.source.sendSystemMessage(Text.of('§8로드된 청크만 훑는다. 멀리 다녀온 뒤 한 번 더 돌릴 것.'))
       return 1
     })))
 })

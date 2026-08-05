@@ -150,7 +150,12 @@ public final class LSCommands {
                         .suggests((c, b) -> { b.suggest("danger"); b.suggest("stack"); b.suggest("spread"); return b.buildFuture(); })
                         .executes(ctx -> testTelegraph(ctx.getSource(), StringArgumentType.getString(ctx, "kind")))))
                 .then(Commands.literal("clear").executes(ctx -> {
-                    int n = WroughtnautGimmick.clearTest() + IgnisGimmick.clearTest() + GauntletGimmick.clearTest();
+                    // 기믹을 새로 만들 때마다 여기에 한 줄을 - 반드시 - 더한다.
+                    // T4·최종이 빠져 있던 적이 있는데, 시험 소환은 PersistenceRequired 라
+                    // 청크를 벗어나도 안 사라진다 — 빠뜨리면 체력 1만짜리가 세계에 영구히 남는다.
+                    int n = WroughtnautGimmick.clearTest() + IgnisGimmick.clearTest()
+                          + GauntletGimmick.clearTest() + MonstrosityGimmick.clearTest()
+                          + LichGimmick.clearTest() + SiegeVanguardGimmick.clearTest();
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§7시험 소환분 " + n + "기 제거 §8(세계에서 만난 개체는 건드리지 않는다)"), false);
                     return 1;
@@ -194,6 +199,77 @@ public final class LSCommands {
                         return 1;
                     }))
                 // ── T3 건틀렛 「분쇄 파문」 (보라 = 흩어져라) ──
+                .then(Commands.literal("monstrosity")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!MonstrosityGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — L_Ender's Cataclysm 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a네더라이트 괴물 소환 §7— 교전 후 §e" + (MonstrosityGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 심판. §8(/lsgimmick monstrosity now 로 즉시)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!MonstrosityGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 네더라이트 괴물이 없다. 먼저 /lsgimmick monstrosity summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§6◆ 네더라이트 괴물 §6「용암의 심판」 §8— 두 박자: §d흩어져라§8 → "
+                            + (MonstrosityGimmick.BEAT / 20.0) + "초 뒤 §e뭉쳐라"), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§8  주기 " + (MonstrosityGimmick.INTERVAL_P1 / 20) + "초 → 2페이즈("
+                            + (int) (MonstrosityGimmick.PHASE2_HP * 100) + "%) "
+                            + (MonstrosityGimmick.INTERVAL_P2 / 20) + "초 + 보스 발밑 빨강 = 세 어휘 동시"), false);
+                        for (Component line : MonstrosityGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
+                .then(Commands.literal("lich")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!LichGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — Bosses of Mass Destruction 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a리치 소환 §7— 교전 후 §e" + (LichGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 삼킴. §8(/lsgimmick lich now 로 즉시)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!LichGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 리치가 없다. 먼저 /lsgimmick lich summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§6◆ 리치 §9「별을 삼키는 자」 §8— " + (LichGimmick.SWALLOW_TICKS / 20)
+                            + "초 무적(§9파랑§8), §e노란 자리§8에 절반 이상이 "
+                            + (LichGimmick.HOLD_NEEDED / 20) + "초 모이면 해제"), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§8  못 막으면 최대 체력 " + (int) (LichGimmick.HEAL_FRAC * 100)
+                            + "% 회복 · 주기 " + (LichGimmick.INTERVAL_P1 / 20) + "초 → 2페이즈("
+                            + (int) (LichGimmick.PHASE2_HP * 100) + "%) " + (LichGimmick.INTERVAL_P2 / 20) + "초"), false);
+                        for (Component line : LichGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
                 .then(Commands.literal("gauntlet")
                     .then(Commands.literal("summon").executes(ctx -> {
                         ServerPlayer p = ctx.getSource().getPlayer();
@@ -232,6 +308,55 @@ public final class LSCommands {
                         }
                         return 1;
                     }))
+                // ── 공성 선봉 「무너지는 땅」 — 관문 전에 빨강을 처음 만나는 자리 ──
+                .then(Commands.literal("vanguard")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!SiegeVanguardGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — Cataclysm 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a균열의 선봉 소환 §7— 교전 후 §e" + (SiegeVanguardGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 장판. §8(피해 " + SiegeVanguardGimmick.DAMAGE
+                            + " — T1 의 " + WroughtnautGimmick.DAMAGE + " 보다 약하다. 연습이니까)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!SiegeVanguardGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 선봉이 없다. 먼저 /lsgimmick vanguard summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        for (Component line : SiegeVanguardGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
+                // ── 탐험 보스: 모드가 이미 가진 규칙을 보이게 만든 것들 ──
+                // 소환·즉시시전이 없다(ExplorerGimmicks 주석 참고). 규칙표와 추적 현황만.
+                .then(Commands.literal("explorer").executes(ctx -> {
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§6◆ 탐험 보스의 숨은 규칙 §8— 전부 모드가 원래 가진 것. 우리는 보이게만 했다"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7프로스트모 §8— 불 ×1.25 · §c화살은 피해 0§8 (시리우스가 통째로 막힌다)"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7히드라 §8— §a벌린 입§8만 온전한 피해, 나머지는 1/8 · "
+                        + (int) ExplorerGimmicks.HYDRA_MAX_DIST + "칸 밖은 피해 0"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7유령기사 §8— 돌진 중이 아니면 §a방어도 5배§8 (돌진 때만 딜이 들어간다)"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7우르가스트 §8— 발작 중 피해 1/10 · 누적 18 이면 페이즈 전환"), false);
+                    for (Component line : ExplorerGimmicks.status()) {
+                        ctx.getSource().sendSuccess(() -> line, false);
+                    }
+                    return 1;
+                }))
                 .executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§6◆ 강철거인 기믹 §c「대지 가르기」 §8— 무작위 플레이어 발밑, 반경 "
@@ -241,11 +366,17 @@ public final class LSCommands {
                         ctx.getSource().sendSuccess(() -> line, false);
                     }
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§7T1 §c빨강§7 강철거인 · T2 §e노랑§7 이그니스 · T3 §d보라§7 건틀렛 §8| §a초록§7 지금 쳐라(취약 창)"), false);
+                        "§7T1 §c빨강§7 · T2 §e노랑§7 · T3 §d보라§7(+2P 조합) · T4 §6조합 시험§7 · 최종 §9파랑"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7언제 때릴 것인가 §8— §a초록§7 지금 쳐라(강철거인 취약 창) · §9파랑§7 멈춰라(이그니스 반격)"), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§8/lsgimmick summon · now · window · test <danger|stack|spread> · clear"), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§8/lsgimmick ignis <summon|now> · /lsgimmick gauntlet <summon|now>"), false);
+                        "§8/lsgimmick ignis · gauntlet · monstrosity · lich  <summon|now>"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§8/lsgimmick vanguard <summon|now> §8— 공성 선봉(관문 전 연습)"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§8/lsgimmick explorer §8— 탐험 보스 4종의 숨은 규칙"), false);
                     return 1;
                 }));
 

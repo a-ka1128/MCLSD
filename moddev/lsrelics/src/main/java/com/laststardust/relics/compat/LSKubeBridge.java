@@ -1,6 +1,7 @@
 package com.laststardust.relics.compat;
 
 import com.laststardust.relics.data.LSData;
+import com.laststardust.relics.data.SiegeData;
 import com.laststardust.relics.data.TownCatalog;
 import com.laststardust.relics.town.TownGui;
 
@@ -134,12 +135,434 @@ public class LSKubeBridge implements KubeJSPlugin {
             data.dirty();
         }
 
+        // ── 가호·유물·각성 (이관 3단계) ──
+        // `fate_<이름>` · `relic_<이름>` · `star_<이름>` 이라는 - 문자열로 조립한 키 - 셋이
+        // 세 스크립트에 흩어져 있었다. 그런 키는 오타가 나도 예외 없이 «없음/0» 을 돌려주고,
+        // 쓰는 쪽만 옮기면 읽는 쪽이 조용히 기본값을 읽는다(명예 보드 사고와 같은 구조).
+        // 이제 HeroData 가 유일한 소유자다. 상한(1~5)도 그쪽이 건다.
+        //
+        // ※ 성역 좌표 때와 같은 원칙: **스크립트는 자기 사본을 두지 않는다.** 두 벌이 있는 한
+        //   "한쪽만 갱신됨"은 시간 문제였다.
+        public String fate(MinecraftServer server, String name) {
+            return server == null ? "" : LSData.get(server).hero().fate(name);
+        }
+
+        public void setFate(MinecraftServer server, String name, String key) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.hero().setFate(name, key);
+            data.dirty();
+        }
+
+        // 이 가호를 이미 가진 사람 — 없으면 "". 같은 직업 둘을 막는 데 쓴다.
+        public String fateOwner(MinecraftServer server, String key, String exceptName) {
+            return server == null ? "" : LSData.get(server).hero().ownerOf(key, exceptName);
+        }
+
+        public boolean hasRelic(MinecraftServer server, String name) {
+            return server != null && LSData.get(server).hero().hasRelic(name);
+        }
+
+        public void setHasRelic(MinecraftServer server, String name, boolean v) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.hero().setHasRelic(name, v);
+            data.dirty();
+        }
+
+        // 0 = 아직 유물이 없다. 표시용으로 1 을 깔지 말 것 — 그 구분이 «유물은 받았는데
+        // 각성이 0» 같은 어긋난 상태를 알아보는 유일한 근거다.
+        public int star(MinecraftServer server, String name) {
+            return server == null ? 0 : LSData.get(server).hero().star(name);
+        }
+
+        public void setStar(MinecraftServer server, String name, int n) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.hero().setStar(name, n);
+            data.dirty();
+        }
+
+        // 제단은 사람이 아니라 - 가호 - 에 붙는다. 여덟 직업이 각자 자기 제단을 갖는다.
+        public boolean hasAltar(MinecraftServer server, String fateKey) {
+            return server != null && LSData.get(server).hero().hasAltar(fateKey);
+        }
+
+        public int altarX(MinecraftServer server, String f) { return altar(server, f, 0); }
+        public int altarY(MinecraftServer server, String f) { return altar(server, f, 1); }
+        public int altarZ(MinecraftServer server, String f) { return altar(server, f, 2); }
+
+        public void setAltar(MinecraftServer server, String fateKey, int x, int y, int z) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.hero().setAltar(fateKey, x, y, z);
+            data.dirty();
+        }
+
+        // 이관이 실제로 됐는지 한 줄로 본다 (/lsdata).
+        public String heroSummary(MinecraftServer server) {
+            return server == null ? "" : LSData.get(server).hero().summary();
+        }
+
+        // ── 공성 (이관 4단계) ──
+        // 키 26개. 이름을 하나하나 메서드로 낸다 — 문자열 키 하나로 받는 통로
+        // (`LS.siegeI(server, 'ls_threat')` 같은 것)를 두면 이관해서 얻는 게 없다.
+        // 그 형태는 오타가 여전히 «예외 없이 0» 이고, 그게 애초에 여기로 옮기는 이유다.
+        //
+        // ※ **읽는 쪽 다섯이 다른 파일에 있다** — `ls_hope`(위협) · `ls_voice`(위협·성벽·진행·첫격퇴) ·
+        //   `ls_stats`(최종장). 그쪽도 이 통로로 바꿨다. 쓰는 쪽만 옮기면 저 다섯이 조용히 0 을 읽는다.
+        private SiegeData sg(MinecraftServer server) {
+            return LSData.get(server).siege();
+        }
+
+        private void sgDirty(MinecraftServer server) {
+            LSData.get(server).dirty();
+        }
+
+        public int threat(MinecraftServer server) {
+            return server == null ? 0 : sg(server).threat();
+        }
+
+        public void setThreat(MinecraftServer server, int v) {
+            if (server == null) return;
+            sg(server).setThreat(v);
+            sgDirty(server);
+        }
+
+        // 노드는 CSV 한 줄로 주고받는다(스크립트가 이미 그 형식이다).
+        public String nodeCsv(MinecraftServer server) {
+            return server == null ? "" : sg(server).nodeCsv();
+        }
+
+        public void setNodeCsv(MinecraftServer server, String csv) {
+            if (server == null) return;
+            sg(server).setNodeCsv(csv);
+            sgDirty(server);
+        }
+
+        public int nodeCount(MinecraftServer server) {
+            return server == null ? 0 : sg(server).nodeCount();
+        }
+
+        // ── 성벽 ──
+        // `wallInit` 을 따로 내는 이유: hp 0 이 «미설정»인지 «부서짐»인지 스크립트가 가려야 한다.
+        public boolean wallInit(MinecraftServer server) {
+            return server != null && sg(server).wallInit();
+        }
+
+        public int wallHpRaw(MinecraftServer server) {
+            return server == null ? 0 : sg(server).wallHpRaw();
+        }
+
+        // 천장은 호출부가 준다 — 최대 HP 가 `3000 + 방벽Lv×1000` 이고 3000 은 스크립트 상수다.
+        public void setWallHp(MinecraftServer server, int hp, int max) {
+            if (server == null) return;
+            sg(server).setWallHp(hp, max);
+            sgDirty(server);
+        }
+
+        public int wallRadius(MinecraftServer server) {
+            return server == null ? 0 : sg(server).wallRadius();
+        }
+
+        public void setWallRadius(MinecraftServer server, int r) {
+            if (server == null) return;
+            sg(server).setWallRadius(r);
+            sgDirty(server);
+        }
+
+        public int wallWarn(MinecraftServer server) {
+            return server == null ? 0 : sg(server).wallWarn();
+        }
+
+        public void setWallWarn(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setWallWarn(n);
+            sgDirty(server);
+        }
+
+        public boolean wallLastStand(MinecraftServer server) {
+            return server != null && sg(server).wallLastStand();
+        }
+
+        public void setWallLastStand(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setWallLastStand(v);
+            sgDirty(server);
+        }
+
+        public int wallStandUntil(MinecraftServer server) {
+            return server == null ? 0 : sg(server).wallStandUntil();
+        }
+
+        public void setWallStandUntil(MinecraftServer server, int t) {
+            if (server == null) return;
+            sg(server).setWallStandUntil(t);
+            sgDirty(server);
+        }
+
+        // ── 최종장 ──
+        public int finale(MinecraftServer server) {
+            return server == null ? 0 : sg(server).finale();
+        }
+
+        public void setFinale(MinecraftServer server, int v) {
+            if (server == null) return;
+            sg(server).setFinale(v);
+            sgDirty(server);
+        }
+
+        public boolean finaleArmed(MinecraftServer server) {
+            return server != null && sg(server).finaleArmed();
+        }
+
+        public void setFinaleArmed(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setFinaleArmed(v);
+            sgDirty(server);
+        }
+
+        public boolean finaleNightOk(MinecraftServer server) {
+            return server != null && sg(server).finaleNightOk();
+        }
+
+        public void setFinaleNightOk(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setFinaleNightOk(v);
+            sgDirty(server);
+        }
+
+        public boolean trueSpawned(MinecraftServer server) {
+            return server != null && sg(server).trueSpawned();
+        }
+
+        public void setTrueSpawned(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setTrueSpawned(v);
+            sgDirty(server);
+        }
+
+        public boolean trueFormOff(MinecraftServer server) {
+            return server != null && sg(server).trueFormOff();
+        }
+
+        public void setTrueFormOff(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setTrueFormOff(v);
+            sgDirty(server);
+        }
+
+        public boolean dawnbreak(MinecraftServer server) {
+            return server != null && sg(server).dawnbreak();
+        }
+
+        public void setDawnbreak(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setDawnbreak(v);
+            sgDirty(server);
+        }
+
+        // ── 진행 중인 공세 ──
+        public boolean siegeActive(MinecraftServer server) {
+            return server != null && sg(server).siegeActive();
+        }
+
+        public void setSiegeActive(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setSiegeActive(v);
+            sgDirty(server);
+        }
+
+        public boolean siegeGrand(MinecraftServer server) {
+            return server != null && sg(server).siegeGrand();
+        }
+
+        public void setSiegeGrand(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setSiegeGrand(v);
+            sgDirty(server);
+        }
+
+        public int siegeWaves(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeWaves();
+        }
+
+        public void setSiegeWaves(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setSiegeWaves(n);
+            sgDirty(server);
+        }
+
+        public int siegeWaveNo(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeWaveNo();
+        }
+
+        public void setSiegeWaveNo(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setSiegeWaveNo(n);
+            sgDirty(server);
+        }
+
+        public int siegeRemaining(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeRemaining();
+        }
+
+        public void setSiegeRemaining(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setSiegeRemaining(n);
+            sgDirty(server);
+        }
+
+        public int siegeReward(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeReward();
+        }
+
+        public void setSiegeReward(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setSiegeReward(n);
+            sgDirty(server);
+        }
+
+        public int siegeAngle(MinecraftServer server) {
+            return server == null ? 0 : sg(server).siegeAngle();
+        }
+
+        public void setSiegeAngle(MinecraftServer server, int deg) {
+            if (server == null) return;
+            sg(server).setSiegeAngle(deg);
+            sgDirty(server);
+        }
+
+        // 공세를 끝낼 때 되돌려야 하는 네 값을 한 번에 — 스크립트에 이 네 줄이 두 군데 있었다.
+        public void endSiege(MinecraftServer server) {
+            if (server == null) return;
+            sg(server).endSiege();
+            sgDirty(server);
+        }
+
+        // ── 하루 · 예고 ──
+        public int dreadStep(MinecraftServer server) {
+            return server == null ? 0 : sg(server).dreadStep();
+        }
+
+        public void setDreadStep(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setDreadStep(n);
+            sgDirty(server);
+        }
+
+        public int annTier(MinecraftServer server) {
+            return server == null ? 0 : sg(server).annTier();
+        }
+
+        public void setAnnTier(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setAnnTier(n);
+            sgDirty(server);
+        }
+
+        public int siegeDay(MinecraftServer server) {
+            return server == null ? 0 : sg(server).day();
+        }
+
+        public void setSiegeDay(MinecraftServer server, int n) {
+            if (server == null) return;
+            sg(server).setDay(n);
+            sgDirty(server);
+        }
+
+        public boolean wasNight(MinecraftServer server) {
+            return server != null && sg(server).wasNight();
+        }
+
+        public void setWasNight(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setWasNight(v);
+            sgDirty(server);
+        }
+
+        // ── 이력 ──
+        public boolean firstSiegeDone(MinecraftServer server) {
+            return server != null && sg(server).firstSiegeDone();
+        }
+
+        public void setFirstSiegeDone(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            sg(server).setFirstSiegeDone(v);
+            sgDirty(server);
+        }
+
+        public String siegeSummary(MinecraftServer server) {
+            return server == null ? "" : sg(server).summary();
+        }
+
+        private int altar(MinecraftServer server, String fateKey, int axis) {
+            if (server == null) return 0;
+            var h = LSData.get(server).hero();
+            if (!h.hasAltar(fateKey)) return 0;
+            var p = h.altar(fateKey);
+            return axis == 0 ? p.getX() : axis == 1 ? p.getY() : p.getZ();
+        }
+
         private int sanc(MinecraftServer server, int axis) {
             if (server == null) return 0;
             LSData data = LSData.get(server);
             if (!data.hasSanctuary()) return 0;
             var p = data.sanctuary();
             return axis == 0 ? p.getX() : axis == 1 ? p.getY() : p.getZ();
+        }
+
+        // ── 몹이 「몬스터」인가 (2026-07-31 유저 결정: DECISIONS 2절 C안) ──
+        // `ls_mobscale.js` 가 여태 «공격력 속성이 있으면 적대» 로 판별하고 있었다.
+        // 원래는 MobCategory 를 보려 했는데, KubeJS 의 `e.getType()` 은 EntityType 이 아니라
+        // **id 문자열**이라 `.getCategory()` 가 처음부터 예외만 던졌다 — 그래서 판별이
+        // 계속 예비 경로로 떨어졌고, 결과적으로 철골렘·눈사람·늑대·벌까지 세지고 있었다.
+        //
+        // 자바에서는 EntityType 을 그대로 들고 있으니 한 줄이다. 스크립트가 못 하던 걸
+        // 모드가 하는 전형적인 자리라 다리를 놓는다.
+        //
+        // ※ 이 판정은 **늑대·북극곰도 뺀다.** 「실제로 덤비는데 안 세지는」 경우가 생긴다는 걸
+        //   알고 고른 값이다(DECISIONS 2절에 A/B/C 를 비교해 뒀다). 규칙이 한 문장으로
+        //   설명되는 쪽을 택한 것이다 — «몬스터만 세진다».
+        // ⚠️ 인자를 Object 로 받는 이유 — 처음엔 `Entity` 로 받았는데, 그러면
+        // **「엔티티가 아니다」와 「몬스터가 아니다」가 둘 다 false 로 뭉개진다.**
+        // 실제로 그 상태로 넣었더니 좀비가 스케일링을 못 받았고, 예외도 로그도 안 나서
+        // 원인을 못 찾을 뻔했다(Rhino 가 변환 못 하는 인자를 null 로 넘긴다).
+        // 여기서는 **못 알아본 타입이면 던진다** — 호출부의 catch 가 경고를 찍고 예비 경로로
+        // 내려가므로, 조용히 틀리는 대신 시끄럽게 틀린다.
+        public boolean isMonster(Object entity) {
+            if (entity instanceof net.minecraft.world.entity.Entity e) {
+                return e.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER;
+            }
+            throw new IllegalArgumentException(
+                "LS.isMonster: 엔티티가 아니다 — " + (entity == null ? "null" : entity.getClass().getName()));
+        }
+
+        // ── 그 몹 종류의 «공장 출고» 속성값 (2026-07-31) ──
+        // 몹 스케일링이 재시작마다 복리로 붙던 걸 막으려고 만들었다. 원인은 두 겹이었다:
+        //   ① `EntityEvents.spawned` 는 디스크에서 다시 로드될 때도 온다
+        //   ② 이 모드팩은 로드 시 속성 모디파이어를 base 에 구워 넣는다
+        // 그래서 «태그로 표식» 도 «이름 붙은 모디파이어» 도 안 통했다. 전자는 태그가 아직
+        // 안 붙은 시점에 이벤트가 오고, 후자는 구워지면서 다음 로드의 새 base 가 된다.
+        // 실측: 좀비 하나가 재시작 한 번에 20 → 34.56 (20×1.2³) 이 됐다.
+        //
+        // **그래서 현재값을 아예 안 읽는다.** 엔티티 «종류»의 기본값에서 곱하면 몇 번을
+        // 다시 돌려도 결과가 하나다 — 탐지가 필요 없어진다.
+        // 없는 속성이면 -1 (0 이 아니다 — 0 은 «값이 0» 과 구분이 안 된다).
+        public double defaultAttrBase(Object entity, String attrId) {
+            if (!(entity instanceof net.minecraft.world.entity.LivingEntity le)) return -1;
+            try {
+                var loc = net.minecraft.resources.ResourceLocation.parse(attrId);
+                var holder = net.minecraft.core.registries.BuiltInRegistries.ATTRIBUTE.getHolder(loc);
+                if (holder.isEmpty()) return -1;
+                @SuppressWarnings("unchecked")
+                var type = (net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>) le.getType();
+                var supplier = net.minecraft.world.entity.ai.attributes.DefaultAttributes.getSupplier(type);
+                if (!supplier.hasAttribute(holder.get())) return -1;
+                return supplier.getBaseValue(holder.get());
+            } catch (Exception e) {
+                return -1;
+            }
         }
 
         // 화면을 열어둔 사람에게 갱신을 밀어준다 (스크립트가 금고를 바꾼 직후 등)

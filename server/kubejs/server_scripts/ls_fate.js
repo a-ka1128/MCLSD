@@ -2,9 +2,8 @@
 // 첫 접속 후 1회 선택하는 가호(소프트 클래스). 고유 패시브 + 시작 키트.
 // "나는 누구인가"를 첫 순간에 정한다 — Cisco's/Prominence의 Fate 패턴.
 // 패시브는 /attribute modifier(고정 ID)로 적용 — 재접속에도 유지, 중복 적용은 명령이 거부.
-// 저장: fate_<uuid> (선택한 가호 키)
+// 저장: 모드가 소유한다 (이관 3단계) — LS.fate / LS.setFate / LS.fateOwner.
 
-function ftStore(server) { return server.overworld().persistentData }
 function ftSay(server, text) { server.players.forEach(p => p.tell(Text.of(text))) }
 
 // ── 공용 시작 키트 ──
@@ -123,7 +122,7 @@ const FATES = {
 }
 const FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer']
 
-function ftGet(server, player) { return String(ftStore(server).getString('fate_' + player.username) || '') }
+function ftGet(server, player) { return String(LS.fate(server, player.username) || '') }
 
 function ftModId(key, i) { return 'last_stardust:fate_' + key + (i ? '_' + i : '') }
 
@@ -153,7 +152,7 @@ function ftApply(server, player, key) {
 // (속성 제거 명령은 대상이 없으면 조용히 실패하고, 재접속 시 ftApply 가 다시 정리한다).
 // ※ 블록 안에서는 var — const/let 은 Rhino 재선언 오류를 낸다 (docs/TODO.md 함정 #1)
 function ftClear(server, name) {
-  var cur = String(ftStore(server).getString('fate_' + name) || '')
+  var cur = String(LS.fate(server, name) || '')
   if (!cur || !FATES[cur]) return ''
   FATES[cur].attrs.forEach((a, i) => {
     try { server.runCommandSilent(`attribute ${name} ${a[0]} modifier remove ${ftModId(cur, i)}`) } catch (err) { lsWarn('ls_fate:ftClear-attr', err) }
@@ -161,27 +160,17 @@ function ftClear(server, name) {
   ;(FATES[cur].effects || []).forEach(eff => {
     try { server.runCommandSilent(`effect clear ${name} ${eff}`) } catch (err) { lsWarn('ls_fate:ftClear-eff', err) }
   })
-  ftStore(server).putString('fate_' + name, '')
+  LS.setFate(server, name, '')
   return cur
 }
 
 // 이 가호를 이미 가진 사람 — 없으면 ''.
-// 저장이 fate_<이름> 이라 키 목록을 훑는 수밖에 없다(인원이 8명이라 비용은 무시할 만하다).
-// ※ 블록 안에서는 var — const/let 은 Rhino 재선언 오류를 낸다
+// 예전엔 여기서 persistentData 키 목록을 훑고 `fate_` 접두사를 문자열로 잘라냈다.
+// 그 방식은 키 형식이 조금만 바뀌어도 - 조용히 아무도 못 찾는 상태 - 가 된다(예외도 안 난다).
+// 이관 3단계에서 모드가 장부를 갖게 되면서 그쪽에 물어보면 되게 됐다.
 function ftTakenBy(server, key, exceptName) {
-  var st = ftStore(server)
-  var found = ''
-  try {
-    st.getAllKeys().forEach(k => {
-      if (found) return
-      var ks = String(k)
-      if (ks.indexOf('fate_') !== 0) return
-      var who = ks.substring(5)
-      if (exceptName && who === exceptName) return
-      if (String(st.getString(ks) || '') === key) found = who
-    })
-  } catch (e) { lsWarn('ls_fate:taken-by', e) }
-  return found
+  try { return String(LS.fateOwner(server, key, exceptName || '') || '') }
+  catch (e) { lsWarn('ls_fate:taken-by', e); return '' }
 }
 
 function ftChoose(server, player, key) {
@@ -195,7 +184,7 @@ function ftChoose(server, player, key) {
     return 0
   }
   const f = FATES[key]
-  ftStore(server).putString('fate_' + player.username, key)
+  LS.setFate(server, player.username, key)
   ftApply(server, player, key)
   // 시작 키트
   STARTER_KIT.concat(dyedArmor(f.color)).forEach(it => { server.runCommandSilent(`give ${player.username} ${it[0]} ${it[1]}`) })
@@ -249,7 +238,8 @@ ServerEvents.commandRegistry(event => {
 
   event.register(Commands.literal('fate')
     // 선택 화면(lsrelics 모드의 /fateui)을 연다 — 유물 아이콘과 소개를 보고 고른다.
-    // 현재 가호는 여기(persistentData)에만 있으므로 인자로 넘겨준다.
+    // 모드 화면이 «이미 고른 가호»를 알아야 선택 버튼을 잠글 수 있는데, /fateui 는
+    // 인자로만 받는다(그쪽이 장부를 직접 읽지 않는다). 그래서 여기서 넘겨준다.
     .executes(ctx => {
       const s = ctx.source.server; const p = ctx.source.player
       if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
@@ -305,7 +295,7 @@ ServerEvents.commandRegistry(event => {
 
         const had = ftClear(s, target)   // 있으면 갈아끼우기, 없으면 '' 반환
         if (had === key) { ctx.source.sendSystemMessage(Text.of(`§7${target} 은(는) 이미 ${FATES[key].name}입니다. §8(패시브만 다시 붙임)`)) }
-        ftStore(s).putString('fate_' + target, key)
+        LS.setFate(s, target, key)
         ftApply(s, p, key)
 
         const f = FATES[key]
@@ -321,7 +311,7 @@ ServerEvents.commandRegistry(event => {
         ctx.source.sendSystemMessage(Text.of(
           `§a${target} → §e${f.name}§a 지정${had ? ` §7(${FATES[had].name}에서 변경)` : ' §7(신규 · 시작 키트 지급)'}`))
         // 유물은 별개 저장이라 옛 직업 유물이 그대로 남는다 — 조용히 손대지 않고 알려만 준다.
-        if (ftStore(s).getBoolean('relic_' + target)) {
+        if (LS.hasRelic(s, target)) {
           ctx.source.sendSystemMessage(Text.of(`§7※ ${target} 은(는) 이미 유물을 받은 상태입니다 — 옛 직업 유물이 인벤에 남아 있습니다.`))
         }
         console.log(`[LS-FATE] admin set ${target} -> ${key} (had=${had || 'none'})`)

@@ -31,22 +31,35 @@ KubeJS 는 붙이기 빨랐지만, 하루 동안 **문법 검사로는 안 잡�
 | 저장 뿌리 | `data/LSData.java` — `SavedData`. 새 기능은 여기에 섹션을 건다 |
 | 마을 정의 | `data/TownCatalog.java` — 4트랙 × 4레벨 (밸런스 다이얼) |
 | 마을 상태 | `data/TownData.java` — 단계·**보관함**·기여도·플래그·금고 |
+| 성장 상태 | `data/HeroData.java` — **가호·유물 수령·각성 성급·직업별 제단** (이관 3단계) |
 | 마을 판정 | `town/TownService.java` — 완성 가능 여부·집행. **판정은 여기 한 곳** |
 | 마을 창 | `town/TownMenu.java` + `client/TownHubScreen`·`TownTrackScreen` |
 | 유물 8종·스킬·각성 새김 | `item/`, `RelicSkills`, `LSCommands` |
 | 가호 선택 화면 | `client/FateSelectScreen`, `FateCatalog` |
 
-### 아직 스크립트 (`server/kubejs/server_scripts`)
+### 아직 스크립트 (`server/kubejs/server_scripts`) — 24파일 5,868줄 (2026-07-31 저녁)
 
-`ls_siege`(923) · `ls_voice`(533) · `ls_rift`(323) · `ls_rescue`(280) · `ls_fate`(253) ·
-`ls_casino`(244) · `ls_ascend`(242) · `ls_bossdiff`(190) · `ls_bounty`(187) · `ls_stats`(154) ·
-`ls_relic`(143) · `ls_title`(119) · `ls_mobscale`(111) · `ls_beacon`(105) · `ls_daynight`(93) ·
-`ls_util`(59) · `ls_keys`(53) · `ls_config`(49) · `ls_revive`(46) · `last_stardust_rules`(23)
+`ls_siege`(1238) · `ls_voice`(542) · `ls_rift`(434) · `ls_fate`(323) · `ls_ascend`(281) ·
+`ls_rescue`(275) · `ls_enrage`(265) · `ls_bossdiff`(265) · `ls_casino`(245) · `ls_migrate`(237) ·
+`ls_beacon`(203) · `ls_relic`(200) · `ls_bounty`(192) · `ls_hope`(191) · `ls_stats`(166) ·
+`ls_mobscale`(133) · `ls_util`(126) · `ls_title`(119) · `ls_config`(117) · `ls_towneffect`(94) ·
+`ls_daynight`(93) · `ls_revive`(53) · `ls_keys`(53) · `last_stardust_rules`(23)
+
+> 줄 수는 세는 순간 낡는다. 갱신하려면 `wc -l server/kubejs/server_scripts/*.js`.
+>
+> **줄었을 것 같지만 늘었다** — 이관 4단계로 `ls_siege` 의 저장 코드가 빠졌는데도 1082 → 1238 이다.
+> 이관은 «스크립트를 줄이는 일»이 아니라 «데이터의 주인을 하나로 만드는 일»이라서 그렇다.
+> 판정·연출·명령은 그대로 남고, 오히려 그 자리에 «왜 이렇게 했나»가 주석으로 붙는다.
+> 줄 수로 이관 진척을 재면 안 된다 — `LSData` 섹션 개수와 B절 스캐너가 진짜 지표다.
 
 ### 은퇴
 
-`ls_town.js.disabled` · `ls_income.js.disabled` · `ls_treasury.js.disabled`
-— 모드로 이관 완료. 비교·복구용으로만 남겨둠.
+`ls_town.js.disabled` · `ls_income.js.disabled` · `ls_treasury.js.disabled` (411줄)
+— **2026-07-31 삭제.** 모드 이관이 끝나고 마을 화면이 실제로 도는 걸 확인한 뒤라
+비교용으로서의 값이 끝났다. 남겨두는 쪽이 오히려 위험하다 — 확장자만 되돌리면
+**금고 장부가 두 벌이 되고**, 그건 이 이관이 없애려던 바로 그 상태다.
+
+되살리려면: `git show bd925b3:server/kubejs/server_scripts/ls_town.js.disabled`
 
 ---
 
@@ -56,19 +69,44 @@ KubeJS 는 붙이기 빨랐지만, 하루 동안 **문법 검사로는 안 잡�
 **모드가 가진 하나의 금고**를 보게 하는 장치다.
 
 ```js
+// 금고·마을
 LS.treasury(server)                  // 잔액
 LS.addTreasury(server, 50)           // 적립
 LS.spendTreasury(server, 200)        // 지출 — 부족하면 false, 아무것도 차감 안 함
 LS.townLevel(server, 'ramparts')     // 마을 단계
-LS.addContribution(server, name, n)  // 기여도
-LS.townFlag(server, 'market')        // 구역 해금 플래그
-LS.syncTown(player)                  // 열려 있는 마을 화면 갱신
+LS.addContribution(server, name, n)  // 기여도 적립
+LS.topContributorName(server)        // 명예 보드 1위 (이름 / 점수)
+LS.topContributorPoints(server)
+LS.townFlag(server, 'market')        // 구역 해금 플래그      ※ 스크립트에서 미사용
+LS.syncTown(player)                  // 마을 화면 갱신        ※ 스크립트에서 미사용
+
+// 성역 좌표 (이관 완료 — 모드가 유일 소유)
+LS.hasSanctuary(server) · LS.sanctuaryX/Y/Z(server) · LS.setSanctuary(server, x, y, z)
+
+// 관문 진행도 (이관 완료 — 모드가 유일 소유)
+LS.progress(server) · LS.setProgress(server, n)
+
+// 가호·유물·각성 (이관 완료 — 모드가 유일 소유, 2026-07-31)
+LS.fate(server, name) · LS.setFate(server, name, key)      // '' = 가호 없음
+LS.fateOwner(server, key, exceptName)                       // 같은 직업 둘 방지
+LS.hasRelic(server, name) · LS.setHasRelic(server, name, b)
+LS.star(server, name) · LS.setStar(server, name, n)         // 0 = 아직 없음, 1~5 = 성급
+LS.hasAltar(server, fateKey) · LS.altarX/Y/Z(server, fateKey) · LS.setAltar(server, f, x, y, z)
+LS.heroSummary(server)                                       // /lsdata 표시용
+
+// 전투 판정
+LS.reviveRule(player)                // 부활 직후 무적 창 + 별빛 쇠약 (ReviveRules.java)
 ```
 
 **이게 없으면 금고가 둘로 갈린다** — 모드의 금고와 스크립트의 `persistentData['ls_treasury']` 가
 서로 다른 값이 되어 공성 보상이 영영 도착하지 않는다.
 
-현재 경유 중: `ls_siege` · `ls_rift` · `ls_beacon` · `ls_bounty` · `ls_rescue` · `ls_stats`
+현재 경유 중: `ls_siege` · `ls_rift` · `ls_beacon` · `ls_bounty` · `ls_rescue` · `ls_stats` ·
+`ls_ascend` · `ls_mobscale` · `ls_voice` · `ls_towneffect` · `ls_revive` · `ls_fate` · `ls_relic` ·
+`ls_hope` · `ls_migrate`
+
+> 대조는 `python tools/scan_dead_kubejs.py` 가 자동으로 한다 (A절) — 스크립트가 부르는데
+> 자바에 없는 메서드는 **그 줄에서 런타임에 터진다.** 문법 검사로는 절대 안 걸린다.
 
 > **수명:** 남은 시스템을 전부 옮기면 이 파일과 `build.gradle` 의 KubeJS `compileOnly` 를 함께 지운다.
 
@@ -78,13 +116,25 @@ LS.syncTown(player)                  // 열려 있는 마을 화면 갱신
 
 키 소유권을 훑어 정한 순서다. **공유가 많은 것부터** 옮겨야 이음새가 최소로 남는다.
 
-| 순서 | 대상 | 이유 |
+| 순서 | 대상 | 상태 |
 |---|---|---|
-| 1 | **성역 좌표** (`ls_sanc_*`) | `siege`·`rift`·`rescue`·`stats` **4개가 공유**. 가장 넓게 퍼진 상태 |
-| 2 | **진행도** (`rf_progress`) | `rift`·`ascend`·`mobscale`·`voice` 4개가 읽음 |
-| 3 | **가호·유물·각성** (`fate_*`·`relic_*`·`star_*`) | RPG 성장의 뿌리. 모드가 이미 아이템 NBT 를 다루므로 자연스럽다 |
-| 4 | **공성** (`ls_siege` 923줄) | 최대 덩어리이자 간판 시스템. 위 셋이 끝나야 깔끔하게 옮겨진다 |
-| 5 | 나머지 (`bounty`·`casino`·`rescue`·`beacon`·`bossdiff`·`title`) | 서로 거의 독립 |
+| 1 | **성역 좌표** (`ls_sanc_*`) | ✅ **완료** — `LSData.sanctuary()`. 스크립트는 `LS.sanctuaryX/Y/Z` 로 읽는다 |
+| 2 | **진행도** (`rf_progress`) | ✅ **완료** — `LSData.progress()`. 상한(0~4)도 그쪽이 건다 |
+| 3 | **가호·유물·각성** (`fate_*`·`relic_*`·`star_*`) | ✅ **완료 (2026-07-31)** — `LSData.hero()`. 상한(1~5)·중복 직업 판정도 그쪽이 건다 |
+| 4 | **공성** (`ls_siege` 1200+줄) | ✅ **완료 (2026-07-31)** — `LSData.siege()`. 키 26개 + **바깥에서 읽던 6곳** |
+| 5 | 나머지 (`bounty`·`casino`·`rescue`·`beacon`·`bossdiff`·`title`) | ⬜ **다음.** 서로 거의 독립 |
+
+> **4단계에서 진짜 일은 자바가 아니라 읽는 쪽이었다.** 키 26개 중 다섯이 파일 경계를 넘어가는데,
+> 그쪽은 `ls_siege.js` 의 접근 함수를 부르지 않고 각자 persistentData 를 직접 읽고 있었다.
+> 쓰는 쪽만 옮겼으면 **희망 게이지가 늘 최대 · 호데고스 영원히 침묵 · 성벽 붕괴 대사 없음 ·
+> 최종 보스를 잡아도 폐막식 없음** 이 되고 아무 오류도 안 났다.
+> 여섯 번째는 스캐너가 잡았다 — `ls_rift.js` 가 `ls_finale_armed` 를 **쓰는** 쪽이었고,
+> 그대로 뒀으면 마지막 봉인을 풀어도 「가장 긴 밤」이 영영 안 열렸다.
+
+> **매 단계 끝에 `python tools/scan_dead_kubejs.py` 를 돌린다.**
+> 이관은 «쓰는 쪽을 옮겼다»로 안 끝난다 — 읽는 쪽을 같이 안 옮기면 조용히 기본값을 읽는다.
+> 실제로 `ls_stats.js` 의 명예 보드가 그렇게 몇 주 동안 «CSV 첫 사람, 0점»을 1위로 내보내고 있었다
+> (`ls_town.js` 가 `.disabled` 되면서 `town_c_<name>` 을 쓰는 쪽만 사라졌다). 그 검출이 B절이다.
 
 `ls_voice`(533)는 **가장 마지막**이 낫다 — 다른 시스템의 상태 전이를 감시하는 구조라,
 감시 대상이 먼저 자리를 잡아야 한다.
@@ -137,11 +187,19 @@ python tools/scan_try_decls.py --write    # var 로 일괄 변환
 | | 정상 출력 |
 |---|---|
 | ① | 없음 |
-| ② | 없음. **단** 함정을 설명하는 주석 안의 `catch (e) { }` 두 줄(`ls_mobscale`·`ls_util`)이 잡힐 수 있다 — 위 파이프의 `grep -v ": *//"` 가 그걸 걸러낸다 |
+| ② | **아래 2줄**. 그 외가 나오면 새 함정이다 |
 | ③ | 없음 (성역 좌표 이관 완료 후) |
 | ④ | `total: 0` |
 
-넷 중 하나라도 뭐가 잡히면 그게 새 함정이다.
+**②의 알려진 2줄 (2026-07-31 기준).** 둘 다 «실패를 없던 일로 한다»가 아니라 **의도된 대체값**이라
+남겨 둔다. 기준선에 안 적으면 다음 사람이 매번 다시 조사하거나, 더 나쁘게는 검출기 자체를 안 보게 된다.
+
+| 위치 | 무엇 | 왜 안 남기나 |
+|---|---|---|
+| `ls_enrage.js` `enApply` | `attribute ... modifier remove` 실패를 무시 | 첫 호출엔 그 모디파이어가 없는 게 정상이다. 격노 단계마다 찍히면 로그가 무의미해진다 |
+| `ls_siege.js` `bangDmg` 계산 | 공격력 속성을 못 읽으면 `+= 3` | 성벽을 때리는 몹마다 매 틱 도는 자리다. 속성 없는 몹은 흔하고, 대체값이 곧 정답이다 |
+
+넷 중 위 2줄 말고 뭐가 잡히면 그게 새 함정이다.
 
 **Rhino 블록 스코프는 정적으로 못 찾는다.** 틱 핸들러 안의 `const`/`let` 이 전부 문제인 것도
 아니고(같은 함수의 다른 블록은 멀쩡히 돈다), 조건이 맞아야 실행되는 코드는 조건이 오기 전까지

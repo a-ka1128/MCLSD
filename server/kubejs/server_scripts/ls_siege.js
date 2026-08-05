@@ -3,14 +3,25 @@
 // 10일마다 대공세(예고됨). 위협도 단계마다 몹이 진화. 노드를 원정 파괴해야 근본 해결.
 // 노드 장부: /riftnode (실제 관문 배치는 리셋 후 인게임 — 배치 후 add로 등록)
 
-// ── 저장소 (오버월드 persistentData) ──
+// ── 저장소는 모드(LSData.siege)가 유일하게 소유한다 (이관 4단계, 2026-07-31) ──
+// 예전엔 `sfGetI(server, 'ls_threat')` 처럼 **문자열로 조립한 키 26개**가 여기 있었다.
+// 그 형태의 대가는 오타가 예외를 안 낸다는 것이다 — 조용히 0 을 읽고 그대로 굴러간다.
+//
+// 옮기며 제일 신경 쓴 건 자바가 아니라 **읽는 쪽**이다. 26개 중 다섯이 파일 경계를 넘어가는데,
+// 그쪽은 이 파일의 접근 함수를 부르지 않고 각자 persistentData 를 직접 읽고 있었다:
+//     ls_threat            → ls_hope.js · ls_voice.js
+//     wall_hp              → ls_voice.js
+//     ls_siege_active      → ls_voice.js
+//     ls_first_siege_done  → ls_voice.js
+//     ls_finale            → ls_stats.js
+// 쓰는 쪽만 옮겼으면 저 다섯이 전부 0 을 읽어 — 희망 게이지가 늘 최대, 호데고스는 영원히 침묵,
+// 성벽이 부서져도 대사 없음, 최종 보스를 잡아도 폐막식 없음 — 이 되고 **아무 오류도 안 난다.**
+// 그래서 그 다섯 파일도 같이 고쳤다(명예 보드 사고와 완전히 같은 구조였다).
+//
+// 판정·연출·명령은 여기 남는다. 웨이브 구성·보상 계산은 `/reload` 로 고치는 값이라 스크립트가 맞다.
+//
+// `sfStore` 만 남는다 — 봉화(`pb_names`)가 아직 스크립트 소유라 위협 하한 계산에서 읽어야 한다.
 function sfStore(server) { return server.overworld().persistentData }
-function sfGetI(server, k) { return sfStore(server).getInt(k) }
-function sfSetI(server, k, v) { sfStore(server).putInt(k, v) }
-function sfGetB(server, k) { return sfStore(server).getBoolean(k) }
-function sfSetB(server, k, v) { sfStore(server).putBoolean(k, v) }
-function sfGetS(server, k) { return String(sfStore(server).getString(k) || '') }
-function sfSetS(server, k, v) { sfStore(server).putString(k, v) }
 // 마을 발전 레벨 읽기 (ls_town.js가 씀)
 // ※ 금고·마을은 lsrelics 모드(LSData)가 소유한다. 전역 바인딩 LS 를 통해 접근한다 —
 //   persistentData 의 'ls_treasury' 를 직접 건드리면 모드의 금고와 갈라져 보상이 도착하지 않는다.
@@ -55,8 +66,11 @@ const ESSENCE_DROP = {
 }
 
 // ── 균열 노드 (어둠의 근원) ──
-function nodeNames(server) { const s = sfGetS(server, 'ls_nodes_names'); return s ? s.split(',') : [] }
-function nodeCount(server) { return nodeNames(server).length }
+// 모드는 CSV 한 줄로 들고 있다. 빈 문자열을 먼저 거르는 건 `''.split(',')` 이
+// **길이 0 이 아니라 1 인 배열**을 주기 때문이다 — 안 거르면 노드 0개가 1개로 세어진다.
+function nodeNames(server) { const s = String(LS.nodeCsv(server) || ''); return s ? s.split(',') : [] }
+function setNodeNames(server, arr) { LS.setNodeCsv(server, arr.join(',')) }
+function nodeCount(server) { return LS.nodeCount(server) }
 function threatFloor(server) {
   let f = nodeCount(server) * NODE_FLOOR
   if (townLvl(server, 'ramparts') >= 3) f -= 1 // 방벽 Lv3: 위협 하한 완화
@@ -68,11 +82,12 @@ function threatFloor(server) {
 }
 
 // ── 위협도 (노드 하한 반영) ──
-function getThreat(server) { return sfGetI(server, 'ls_threat') }
+// 상한(0~15)은 모드가 한 번 더 건다(`SiegeData.MAX_THREAT`). 여기 하한은 성격이 다르다 —
+// 노드·봉화가 정하는 **동적 바닥**이라 스크립트가 계산해서 올려 보낸다.
+function getThreat(server) { return LS.threat(server) }
 function setThreat(server, v) {
-  let nv = Math.max(threatFloor(server), Math.min(MAX_THREAT, v))
-  if (nv < 0) nv = 0
-  sfSetI(server, 'ls_threat', nv)
+  const nv = Math.max(threatFloor(server), Math.min(MAX_THREAT, v))
+  LS.setThreat(server, Math.max(0, nv))
 }
 function getTreasury(server) { return LS.treasury(server) }
 function addTreasury(server, amt) { LS.addTreasury(server, amt) }
@@ -111,13 +126,16 @@ const WALL_REPAIR_MATS = [
   ['minecraft:cobblestone', '조약돌', 20]
 ]
 const WALL_DEFAULT_R = 24     // 성벽 반경 기본값 (실제 성벽에 맞춰 /wall radius 로 조정)
-function wallR(server) { const v = sfGetI(server, 'wall_r'); return v > 0 ? v : WALL_DEFAULT_R }
+function wallR(server) { const v = LS.wallRadius(server); return v > 0 ? v : WALL_DEFAULT_R }
 // 방벽 레벨당 최대 내구도 +100 (기본 150 → 4레벨 550).
 // 방벽 트랙의 가장 직관적인 보상이라 눈에 띄게 올린다.
 function wallMax(server) { return WALL_BASE_HP + townLvl(server, 'ramparts') * 1000 }
-function wallHp(server) { const v = sfGetI(server, 'wall_hp'); return v > 0 ? Math.min(v, wallMax(server)) : (sfGetB(server, 'wall_init') ? 0 : wallMax(server)) }
-function wallSetHp(server, v) { sfSetB(server, 'wall_init', true); sfSetI(server, 'wall_hp', Math.max(0, Math.min(wallMax(server), v))) }
-function wallBroken(server) { return sfGetB(server, 'wall_init') && sfGetI(server, 'wall_hp') <= 0 }
+// hp 0 에는 «아직 한 번도 안 정해짐»과 «부서짐» 두 뜻이 있다. 그 둘을 가르는 게 `wallInit` 이고,
+// 못 가리면 **새 월드의 성벽이 처음부터 부서진 상태로 시작한다.** 천장은 방벽 레벨에 걸려 있어
+// 스크립트가 계산해 넘긴다 — 자르는 건 모드가 한다(자르는 곳이 하나면 호출부가 빠뜨릴 수 없다).
+function wallHp(server) { const v = LS.wallHpRaw(server); return v > 0 ? Math.min(v, wallMax(server)) : (LS.wallInit(server) ? 0 : wallMax(server)) }
+function wallSetHp(server, v) { LS.setWallHp(server, v, wallMax(server)) }
+function wallBroken(server) { return LS.wallInit(server) && LS.wallHpRaw(server) <= 0 }
 function wallBar(server) {
   const hp = wallHp(server), mx = wallMax(server)
   const n = Math.max(0, Math.min(10, Math.round(hp * 10 / mx)))
@@ -142,15 +160,15 @@ function wallBossbar(server, show) {
 
 // ── 최종장 (가장 긴 밤) ──
 // ls_finale: 0=비활성 · 1..N-1=방어 밤 단계 · N=보스 밤 대기 · 90=보스 전투 중 · 100=승리(영구 평화)
-function finaleStage(server) { return sfGetI(server, 'ls_finale') }
-function setFinale(server, v) { sfSetI(server, 'ls_finale', v) }
+function finaleStage(server) { return LS.finale(server) }
+function setFinale(server, v) { LS.setFinale(server, v) }
 let FINAL_BOSS_REF = null
 let BOSS_LOST_SEC = 0
 
 function beginFinale(server) {
   if (finaleStage(server) !== 0) return
   setFinale(server, 1)
-  sfSetB(server, 'ls_true_spawned', false) // 진 형태 초기화
+  LS.setTrueSpawned(server, false) // 진 형태 초기화
   setThreat(server, MAX_THREAT)
   sfStore(server).putInt('ls_nrate_pct', 70) // 1밤: 밤 길이 1.4배
   server.runCommandSilent('title @a title {"text":"가장 긴 밤","color":"dark_purple","bold":true}')
@@ -176,7 +194,7 @@ function spawnFinalBoss(server) {
 
 // 진(眞) 형태 — 1페이즈 격파 시 껍질을 벗고 강화형으로 재림 (더 강함 + 시간 재봉인)
 function spawnTrueForm(server) {
-  sfSetB(server, 'ls_true_spawned', true)
+  LS.setTrueSpawned(server, true)
   const c = sancPos(server)
   server.runCommandSilent(`summon ${FINAL_BOSS_ID} ${c.x + 0.5} ${c.y + 10} ${c.z + 0.5} {Tags:["ls_final_boss_true"],PersistenceRequired:1b}`)
   server.runCommandSilent('effect give @e[tag=ls_final_boss_true] minecraft:strength 99999 1 true')
@@ -203,7 +221,7 @@ function findFinalBoss(server) {
 function finaleVictory(server) {
   setFinale(server, 100)
   setThreat(server, 0)
-  sfSetB(server, 'ls_dawnbreak', true) // 여명 가속 시작
+  LS.setDawnbreak(server, true) // 여명 가속 시작
   sfStore(server).putInt('ls_nrate_pct', 0)
   server.runCommandSilent('title @a title {"text":"별빛이 돌아온다","color":"gold","bold":true}')
   server.runCommandSilent('title @a subtitle {"text":"긴 어둠이 끝났다 — 세상은 너희의 것이다","color":"yellow"}')
@@ -240,7 +258,7 @@ function isGrandDay(server) { const d = worldDay(server); return d >= GRAND_EVER
 
 // ── 첫 공세 ──
 // 유물이 없는 맨몸 상태로 맞는 유일한 밤. 버텨내면 정수가 나오고 그것으로 제단에서 유물이 깨어난다.
-function isFirstSiege(server) { return !sfGetB(server, 'ls_first_siege_done') }
+function isFirstSiege(server) { return !LS.firstSiegeDone(server) }
 // 웨이브 구성에 쓰는 유효 위협도 — 첫 공세만 상한을 씌운다
 function effThreat(server) {
   const t = Math.max(1, getThreat(server))
@@ -299,6 +317,15 @@ function sgDirName(angDeg) {
 const PARTY_PER_EXTRA = 0.5   // 추가 인원 1명당 +50%
 const PARTY_HARD_CAP = 40     // 서버 보호 — 이 이상은 안 뽑는다
 
+// ── 마지막 웨이브의 선봉 (관문 기믹의 연습장) ──
+// 종류와 표식은 모드의 SiegeVanguardGimmick 과 - 반드시 같아야 한다 - .
+// 한쪽만 바꾸면 소환은 되는데 장판이 안 깔리고, 오류도 안 난다.
+const SIEGE_BOSS_ID = 'cataclysm:ignited_berserker'
+const SIEGE_BOSS_TAG = 'ls_siege_boss'
+// 체력만 올린다. 공격력은 광전사 원본이 이미 충분히 아프고, 여기서 배워야 하는 건
+// «붉은 원을 피하는 것»이라 - 오래 서 있을 이유 - 를 주는 쪽이 맞다.
+const SIEGE_BOSS_HP_MUL = 2.5
+
 // 전투에 설 수 있는 인원 (관전자 제외)
 function partyCount(server) {
   var n = 0
@@ -335,14 +362,14 @@ function buildWave(threat, grand, players, prog) {
 // 웨이브 하나 소환
 function spawnWave(server, waveNo) {
   const threat = effThreat(server)
-  const grand = sfGetB(server, 'ls_siege_grand')
+  const grand = LS.siegeGrand(server)
   const c = sancPos(server)
   // 인원은 웨이브가 나올 때마다 다시 센다 — 도중에 들어오거나 나가는 사람이 반영된다
   const party = partyCount(server)
   const wave = buildWave(threat, grand, party, LS.progress(server))
   const n = wave.length
   // 단일 방향 공성: 이번 공성의 진격 방향(±35° 부채꼴)에서만 스폰
-  const baseDeg = sfGetI(server, 'ls_siege_ang')
+  const baseDeg = LS.siegeAngle(server)
   for (let i = 0; i < n; i++) {
     var spread = n > 1 ? (i / (n - 1)) * 70 - 35 : 0
     var ang = (baseDeg + spread) * Math.PI / 180
@@ -351,26 +378,48 @@ function spawnWave(server, waveNo) {
     var sy = surfaceY(server, x, z, c.y)
     server.runCommandSilent(`summon ${wave[i]} ${x} ${sy} ${z} {Tags:["ls_siege"],PersistenceRequired:1b,Glowing:1b}`)
   }
-  sfSetI(server, 'ls_siege_remaining', n)
-  sfSetI(server, 'ls_siege_wave_no', waveNo)
+  // ── 마지막 웨이브의 선봉 ──
+  // 공성이 «관문 기믹의 연습장»이 되는 자리다(RESEARCH 2). 이게 없으면 플레이어가
+  // 빨강 장판을 - 태어나서 처음 보는 순간 - 이 T1 관문 안이 된다 — 연습 없이 시험부터다.
+  // 기믹 본체는 모드의 SiegeVanguardGimmick 이 표식 `ls_siege_boss` 로 찾아 붙인다.
+  //
+  // 표식으로 거르는 이유: 광전사는 4단계 웨이브의 - 평범한 구성원이기도 하다 - .
+  // 종류만 보고 걸면 웨이브 전체에 장판이 깔린다.
+  var sbSpawned = 0
+  if (LS.siegeWaves(server) === 0) {
+    var sbAng = baseDeg * Math.PI / 180
+    var sbX = Math.floor(c.x + Math.cos(sbAng) * SPAWN_RING) + 0.5
+    var sbZ = Math.floor(c.z + Math.sin(sbAng) * SPAWN_RING) + 0.5
+    var sbY = surfaceY(server, sbX, sbZ, c.y)
+    server.runCommandSilent(
+      `summon ${SIEGE_BOSS_ID} ${sbX} ${sbY} ${sbZ} {Tags:["ls_siege","ls_siege_boss"],`
+      + `PersistenceRequired:1b,Glowing:1b,CustomNameVisible:1b,`
+      + `CustomName:'{"text":"균열의 선봉","color":"dark_red","bold":true}'}`)
+    sbSpawned = 1
+    server.runCommandSilent('title @a subtitle {"text":"그리고 선봉이 온다","color":"dark_red"}')
+    playAll(server, 'minecraft:entity.ravager.roar', 1, 0.7)
+  }
+
+  LS.setSiegeRemaining(server, n + sbSpawned)
+  LS.setSiegeWaveNo(server, waveNo)
   if (waveNo === 1) {
     if (grand) {
       server.runCommandSilent('title @a title {"text":"\\u2620 대공세","color":"dark_red","bold":true}')
       server.runCommandSilent('title @a subtitle {"text":"어둠의 총력이 성역을 노립니다 — 전원 방어하세요!","color":"red"}')
       playAll(server, 'minecraft:event.raid.horn', 1, 0.6)
       playAll(server, 'minecraft:entity.wither.spawn', 0.8, 0.7)
-      say(server, `§4☠ 대공세 시작! §7위협도 ${threat} · 웨이브 ${sfGetI(server, 'ls_siege_waves') + 1}개 · 첫 물결 ${n}기 §c(보상 2배)`)
+      say(server, `§4☠ 대공세 시작! §7위협도 ${threat} · 웨이브 ${LS.siegeWaves(server) + 1}개 · 첫 물결 ${n}기 §c(보상 2배)`)
     } else {
       server.runCommandSilent('title @a title {"text":"\\u2694 성역 공성!","color":"red","bold":true}')
       server.runCommandSilent('title @a subtitle {"text":"어둠이 성역으로 몰려옵니다 — 막아주세요!","color":"gold"}')
       playAll(server, 'minecraft:event.raid.horn', 1, 0.8)
       playAll(server, 'minecraft:entity.ender_dragon.growl', 0.6, 0.6)
-      say(server, `§c⚔ 공성 시작! §7위협도 ${threat} · 웨이브 ${sfGetI(server, 'ls_siege_waves') + 1}개 · 첫 물결 ${n}기`)
+      say(server, `§c⚔ 공성 시작! §7위협도 ${threat} · 웨이브 ${LS.siegeWaves(server) + 1}개 · 첫 물결 ${n}기`)
     }
     // 몹 진화 단계 뉴스 (새 단계 첫 공성 때 1회)
     var tier = waveTier(LS.progress(server), threat)
-    if (tier > sfGetI(server, 'ls_ann_tier')) {
-      sfSetI(server, 'ls_ann_tier', tier)
+    if (tier > LS.annTier(server)) {
+      LS.setAnnTier(server, tier)
       if (TIER_NEWS[tier]) say(server, TIER_NEWS[tier])
     }
   } else {
@@ -383,20 +432,20 @@ function spawnWave(server, waveNo) {
 
 function startSiege(server, auto, forceGrand) {
   if (!sancIsSet(server)) { if (!auto) say(server, '§c성역이 지정되지 않았습니다. OP가 /sanctuary here 로 지정하세요.'); return 0 }
-  if (sfGetB(server, 'ls_siege_active')) { if (!auto) say(server, '§7이미 공성이 진행 중입니다.'); return 0 }
+  if (LS.siegeActive(server)) { if (!auto) say(server, '§7이미 공성이 진행 중입니다.'); return 0 }
   const threat = effThreat(server)
   const grand = !!forceGrand || isGrandDay(server)
   let wavesTotal = Math.min(MAX_WAVES, 1 + Math.floor(threat / 3))
   if (grand) wavesTotal = Math.min(MAX_WAVES + 1, wavesTotal + 2)
   if (grand && townLvl(server, 'ramparts') >= 4) wavesTotal = Math.max(1, wavesTotal - 1) // 방벽 Lv4: 대공세 웨이브 -1
-  sfSetB(server, 'ls_siege_active', true)
-  sfSetB(server, 'ls_siege_grand', grand)
-  sfSetI(server, 'ls_siege_waves', wavesTotal - 1)
-  sfSetI(server, 'ls_siege_reward', 0)
+  LS.setSiegeActive(server, true)
+  LS.setSiegeGrand(server, grand)
+  LS.setSiegeWaves(server, wavesTotal - 1)
+  LS.setSiegeReward(server, 0)
   // 진격 방향 롤 (이번 공성 내내 유지) + 예고
-  sfSetI(server, 'wall_warn', 4) // 성벽 경보 단계 초기화
+  LS.setWallWarn(server, 4) // 성벽 경보 단계 초기화
   const dirDeg = Math.floor(Math.random() * 360)
-  sfSetI(server, 'ls_siege_ang', dirDeg)
+  LS.setSiegeAngle(server, dirDeg)
   say(server, `§c⚑ 어둠의 진격 방향: §e${sgDirName(dirDeg)}쪽 §7— 그쪽 방어선에 집결해 주세요!`)
   if (wallBroken(server)) say(server, '§4▨ 성벽이 무너진 채다 — 오늘 밤 방어선이 없습니다! (/wall repair)')
   else say(server, `§6▨ 성벽 내구도 ${wallBar(server)}`)
@@ -412,13 +461,13 @@ function startSiege(server, auto, forceGrand) {
 
 function onWaveCleared(server) {
   const threat = getThreat(server)
-  sfSetI(server, 'ls_siege_reward', sfGetI(server, 'ls_siege_reward') + 5 + threat)
-  const wavesLeft = sfGetI(server, 'ls_siege_waves')
+  LS.setSiegeReward(server, LS.siegeReward(server) + 5 + threat)
+  const wavesLeft = LS.siegeWaves(server)
   if (wavesLeft > 0) {
-    sfSetI(server, 'ls_siege_waves', wavesLeft - 1)
+    LS.setSiegeWaves(server, wavesLeft - 1)
     playAll(server, 'minecraft:ui.toast.challenge_complete', 0.5, 1.4)
     say(server, `§a물결 격퇴! §7다음 물결 대기...`)
-    spawnWave(server, sfGetI(server, 'ls_siege_wave_no') + 1)
+    spawnWave(server, LS.siegeWaveNo(server) + 1)
   } else {
     finishSiege(server, 'win')
   }
@@ -426,7 +475,7 @@ function onWaveCleared(server) {
 
 // 첫 공세를 살아남았다 → 유물이 깨어난다
 function firstSiegeCleared(server) {
-  sfSetB(server, 'ls_first_siege_done', true)
+  LS.setFirstSiegeDone(server, true)
   server.players.forEach(p => {
     server.runCommandSilent(`give ${p.username} kubejs:rift_essence ${FIRST_SIEGE_ESS}`)
   })
@@ -440,25 +489,26 @@ function firstSiegeCleared(server) {
 }
 
 function finishSiege(server, outcome) {
-  sfSetB(server, 'wall_last_stand', false)   // 불굴은 공성 1회당 한 번 — 여기서 되감는다
+  LS.setWallLastStand(server, false)   // 불굴은 공성 1회당 한 번 — 여기서 되감는다
   wallBossbar(server, false) // 상단 보스바 숨김
   server.runCommandSilent('kill @e[tag=ls_siege]')
   const wasFirst = isFirstSiege(server)
-  const grand = sfGetB(server, 'ls_siege_grand')
-  sfSetB(server, 'ls_siege_active', false)
-  sfSetB(server, 'ls_siege_grand', false)
-  sfSetI(server, 'ls_siege_remaining', 0)
-  sfSetI(server, 'ls_siege_waves', 0)
+  const grand = LS.siegeGrand(server)
+  LS.endSiege(server)   // 네 값을 한 번에 되돌린다 — 이 네 줄이 두 군데 있어 어긋날 자리였다
   const threat = getThreat(server)
-  const accrued = sfGetI(server, 'ls_siege_reward')
+  const accrued = LS.siegeReward(server)
   const fin = finaleStage(server)
   if (outcome === 'win' || outcome === 'dawn') {
-    if (fin >= 1 && fin < FINALE_NIGHTS) sfSetB(server, 'ls_fn_ok', true) // 최종장: 이 밤 방어 성공
+    if (fin >= 1 && fin < FINALE_NIGHTS) LS.setFinaleNightOk(server, true) // 최종장: 이 밤 방어 성공
   }
   if (outcome === 'win') {
     var reward = accrued + 10 + threat * 2
     if (grand) reward *= 2
     if (townLvl(server, 'workshop') >= 2) reward = Math.round(reward * 1.2) // 공방 Lv2: 방어 보상 +20%
+    // 희망 단계 보너스 (ls_hope.js). 그 파일이 없어도 공성은 그대로 돈다 —
+    // 로드 순서상(h < s) 정상이면 항상 있지만, 없을 때 조용히 1 이 되는 편이 낫다.
+    try { if (typeof hoRewardMult === 'function') reward = Math.round(reward * hoRewardMult(server)) }
+    catch (e) { lsWarn('ls_siege:hope-mult', e) }
     reward = Math.round(reward * REWARD_MULT)
     addTreasury(server, reward)
     // 공성이 3일에 한 번이므로 승리 한 번이 3일치 상승분을 되돌린다
@@ -498,6 +548,9 @@ function finishSiege(server, outcome) {
     say(server, `§4성역이 밀렸다... §c위협도↑(${getThreat(server)}) · 공동 금고 -5`)
     console.log(`[LS-SIEGE] GIVE_UP`)
   }
+  // 희망 장부에 결과를 적는다 (ls_hope.js). 승리는 빚을 하나 갚고, 패배는 하나 더 쌓는다.
+  try { if (typeof hoOnSiege === 'function') hoOnSiege(server, outcome) }
+  catch (e) { lsWarn('ls_siege:hope-record', e) }
   // 첫 공세는 "버텨내기만" 하면 된다(격퇴/아침) — 유물 해금이 여기 걸려 있어 밀리면 안 되기 때문
   if (wasFirst && (outcome === 'win' || outcome === 'dawn')) {
     firstSiegeCleared(server)
@@ -507,10 +560,7 @@ function finishSiege(server, outcome) {
 function cancelSiege(server) {
   wallBossbar(server, false)
   server.runCommandSilent('kill @e[tag=ls_siege]')
-  sfSetB(server, 'ls_siege_active', false)
-  sfSetB(server, 'ls_siege_grand', false)
-  sfSetI(server, 'ls_siege_remaining', 0)
-  sfSetI(server, 'ls_siege_waves', 0)
+  LS.endSiege(server)   // 네 값을 한 번에 되돌린다 — 이 네 줄이 두 군데 있어 어긋날 자리였다
   say(server, '§7공성이 취소되었습니다. (페널티 없음)')
   console.log('[LS-SIEGE] cancel')
 }
@@ -527,6 +577,20 @@ EntityEvents.spawned(event => {
     tgt = nearestPlayer(e.server, e.x, e.z)
     if (tgt) e.setTarget(tgt)
   } catch (err) { lsWarn('ls_siege:477', err) }
+
+  // ── 선봉만 체력을 더 준다 ──
+  // 곱셈이라 ls_mobscale 과 순서가 갈려도 결과가 같다(둘 다 base × k 를 하고 setHealth 한다).
+  // 나중에 도는 쪽이 최종값으로 체력을 채우므로 어느 쪽이 먼저든 상관없다.
+  if (!(`${e.tags}`).includes(SIEGE_BOSS_TAG)) return
+  var sbAttr = null
+  try {
+    sbAttr = e.getAttribute('minecraft:generic.max_health')
+    if (sbAttr) {
+      var sbHp = sbAttr.getBaseValue() * SIEGE_BOSS_HP_MUL
+      sbAttr.setBaseValue(sbHp)
+      e.setHealth(sbHp)
+    }
+  } catch (err) { lsWarn('ls_siege:vanguard-hp', err) }
 })
 
 // ── 공성 몹 사망 추적 ──
@@ -551,17 +615,17 @@ EntityEvents.death(event => {
   }
   if (tagStr.includes('ls_final_boss')) {
     if (srv && finaleStage(srv) === 90) {
-      if (!sfGetB(srv, 'ls_trueform_off') && !sfGetB(srv, 'ls_true_spawned')) spawnTrueForm(srv)
+      if (!LS.trueFormOff(srv) && !LS.trueSpawned(srv)) spawnTrueForm(srv)
       else finaleVictory(srv)
     }
     return
   }
   if (!tagStr.includes('ls_siege')) return
   const server = e.server
-  if (!server || !sfGetB(server, 'ls_siege_active')) return
-  let rem = sfGetI(server, 'ls_siege_remaining') - 1
+  if (!server || !LS.siegeActive(server)) return
+  let rem = LS.siegeRemaining(server) - 1
   if (rem < 0) rem = 0
-  sfSetI(server, 'ls_siege_remaining', rem)
+  LS.setSiegeRemaining(server, rem)
   if (rem <= 0) onWaveCleared(server)
 })
 
@@ -610,6 +674,84 @@ function onNewDay(server, day) {
   console.log(`[LS-SIEGE] day=${day} nodes=${nodes} threat=${getThreat(server)}`)
 }
 
+// ── 공성일의 하루가 「곧 온다」로 물든다 ──
+//
+// 여태 공성일의 낮은 - 평범한 낮 - 이었다. 아침에 «다음 공성 D-0» 한 줄이 지나가고,
+// 해가 지고, 갑자기 뿔피리와 함께 시작됐다. 긴장이 시작 순간에만 몰려 있었다.
+//
+// 7 Days to Die 가 블러드문 하루를 통째로 예고로 쓰는 이유가 여기 있다:
+// **긴장은 사건이 아니라 예고에서 나온다.** 오늘 밤 온다는 걸 아침부터 알면
+// 그날의 채굴·건설·원정이 전부 «밤까지 돌아올 수 있나»로 다시 계산된다.
+// 사건 자체는 30초면 끝나지만 예고는 하루를 채운다.
+//
+// 세 박자로 나눈다. 각자 다른 감각을 쓴다 — 글자·소리·화면:
+//   아침(하루 시작)   글자   "오늘 밤이다"          — 계획을 세울 시간을 준다
+//   저녁(11500)       소리   먼 천둥                 — 밖에 있다면 지금 돌아와야 한다
+//   밤 직전(12600)    화면   뿔피리 + 성역으로       — 마지막 호출
+//
+// ※ 하늘을 실제로 어둡게 하려면 /weather thunder 뿐인데 그건 비를 동반한다.
+//   불이 꺼지고 작물·몹 스폰이 달라지는 건 예고의 대가로 너무 크다. 소리로만 한다.
+const DREAD_DUSK = 11500      // ls_daynight.js 의 B_DUSK 와 같은 값
+const DREAD_HORN = 12600      // isNight 의 13000 직전 — 마지막 호출
+const DREAD_BAR_EVERY = 2     // 저녁 이후 액션바 갱신 간격(초)
+
+// 오늘 밤 실제로 공성이 오는가. 위 tick 의 시작 조건과 - 같은 판정 - 이어야 한다.
+// 갈리면 «온다고 해놓고 안 오거나», 더 나쁘게는 «예고 없이 온다».
+function sdSiegeComing(server) {
+  return finaleStage(server) === 0
+    && !LS.siegeActive(server)
+    && sancIsSet(server)
+    && getThreat(server) > 0
+    && isSiegeDay(worldDay(server))
+}
+
+function sdTick(server) {
+  if (!sdSiegeComing(server)) return
+  var sdT = dayTime(server)
+  var sdStep = LS.dreadStep(server)
+
+  // 1박: 아침. onNewDay 가 아니라 여기서 내는 이유는 판정을 한 곳에만 두기 위해서다
+  // (onNewDay 는 위협도를 - 올리는 중 - 이라, 거기서 판정하면 오늘 값과 어긋날 수 있다).
+  if (sdStep < 1) {
+    LS.setDreadStep(server, 1)
+    var sdGrand = isGrandDay(server)
+    say(server, sdGrand
+      ? '§4☠ 오늘 밤, 대공세다. §7해가 지기 전에 돌아와라.'
+      : '§c⚔ 오늘 밤, 공성이다. §7해가 지기 전에 돌아와라.')
+    playAll(server, 'minecraft:entity.wither.ambient', 0.35, 0.6)
+    return
+  }
+
+  // 2박: 저녁. 먼 천둥 — 밖에 있다면 지금이 돌아올 시각이다.
+  if (sdStep < 2 && sdT >= DREAD_DUSK) {
+    LS.setDreadStep(server, 2)
+    say(server, '§8먼 곳에서 천둥이 친다. §7어둠이 모이고 있다.')
+    playAll(server, 'minecraft:entity.lightning_bolt.thunder', 0.9, 0.5)
+    playAll(server, 'minecraft:ambient.cave', 0.6, 0.5)
+    return
+  }
+
+  // 3박: 밤 직전. 뿔피리 + 화면 — 마지막 호출이다.
+  if (sdStep < 3 && sdT >= DREAD_HORN) {
+    LS.setDreadStep(server, 3)
+    server.runCommandSilent('title @a times 5 40 10')
+    server.runCommandSilent('title @a title {"text":"어둠이 온다","color":"dark_red","bold":true}')
+    server.runCommandSilent('title @a subtitle {"text":"성역으로","color":"red"}')
+    playAll(server, 'minecraft:event.raid.horn', 1, 0.45)
+    return
+  }
+
+  // 저녁부터 밤까지는 남은 시간을 액션바로 센다. 하루 종일 띄우지 않는 이유:
+  // 상시 표시는 배경이 되어 안 읽힌다. 마지막 구간에만 나와야 «줄어든다»가 보인다.
+  if (sdStep >= 2 && sdT < 13000 && (LS_TICK / 20) % DREAD_BAR_EVERY === 0) {
+    // 남은 실시간(초) = 남은 틱 ÷ 그 구간 배율 ÷ 20. 저녁 구간 배율은 ls_daynight 이 정한다.
+    // 여기서 정확히 역산하면 두 파일이 결합되므로, 대략치를 «약 N초»로만 보여준다.
+    var sdLeft = Math.max(0, Math.round((13000 - sdT) / 0.42 / 20))
+    server.runCommandSilent(
+      `title @a actionbar {"text":"어둠까지 약 ${sdLeft}초","color":"red"}`)
+  }
+}
+
 // ── 상단 상시 표시: 며칠차 · 다음 공성 · 위협도 ──
 // 커스텀 낮밤이라 체감으로 날짜를 세기 어렵다 — 항상 보이게 띄운다.
 let DAY_BAR_LAST = ''
@@ -627,8 +769,8 @@ function dayBossbar(server) {
     var left = daysToSiege(day)
     var grand = isSiegeDay(day) && day % GRAND_EVERY === 0
     max = SIEGE_EVERY; val = SIEGE_EVERY - left
-    if (sfGetB(server, 'ls_siege_active')) {
-      label = `⚔ ${day}일차 · ${sfGetB(server, 'ls_siege_grand') ? '대공세' : '공성'} 진행 중 · 위협도 ${th}`; color = 'red'
+    if (LS.siegeActive(server)) {
+      label = `⚔ ${day}일차 · ${LS.siegeGrand(server) ? '대공세' : '공성'} 진행 중 · 위협도 ${th}`; color = 'red'
     } else if (left === 0) {
       label = `⚔ ${day}일차 · 오늘 밤 ${grand ? '대공세' : '공성'} · 위협도 ${th}`; color = 'red'
     } else {
@@ -657,21 +799,23 @@ ServerEvents.tick(event => {
 
   // 날짜 변화 감지
   const day = worldDay(server)
-  if (day !== sfGetI(server, 'ls_day')) {
-    sfSetI(server, 'ls_day', day)
+  if (day !== LS.siegeDay(server)) {
+    LS.setSiegeDay(server, day)
+    LS.setDreadStep(server, 0)   // 예고 박자를 새 하루마다 처음부터
     onNewDay(server, day)
   }
+  sdTick(server)
 
   const night = isNight(server)
-  const wasNight = sfGetB(server, 'ls_night')
-  sfSetB(server, 'ls_night', night)
-  const active = sfGetB(server, 'ls_siege_active')
+  const wasNight = LS.wasNight(server)
+  LS.setWasNight(server, night)
+  const active = LS.siegeActive(server)
   const fin = finaleStage(server)
 
   // 밤 시작
   if (night && !wasNight) {
     if (fin >= 1 && fin < FINALE_NIGHTS && !active && sancIsSet(server)) {
-      sfSetB(server, 'ls_fn_ok', false)
+      LS.setFinaleNightOk(server, false)
       say(server, `§5☽ 최종장 ${fin}번째 밤이 내린다...`)
       startSiege(server, true, true) // 강제 대공세급
     } else if (fin === FINALE_NIGHTS && sancIsSet(server)) {
@@ -683,12 +827,12 @@ ServerEvents.tick(event => {
   }
   // 새벽
   if (!night && wasNight) {
-    if (sfGetB(server, 'ls_siege_active')) finishSiege(server, 'dawn')
+    if (LS.siegeActive(server)) finishSiege(server, 'dawn')
     if (fin >= 1 && fin < FINALE_NIGHTS) {
-      if (sfGetB(server, 'ls_fn_ok')) {
+      if (LS.finaleNightOk(server)) {
         var next = fin + 1
         setFinale(server, next)
-        sfSetB(server, 'ls_fn_ok', false)
+        LS.setFinaleNightOk(server, false)
         if (next === FINALE_NIGHTS) {
           sfStore(server).putInt('ls_nrate_pct', 40) // 마지막 밤: 2.5배 길이 (보스가 시간을 쥔다)
           say(server, '§4☽ 다음 밤이 마지막이다 — 어둠의 심장이 온다. §c만반의 준비를 해주세요.')
@@ -709,13 +853,13 @@ ServerEvents.tick(event => {
   // ※ 예전엔 warden.heartbeat 였는데, 공성에 워든이 실제로 섞여 나온다(위협도 표 참고).
   //    그래서 워든을 잡고도 심장 소리가 계속 나면 "안 죽은 건가?" 하고 헷갈렸다.
   //    워든과 무관한 소리로 바꾼다 — 무거운 발소리 쪽이 "몰려온다"는 뜻도 더 맞다.
-  if (sfGetB(server, 'ls_siege_active') && LS_TICK % 300 === 0) {
+  if (LS.siegeActive(server) && LS_TICK % 300 === 0) {
     playAll(server, 'minecraft:entity.ravager.step', 0.7, 0.6)
   }
   // 공성 중: 상단 보스바 갱신 (2초마다 — 피해/수리 실시간 반영)
-  if (sfGetB(server, 'ls_siege_active') && LS_TICK % 40 === 0) wallBossbar(server, true)
+  if (LS.siegeActive(server) && LS_TICK % 40 === 0) wallBossbar(server, true)
   // 공성 중: 성벽 방어선 판정 (2초마다) — 성벽이 서 있는 동안 몹은 못 들어오고, 대신 성벽을 두드린다
-  if (sfGetB(server, 'ls_siege_active') && sancIsSet(server) && LS_TICK % 40 === 0 && !wallBroken(server)) {
+  if (LS.siegeActive(server) && sancIsSet(server) && LS_TICK % 40 === 0 && !wallBroken(server)) {
     var wc = sancPos(server)
     var R = wallR(server)
     var banging = 0
@@ -746,10 +890,10 @@ ServerEvents.tick(event => {
     // ── 불굴 유지 판정 ──
     // 버티는 동안엔 아무리 두들겨도 HP 가 1 밑으로 내려가지 않는다.
     // 시간이 끝나면 그 순간 무너진다 — 버틴 15초 안에 손을 못 썼다는 뜻이니까.
-    var standing = sfGetB(server, 'wall_last_stand') && LS_TICK < sfGetI(server, 'wall_stand_until')
-    if (sfGetB(server, 'wall_last_stand') && !standing && wallHp(server) <= 1) {
+    var standing = LS.wallLastStand(server) && LS_TICK < LS.wallStandUntil(server)
+    if (LS.wallLastStand(server) && !standing && wallHp(server) <= 1) {
       wallSetHp(server, 0)
-      sfSetB(server, 'wall_last_stand', false)
+      LS.setWallLastStand(server, false)
       server.runCommandSilent('title @a title {"text":"성벽 붕괴!","color":"dark_red","bold":true}')
       server.runCommandSilent('title @a subtitle {"text":"버텨낼 시간이 끝났습니다","color":"red"}')
       playAll(server, 'minecraft:entity.generic.explode', 1, 0.5)
@@ -767,17 +911,17 @@ ServerEvents.tick(event => {
       playAll(server, 'minecraft:entity.zombie.attack_iron_door', 0.8, 0.7)
       var hp = wallHp(server), mx = wallMax(server)
       var stage = hp <= mx * 0.25 ? 1 : hp <= mx * 0.5 ? 2 : hp <= mx * 0.75 ? 3 : 4
-      if (stage < sfGetI(server, 'wall_warn')) {
-        sfSetI(server, 'wall_warn', stage)
+      if (stage < LS.wallWarn(server)) {
+        LS.setWallWarn(server, stage)
         if (stage === 3) say(server, `§6▨ 성벽이 공격받고 있다! ${wallBar(server)}`)
         if (stage === 2) { say(server, `§c▨ 성벽에 금이 간다! ${wallBar(server)} §c— 성벽 밖의 적을 처치해 주세요!`); playAll(server, 'minecraft:block.bell.use', 1, 0.6) }
         if (stage === 1) { server.runCommandSilent('title @a title {"text":"▨ 성벽 위기","color":"red","bold":true}'); playAll(server, 'minecraft:entity.wither.hurt', 1, 0.5) }
       }
       // 방벽 Lv4「불굴의 성벽」— 무너지기 직전 HP 1 로 버티며 15초를 번다.
       // 그 15초가 "밖의 적을 정리하고 보수할 마지막 기회"다. 한 번의 공성에 한 번만 발동한다.
-      if (hp <= 0 && townLvl(server, 'ramparts') >= 4 && !sfGetB(server, 'wall_last_stand')) {
-        sfSetB(server, 'wall_last_stand', true)
-        sfSetI(server, 'wall_stand_until', LS_TICK + 300)   // 15초
+      if (hp <= 0 && townLvl(server, 'ramparts') >= 4 && !LS.wallLastStand(server)) {
+        LS.setWallLastStand(server, true)
+        LS.setWallStandUntil(server, LS_TICK + 300)   // 15초
         wallSetHp(server, 1)
         server.runCommandSilent('title @a title {"text":"▨ 불굴의 성벽","color":"gold","bold":true}')
         server.runCommandSilent('title @a subtitle {"text":"15초간 무너지지 않는다 — 지금 밖을 정리하라","color":"yellow"}')
@@ -794,7 +938,7 @@ ServerEvents.tick(event => {
     }
   }
   // 공성 중 마을 발전 효과 (성역 반경 내)
-  if (sfGetB(server, 'ls_siege_active') && sancIsSet(server)) {
+  if (LS.siegeActive(server) && sancIsSet(server)) {
     var c = sancPos(server)
     // 방벽 Lv1: 결계 — 재생+저항 (3초마다)
     if (townLvl(server, 'ramparts') >= 1 && LS_TICK % 60 === 0) {
@@ -817,7 +961,7 @@ ServerEvents.tick(event => {
     }
   }
   // 공성 중 진격 유지: 타겟 잃은 몹 재타겟팅 (10초마다)
-  if (sfGetB(server, 'ls_siege_active') && LS_TICK % 200 === 0) {
+  if (LS.siegeActive(server) && LS_TICK % 200 === 0) {
     try {
       server.getEntities().forEach(e => {
         if (e && e.tags && (`${e.tags}`).includes('ls_siege') && e.isAlive() && !e.getTarget()) {
@@ -845,10 +989,10 @@ ServerEvents.tick(event => {
     }
   }
   // 승리 후 여명 가속
-  if (sfGetB(server, 'ls_dawnbreak')) {
+  if (LS.dawnbreak(server)) {
     var curDawn = dayTime(server)
     if (curDawn >= 23600 || curDawn < 12000) {
-      sfSetB(server, 'ls_dawnbreak', false)
+      LS.setDawnbreak(server, false)
       sfStore(server).putBoolean('ls_time_locked', false)
       playAll(server, 'minecraft:block.beacon.activate', 1, 1.4)
     } else {
@@ -935,7 +1079,7 @@ ServerEvents.commandRegistry(event => {
     })))
     .then(Commands.literal('radius').requires(s => s.hasPermission(2)).then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
       const n = Math.max(8, Math.min(60, Arguments.INTEGER.getResult(ctx, 'n')))
-      sfSetI(ctx.source.server, 'wall_r', n)
+      LS.setWallRadius(ctx.source.server, n)
       ctx.source.sendSystemMessage(Text.of(`§a성벽 반경 = ${n} §7(실제 성벽 크기에 맞춰 조정)`)); return 1
     })))
     .then(Commands.literal('set').requires(s => s.hasPermission(2)).then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
@@ -973,7 +1117,7 @@ ServerEvents.commandRegistry(event => {
       const names = nodeNames(s)
       if (names.indexOf(name) >= 0) { ctx.source.sendSystemMessage(Text.of('§c이미 있는 노드 이름')); return 0 }
       names.push(name)
-      sfSetS(s, 'ls_nodes_names', names.join(','))
+      setNodeNames(s, names)
       setThreat(s, getThreat(s)) // 하한 재적용
       say(s, `§5⚠ 균열 노드 관측: §d${name} §7— 어둠이 짙어진다 (활성 ${names.length}개)`)
       playAll(s, 'minecraft:block.end_portal.spawn', 0.6, 0.5)
@@ -987,7 +1131,7 @@ ServerEvents.commandRegistry(event => {
         const i = names.indexOf(name)
         if (i < 0) { ctx.source.sendSystemMessage(Text.of('§c없는 노드 이름')); return 0 }
         names.splice(i, 1)
-        sfSetS(s, 'ls_nodes_names', names.join(','))
+        setNodeNames(s, names)
         const nodeReward = Math.round((30 + (townLvl(s, 'sanctum') >= 3 ? 30 : 0)) * REWARD_MULT) // 성소 Lv3: 노드 보상 강화
         addTreasury(s, nodeReward)
         const nodeEss = townLvl(s, 'sanctum') >= 3 ? 3 : 2
@@ -998,14 +1142,14 @@ ServerEvents.commandRegistry(event => {
         playAll(s, 'minecraft:ui.toast.challenge_complete', 1, 0.8)
         playAll(s, 'minecraft:block.beacon.activate', 0.8, 1.2)
         // 마지막 노드 파괴 + 최종장 무장 상태 → 어둠의 발악 개막
-        if (names.length === 0 && sfGetB(s, 'ls_finale_armed') && finaleStage(s) === 0) beginFinale(s)
+        if (names.length === 0 && LS.finaleArmed(s) && finaleStage(s) === 0) beginFinale(s)
         return 1
       }))))
 
   event.register(Commands.literal('finale')
     .executes(ctx => {
       const s = ctx.source.server; const f = finaleStage(s)
-      const txt = f === 0 ? (sfGetB(s, 'ls_finale_armed') ? '대기 중 (마지막 노드 파괴 시 개막)' : '비활성 (/finale arm 으로 무장)')
+      const txt = f === 0 ? (LS.finaleArmed(s) ? '대기 중 (마지막 노드 파괴 시 개막)' : '비활성 (/finale arm 으로 무장)')
         : f === 100 ? '§6승리 — 세상을 되찾았다 ★'
         : f === 90 ? '§4어둠의 심장 전투 중 (하늘 = 보스 체력)'
         : f === FINALE_NIGHTS ? `§5보스 밤 대기 (오늘 밤 강림)` : `§5방어 밤 ${f}/${FINALE_NIGHTS - 1} 진행 중`
@@ -1013,7 +1157,7 @@ ServerEvents.commandRegistry(event => {
       return 1
     })
     .then(Commands.literal('arm').requires(s => s.hasPermission(2)).executes(ctx => {
-      sfSetB(ctx.source.server, 'ls_finale_armed', true)
+      LS.setFinaleArmed(ctx.source.server, true)
       ctx.source.sendSystemMessage(Text.of('§5최종장 무장됨 — 마지막 균열 노드가 파괴되면 자동 개막')); return 1
     }))
     .then(Commands.literal('start').requires(s => s.hasPermission(2)).executes(ctx => {
@@ -1025,22 +1169,34 @@ ServerEvents.commandRegistry(event => {
       s.runCommandSilent('kill @e[tag=ls_final_boss]')
       s.runCommandSilent('kill @e[tag=ls_final_boss_true]')
       setFinale(s, 0)
-      sfSetB(s, 'ls_fn_ok', false)
-      sfSetB(s, 'ls_dawnbreak', false)
-      sfSetB(s, 'ls_true_spawned', false)
+      LS.setFinaleNightOk(s, false)
+      LS.setDawnbreak(s, false)
+      LS.setTrueSpawned(s, false)
       sfStore(s).putBoolean('ls_time_locked', false)
       sfStore(s).putInt('ls_nrate_pct', 0)
       ctx.source.sendSystemMessage(Text.of('§7최종장 중단·초기화 (시간 잠금 해제)')); return 1
     }))
     .then(Commands.literal('trueform').requires(s => s.hasPermission(2)).executes(ctx => {
       const s = ctx.source.server
-      const off = !sfGetB(s, 'ls_trueform_off')
-      sfSetB(s, 'ls_trueform_off', off)
+      const off = !LS.trueFormOff(s)
+      LS.setTrueFormOff(s, off)
       ctx.source.sendSystemMessage(Text.of(off ? '§7진(眞) 보스 페이즈 OFF' : '§a진(眞) 보스 페이즈 ON (기본)')); return 1
     })))
 
   event.register(Commands.literal('siege')
     .then(Commands.literal('start').requires(s => s.hasPermission(2)).executes(ctx => startSiege(ctx.source.server, false)))
+    // 예고 세 박자를 다시 보기. 박자는 하루에 한 번씩만 도는데, 그걸 확인하려고
+    // 실제로 하루를 기다릴 수는 없다. 되감고 /time set 으로 원하는 시각에 놓는다.
+    .then(Commands.literal('dread').requires(s => s.hasPermission(2)).executes(ctx => {
+      const s = ctx.source.server
+      LS.setDreadStep(s, 0)
+      ctx.source.sendSystemMessage(Text.of(
+        `§7예고 박자 되감김 §8— 오늘 공성 ${sdSiegeComing(s) ? '§a예정' : '§c없음'}§8 · 지금 ${dayTime(s)}틱`))
+      ctx.source.sendSystemMessage(Text.of(
+        `§8아침(즉시) → 저녁(${DREAD_DUSK}) → 뿔피리(${DREAD_HORN}) → 공성(13000)`))
+      ctx.source.sendSystemMessage(Text.of('§8/time set <틱> 으로 각 구간에 놓고 본다'))
+      return 1
+    }))
     // 대공세를 그날이 아니어도 강제로 연다. 원래는 GRAND_EVERY(12일)의 배수 밤에만 붙는데,
     // 테스트하려고 /time set 으로 날짜를 넘기는 건 다른 주기(공성일·현상금·시세)까지 흔든다.
     .then(Commands.literal('grand').requires(s => s.hasPermission(2)).executes(ctx => startSiege(ctx.source.server, false, true)))
@@ -1049,8 +1205,8 @@ ServerEvents.commandRegistry(event => {
       const d = worldDay(s)
       const untilGrand = (GRAND_EVERY - (d % GRAND_EVERY)) % GRAND_EVERY
       const grandTxt = untilGrand === 0 && d >= GRAND_EVERY ? '오늘!' : `${untilGrand || GRAND_EVERY}일 후`
-      if (sfGetB(s, 'ls_siege_active'))
-        ctx.source.sendSystemMessage(Text.of(`§c공성 진행 중${sfGetB(s, 'ls_siege_grand') ? ' §4[대공세]' : ''} §7· 물결 ${sfGetI(s, 'ls_siege_wave_no')} · 남은 적 ${sfGetI(s, 'ls_siege_remaining')}기 · 남은 물결 ${sfGetI(s, 'ls_siege_waves')}`))
+      if (LS.siegeActive(s))
+        ctx.source.sendSystemMessage(Text.of(`§c공성 진행 중${LS.siegeGrand(s) ? ' §4[대공세]' : ''} §7· 물결 ${LS.siegeWaveNo(s)} · 남은 적 ${LS.siegeRemaining(s)}기 · 남은 물결 ${LS.siegeWaves(s)}`))
       else
         ctx.source.sendSystemMessage(Text.of(`§7공성 없음 · §6${d}일차 §7· 위협도 ${getThreat(s)} · 노드 ${nodeCount(s)} · 대공세 ${grandTxt} · 금고 ${getTreasury(s)}`))
       // 인원 계수가 실제로 얼마나 붙는지 — 안 보이면 조절할 근거가 없다
@@ -1070,11 +1226,11 @@ ServerEvents.commandRegistry(event => {
       return 1
     }))
     .then(Commands.literal('end').requires(s => s.hasPermission(2)).executes(ctx => {
-      if (!sfGetB(ctx.source.server, 'ls_siege_active')) { ctx.source.sendSystemMessage(Text.of('§7진행 중인 공성이 없습니다.')); return 0 }
+      if (!LS.siegeActive(ctx.source.server)) { ctx.source.sendSystemMessage(Text.of('§7진행 중인 공성이 없습니다.')); return 0 }
       finishSiege(ctx.source.server, 'give_up'); return 1
     }))
     .then(Commands.literal('cancel').requires(s => s.hasPermission(2)).executes(ctx => {
-      if (!sfGetB(ctx.source.server, 'ls_siege_active')) { ctx.source.sendSystemMessage(Text.of('§7진행 중인 공성이 없습니다.')); return 0 }
+      if (!LS.siegeActive(ctx.source.server)) { ctx.source.sendSystemMessage(Text.of('§7진행 중인 공성이 없습니다.')); return 0 }
       cancelSiege(ctx.source.server); return 1
     })))
 })
