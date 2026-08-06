@@ -39,29 +39,29 @@ KubeJS 는 붙이기 빨랐지만, 하루 동안 **문법 검사로는 안 잡�
 | 봉화 | `data/BeaconData.java` — 이름·좌표. **개수를 공성·희망이 읽는다** (이관 5단계) |
 | 경마 | `data/CasinoData.java` — 단계·말 위치·베팅 (이관 5단계) |
 | 구출 | `data/RescueData.java` — 원정·명부. **인구 = 명부의 크기** (이관 5단계) |
+| 목소리 | `data/VoiceData.java` — 예산·대사별 상태·감시 스냅샷·사람별 접속 (이관 6단계) |
 | 마을 판정 | `town/TownService.java` — 완성 가능 여부·집행. **판정은 여기 한 곳** |
 | 마을 창 | `town/TownMenu.java` + `client/TownHubScreen`·`TownTrackScreen` |
 | 유물 8종·스킬·각성 새김 | `item/`, `RelicSkills`, `LSCommands` |
 | 가호 선택 화면 | `client/FateSelectScreen`, `FateCatalog` |
 
-### 아직 스크립트 (`server/kubejs/server_scripts`) — 24파일 6,465줄 (2026-08-06)
+### 아직 스크립트 (`server/kubejs/server_scripts`) — 24파일 6,596줄 (2026-08-06, 이관 완료 시점)
 
-`ls_siege`(1241) · `ls_voice`(542) · `ls_migrate`(538) · `ls_rift`(434) · `ls_fate`(323) ·
+`ls_siege`(1244) · `ls_migrate`(627) · `ls_voice`(571) · `ls_rift`(434) · `ls_fate`(327) ·
 `ls_rescue`(309) · `ls_bossdiff`(301) · `ls_ascend`(281) · `ls_enrage`(265) · `ls_casino`(265) ·
 `ls_beacon`(228) · `ls_mobscale`(222) · `ls_bounty`(215) · `ls_relic`(207) · `ls_hope`(195) ·
-`ls_stats`(170) · `ls_title`(155) · `ls_config`(132) · `ls_util`(126) · `ls_towneffect`(94) ·
-`ls_daynight`(93) · `ls_revive`(53) · `ls_keys`(53) · `last_stardust_rules`(23)
+`ls_stats`(170) · `ls_title`(155) · `ls_config`(132) · `ls_util`(126) · `ls_daynight`(99) ·
+`ls_towneffect`(94) · `ls_revive`(53) · `ls_keys`(53) · `last_stardust_rules`(23)
 
 > 줄 수는 세는 순간 낡는다. 갱신하려면 `wc -l server/kubejs/server_scripts/*.js`.
 >
-> **줄었을 것 같지만 늘었다** — 4단계 뒤 5,868 이었는데 5단계 뒤 6,465 다.
+> **줄었을 것 같지만 늘었다** — 4단계 뒤 5,868 → 이관 완료 6,596.
 > 이관은 «스크립트를 줄이는 일»이 아니라 «데이터의 주인을 하나로 만드는 일»이라서 그렇다.
 > 판정·연출·명령은 그대로 남고, 오히려 그 자리에 «왜 이렇게 했나»가 주석으로 붙는다.
-> 5단계에서 늘어난 600줄 중 300은 `ls_migrate`(옛 키 옮기기 6종)이고, 그건 **한동안 문제가
-> 없으면 통째로 지울 파일**이다.
+> 늘어난 730줄 중 **390이 `ls_migrate`**(옛 키 옮기기 8종)이고, 그건 **한동안 문제가 없으면
+> 통째로 지울 파일**이다. 그걸 빼면 실제 증가는 340줄, 대부분 주석이다.
 >
-> 줄 수로 이관 진척을 재면 안 된다 — `LSData` 섹션 개수(지금 **9개**)와 B절 스캐너가 진짜 지표다.
-> B절이 옛 키를 「`ls_migrate.js` 에서만 읽는다」로 잡으면 그게 이관이 끝났다는 서명이다.
+> 줄 수로 이관 진척을 재면 안 된다 — `LSData` 섹션 개수(지금 **10개**)와 B절 스캐너가 진짜 지표다.
 
 ### 은퇴
 
@@ -134,8 +134,23 @@ LS.population · isRescued · settleSurvivor
 LS.rescueActive/Built/Idx/X/Y/Z/Guards · beginScout · revealCamp · killGuard · endRescue
 LS.rescueDay/setRescueDay
 
+// ── 이관 6단계 = 마지막 (완료 2026-08-06) ──
+// 하늘 — 공성이 쓰고 ls_daynight·ls_voice 가 읽는다
+LS.timeLocked/setTimeLocked · nightRatePct/setNightRatePct
+
+// 목소리 — 대사 문장·채널·쿨다운·예산 상한은 ls_voice.js 에 남는다
+LS.voiceMuted/setVoiceMuted
+LS.voiceBudget/setVoiceBudget/takeVoiceBudget · voiceBudgetDay/setVoiceBudgetDay
+//   ※ voiceBudget 은 「아직 안 정해짐」을 -1 로 준다 (상한이 스크립트에 있어서)
+LS.voiceOnce/setVoiceOnce · voiceCd/setVoiceCd · voicePend/setVoicePend
+LS.nextVoiceRot          // 인덱스를 주면서 동시에 넘긴다 — 읽기·쓰기 두 줄을 접었다
+LS.resetVoiceLines       // 1회성·쿨다운만. **회전 인덱스는 안 지운다**
+LS.voiceSeenRf/Band/Wall/Night + set*   // 사본이 아니라 진도표
+LS.markVoiceKnown · voiceLastDay/voiceLastRf · stampVoiceSeen
+
 // /lsdata 표시용
-LS.bossDiffSummary · titleSummary · bountySummary · beaconSummary · casinoSummary · rescueSummary
+LS.bossDiffSummary · titleSummary · bountySummary · beaconSummary · casinoSummary ·
+LS.rescueSummary · voiceSummary
 ```
 
 **이게 없으면 금고가 둘로 갈린다** — 모드의 금고와 스크립트의 `persistentData['ls_treasury']` 가
@@ -143,12 +158,22 @@ LS.bossDiffSummary · titleSummary · bountySummary · beaconSummary · casinoSu
 
 현재 경유 중: `ls_siege` · `ls_rift` · `ls_beacon` · `ls_bounty` · `ls_rescue` · `ls_stats` ·
 `ls_ascend` · `ls_mobscale` · `ls_voice` · `ls_towneffect` · `ls_revive` · `ls_fate` · `ls_relic` ·
-`ls_hope` · `ls_migrate` · `ls_bossdiff` · `ls_title` · `ls_casino` (18/24)
+`ls_hope` · `ls_migrate` · `ls_bossdiff` · `ls_title` · `ls_casino` · `ls_daynight` (19/24)
+
+안 타는 다섯은 상태가 없거나(`ls_util`·`ls_config`·`last_stardust_rules`) 자기 값만
+쓰는 것(`ls_keys` 쿨다운·`ls_enrage` 메모리)이다.
 
 > 대조는 `python tools/scan_dead_kubejs.py` 가 자동으로 한다 (A절) — 스크립트가 부르는데
 > 자바에 없는 메서드는 **그 줄에서 런타임에 터진다.** 문법 검사로는 절대 안 걸린다.
 
-> **수명:** 남은 시스템을 전부 옮기면 이 파일과 `build.gradle` 의 KubeJS `compileOnly` 를 함께 지운다.
+> **수명 — 예전에 여기 적혀 있던 말은 틀렸다 (2026-08-06 정정).**
+> 「남은 시스템을 전부 옮기면 이 파일을 지운다」고 적어 뒀는데, **데이터 이관이 끝난 지금도 못 지운다.**
+> 이관이 옮긴 건 «데이터의 주인»이고, **판정·연출·명령은 설계상 스크립트에 남긴 것**이기 때문이다
+> (웨이브 구성·보상 계산·대사 문장은 `/reload` 로 고치는 값이라 그쪽이 맞는 자리다).
+> 그 스크립트들이 장부를 읽으려면 이 다리가 필요하다.
+>
+> 즉 다리는 **KubeJS 자체를 걷어낼 때** 사라진다. 그건 이관과 다른 작업이고, 계획에 없다.
+> 「이관 = 다리 제거」로 적어둔 탓에 끝나고도 지울 수 없는 이유를 다시 따져봐야 했다.
 
 ---
 
@@ -163,7 +188,7 @@ LS.bossDiffSummary · titleSummary · bountySummary · beaconSummary · casinoSu
 | 3 | **가호·유물·각성** (`fate_*`·`relic_*`·`star_*`) | ✅ **완료 (2026-07-31)** — `LSData.hero()`. 상한(1~5)·중복 직업 판정도 그쪽이 건다 |
 | 4 | **공성** (`ls_siege` 1200+줄) | ✅ **완료 (2026-07-31)** — `LSData.siege()`. 키 26개 + **바깥에서 읽던 6곳** |
 | 5 | 나머지 (`bossdiff`·`title`·`bounty`·`beacon`·`casino`·`rescue`) | ✅ **완료 (2026-08-06)** — 섹션 6개. **바깥에서 읽던 3곳**도 같이 |
-| 6 | `ls_voice` (542줄) | ⬜ **마지막.** 다른 시스템의 상태 전이를 감시하는 구조라 감시 대상이 먼저 자리를 잡아야 한다 |
+| 6 | `ls_voice` + 하늘(`ls_time_locked`·`ls_nrate_pct`) | ✅ **완료 (2026-08-06)** — `LSData.voice()`. **이관 끝** |
 
 > **5단계에서 옮긴 이유는 「크다」가 아니라 「키를 문자열로 조립한다」였다.** 여섯 중 셋이 그랬다:
 > `'bd_' + id + '_hp'`(보스 id 의 콜론이 NBT 키가 된다) · `titles_<이름>` CSV ·
@@ -191,8 +216,36 @@ LS.bossDiffSummary · titleSummary · bountySummary · beaconSummary · casinoSu
 > 실제로 `ls_stats.js` 의 명예 보드가 그렇게 몇 주 동안 «CSV 첫 사람, 0점»을 1위로 내보내고 있었다
 > (`ls_town.js` 가 `.disabled` 되면서 `town_c_<name>` 을 쓰는 쪽만 사라졌다). 그 검출이 B절이다.
 
-`ls_voice`(542)만 남았다. 감시 대상이 전부 자리를 잡았으니 이제 옮길 수 있다 —
-그게 끝나면 `LSKubeBridge` 와 `build.gradle` 의 KubeJS `compileOnly` 를 함께 지운다.
+**이관이 끝났다 (2026-08-06).**
+
+`ls_voice` 를 마지막에 둔 이유는 그게 **다른 시스템의 상태 전이를 감시하는 구조**여서다.
+감시 대상을 옮기는 도중에 감시자를 같이 옮기면 「대사가 안 나오는」 원인이 둘로 갈린다.
+
+6단계에서 같이 정리한 것이 하나 더 있다 — `ls_time_locked`·`ls_nrate_pct`.
+공성이 쓰고 `ls_daynight`·`ls_voice` 가 읽던, **마지막까지 남아 있던 파일 경계를 넘는 키**다.
+4단계에서 옮긴 26개와 성격이 같았는데 이 둘만 빠져 있었다.
+
+### 끝났다는 것을 어떻게 아나
+
+줄 수도, 파일 개수도 아니다. **두 가지로 본다:**
+
+1. **`scan_dead_kubejs.py` B절이 옛 키를 전부 「`ls_migrate.js` 에서만 읽는다」로 잡는다.**
+   쓰는 쪽이 하나도 안 남았다는 뜻이고, 그게 이관 완료의 서명이다.
+2. **파일 경계를 넘는 `persistentData` 키가 0 개다.**
+   남은 `persistentData` 사용은 전부 **자기 파일 안에서만 도는 값**이다:
+
+   | 키 | 파일 | 왜 안 옮겼나 |
+   |---|---|---|
+   | `ls_cycle_off` | `ls_daynight` | 그 파일만 읽고 쓴다. 옮길 이유가 없다 |
+   | `ls_hope_loss` | `ls_hope` | 〃 |
+   | `ks_cd_<이름>` | `ls_keys` | 〃 (쿨다운) |
+   | `cer_step`·`cer_wait` | `ls_stats` | 〃 (폐막식 진행) |
+   | `ms_*` | `ls_mobscale` | 〃 |
+   | `rf_*` | `ls_rift` | 〃 |
+   | `town_npc_<키>` | `ls_rescue` | **아무도 안 읽는다** — 다음 월드를 위한 메모다 |
+
+   > 이관의 목표는 «persistentData 를 없애는 것»이 아니라 **«같은 값을 두 곳이 갖지 않는 것»**
+   > 이었다. 한 파일 안에서만 도는 값은 두 곳이 될 수가 없다.
 
 ---
 
@@ -245,6 +298,17 @@ python tools/scan_try_decls.py --write    # var 로 일괄 변환
 | ② | **아래 2줄**. 그 외가 나오면 새 함정이다 |
 | ③ | 없음 (성역 좌표 이관 완료 후) |
 | ④ | `total: 0` |
+
+**⑤ 이관이 끝난 뒤 새로 생긴 검사 (2026-08-06).** ③은 「모드 소유 키를 직접 쓰나」만 봤는데,
+이제 더 강한 걸 물을 수 있다 — **파일 경계를 넘는 `persistentData` 키가 있나.**
+
+```bash
+# 스크립트 하나가 쓰고 다른 하나가 읽는 키는 이제 0 개여야 한다
+python tools/scan_dead_kubejs.py    # B절 — 「읽는데 쓰는 곳이 없다」가 전부 ls_migrate.js 여야 한다
+```
+
+새 기능을 스크립트로 붙이다 보면 이게 제일 먼저 깨진다. 깨지면 `LSData` 에 섹션을 만들 때다 —
+`ARCHITECTURE.md` 원칙 1(「새 기능은 처음부터 모드로」)이 그 말이다.
 
 **②의 알려진 2줄 (2026-07-31 기준).** 둘 다 «실패를 없던 일로 한다»가 아니라 **의도된 대체값**이라
 남겨 둔다. 기준선에 안 적으면 다음 사람이 매번 다시 조사하거나, 더 나쁘게는 검출기 자체를 안 보게 된다.
