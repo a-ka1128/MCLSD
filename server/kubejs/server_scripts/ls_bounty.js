@@ -1,14 +1,16 @@
 // Last Stardust — 현상금 게시판 (Bounty Board)  [일일 콘텐츠 루프]
 // 매일 새벽 3건 자동 롤(사냥/납품/정예). 완료 시 공동 금고 + 개인 기여도 적립.
 // 할 게 없는 날을 없앤다 — Vault Hunters의 Bounty Table 패턴.
-// 저장: bt_day · bt<n> (인코딩 "type|target|need|reward") · bt<n>_have · bt<n>_done
 // 기여도의 주인은 모드다(LS.addContribution → TownData). 마을 화면의 명예 보드가 그 장부다.
+//
+// ── 저장: 이관 5단계로 모드가 소유한다 (2026-08-06) ──
+// 옛 저장은 한 칸이 `'hunt|minecraft:zombie|좀비|25|60'` 이었다. 읽는 쪽은 조각이 다섯인지만 봤고,
+// **이름에 `|` 가 하나 들어가면 그 현상금이 조용히 사라졌다** — `btDec` 가 null 을 주고 호출부가
+// `continue` 하기 때문이다. 예외도 로그도 없다. 한글 이름은 우리가 계속 늘리는 값이라 시간 문제였다.
+// 이제 필드는 각자 자리를 갖는다(`LS.postBounty` / `LS.bountyName` …). 이어붙이는 곳이 없다.
+//
+// ※ 후보 목록(아래 BT_HUNT·BT_SUPPLY·BT_ELITE)과 보상 배율은 여기 남는다 — `/reload` 로 고치는 값이다.
 
-function btStore(server) { return server.overworld().persistentData }
-function btGetI(server, k) { return btStore(server).getInt(k) }
-function btSetI(server, k, v) { btStore(server).putInt(k, v) }
-function btGetS(server, k) { return String(btStore(server).getString(k) || '') }
-function btSetS(server, k, v) { btStore(server).putString(k, v) }
 function btSay(server, text) { server.players.forEach(p => p.tell(Text.of(text))) }
 function btPlay(server, s, v, p) { server.runCommandSilent(`execute as @a at @s run playsound ${s} master @s ~ ~ ~ ${v} ${p}`) }
 // ※ 2026-07-30: persistentData 의 town_cnames 에 이름을 같이 남기던 코드를 지웠다.
@@ -54,27 +56,48 @@ const BT_ELITE = [
   { target: 'minecraft:evoker', name: '소환사', need: 1, reward: 140 }
 ]
 
-function btEnc(kind, def) { return kind + '|' + def.target + '|' + def.name + '|' + def.need + '|' + def.reward }
-function btDec(s) {
-  const p = s.split('|')
-  return p.length === 5 ? { kind: p[0], target: p[1], name: p[2], need: parseInt(p[3]), reward: parseInt(p[4]) } : null
-}
 function btPick(arr) { return arr[Math.floor(Math.random() * arr.length)] }
 
-// ── 매일 롤 ──
+// 장부에서 한 칸을 통째로 읽어 온다. 게시된 게 없으면 null — 호출부의 `if (!b)` 가 그대로 산다.
+// 다리 호출을 감싸는 이유: 이 함수는 킬 이벤트(EntityEvents.death) 안에서 도는데, 거기서
+// 예외가 나면 **핸들러가 통째로 죽어 현상금이 다시 안 오른다**(2026-07-25에 실제로 겪은 모양).
+function btSlot(server, i) {
+  try {
+    if (!LS.bountyPosted(server, i)) return null
+    return {
+      kind: String(LS.bountyKind(server, i)),
+      target: String(LS.bountyTarget(server, i)),
+      name: String(LS.bountyName(server, i)),
+      need: LS.bountyNeed(server, i) | 0,
+      reward: LS.bountyReward(server, i) | 0,
+      have: LS.bountyHave(server, i) | 0,
+      done: !!LS.bountyDone(server, i)
+    }
+  } catch (e) { lsWarn('ls_bounty:slot', e); return null }
+}
+
+// ── 주기마다 롤 ──
 function btRoll(server) {
-  btSetS(server, 'bt1', btEnc('hunt', btPick(BT_HUNT)))
-  btSetS(server, 'bt2', btEnc('supply', btPick(BT_SUPPLY)))
-  btSetS(server, 'bt3', btEnc('elite', btPick(BT_ELITE)))
-  for (let i = 1; i <= BT_COUNT; i++) { btSetI(server, 'bt' + i + '_have', 0); btSetI(server, 'bt' + i + '_done', 0) }
-  const b1 = btDec(btGetS(server, 'bt1')), b2 = btDec(btGetS(server, 'bt2')), b3 = btDec(btGetS(server, 'bt3'))
+  const picks = [['hunt', btPick(BT_HUNT)], ['supply', btPick(BT_SUPPLY)], ['elite', btPick(BT_ELITE)]]
+  try {
+    picks.forEach((row, idx) => {
+      var d = row[1]
+      // 진행도 초기화는 postBounty 안에 들어 있다 — 굴리기와 초기화를 나누면 한쪽만 도는 날이 온다.
+      LS.postBounty(server, idx + 1, row[0], d.target, d.name, d.need, d.reward)
+    })
+  } catch (e) { lsWarn('ls_bounty:roll', e); return }
+  const b1 = picks[0][1], b2 = picks[1][1], b3 = picks[2][1]
   btSay(server, `§6✎ 새 현상금 §7(${BT_EVERY}일간 유효) — §f${b1.name} ${b1.need}§7 사냥 · §f${b2.name} ${b2.need}§7 납품 · §c${b3.name} ${b3.need}§7 토벌 §8(/bounty)`)
   btPlay(server, 'minecraft:block.note_block.pling', 0.7, 1.4)
-  console.log('[LS-BOUNTY] rolled: ' + btGetS(server, 'bt1') + ' / ' + btGetS(server, 'bt2') + ' / ' + btGetS(server, 'bt3'))
+  console.log(`[LS-BOUNTY] rolled: ${b1.target}×${b1.need} / ${b2.target}×${b2.need} / ${b3.target}×${b3.need}`)
 }
 
 function btComplete(server, i, b, playerName) {
-  btSetI(server, 'bt' + i + '_done', 1)
+  // **이미 완료였으면 아무것도 안 한다.** 판정이 모드에 하나뿐이라, 킬과 납품이 같은 틱에
+  // 겹쳐도 보상이 두 번 나가지 않는다. 예전엔 done 플래그를 쓰기만 하고 확인은 호출부 몫이었다.
+  var fresh = false
+  try { fresh = !!LS.completeBounty(server, i) } catch (e) { lsWarn('ls_bounty:complete', e); return }
+  if (!fresh) return
   const pay = Math.round(b.reward * BT_REWARD_MULT)
   LS.addTreasury(server, pay)
   btAddContribution(server, playerName, Math.ceil(pay / 10))
@@ -111,11 +134,10 @@ EntityEvents.death(event => {
   //   **두 번째 순회에서 'redeclaration of var' 로 터진다.** 그러면 EntityEvents.death
   //   핸들러가 통째로 중단되어 현상금이 다시 안 오른다(2026-07-25 실측으로 확인).
   for (var i = 1; i <= BT_COUNT; i++) {
-    if (btGetI(server, 'bt' + i + '_done')) continue
-    var b = btDec(btGetS(server, 'bt' + i))
-    if (!b || b.kind === 'supply' || b.target !== type) continue
-    var have = btGetI(server, 'bt' + i + '_have') + 1
-    btSetI(server, 'bt' + i + '_have', have)
+    var b = btSlot(server, i)
+    if (!b || b.done || b.kind === 'supply' || b.target !== type) continue
+    var have = 0
+    try { have = LS.addBountyProgress(server, i, 1) | 0 } catch (e) { lsWarn('ls_bounty:kill-add', e); continue }
     if (have >= b.need) btComplete(server, i, b, killer.username ? String(killer.username) : '누군가')
     else if (have % 5 === 0 || b.need - have <= 3) killer.tell(Text.of(`§7✎ ${b.name} ${have}/${b.need}`))
   }
@@ -125,20 +147,19 @@ EntityEvents.death(event => {
 function btDeliver(server, player) {
   let any = false
   for (let i = 1; i <= BT_COUNT; i++) {
-    if (btGetI(server, 'bt' + i + '_done')) continue
-    var b = btDec(btGetS(server, 'bt' + i))
-    if (!b || b.kind !== 'supply') continue
-    var need = b.need - btGetI(server, 'bt' + i + '_have')
+    var b = btSlot(server, i)
+    if (!b || b.done || b.kind !== 'supply') continue
+    var need = b.need - b.have
     if (need <= 0) continue
     var name = player.username
     var have = 0
     // 개수는 인벤토리를 직접 읽는다 (ls_util.js) — /clear 반환값으로 세는 건 애초에 불가능하다.
     have = lsCountItem(player, b.target)
-    if (have <= 0) { player.tell(Text.of(`§7납품할 ${b.name}이(가) 없습니다. (${btGetI(server, 'bt' + i + '_have')}/${b.need})`)); continue }
+    if (have <= 0) { player.tell(Text.of(`§7납품할 ${b.name}이(가) 없습니다. (${b.have}/${b.need})`)); continue }
     var take = lsTakeItem(player, b.target, Math.min(need, have))
     if (take <= 0) continue
-    var now = btGetI(server, 'bt' + i + '_have') + take
-    btSetI(server, 'bt' + i + '_have', now)
+    var now = 0
+    try { now = LS.addBountyProgress(server, i, take) | 0 } catch (e) { lsWarn('ls_bounty:deliver-add', e); continue }
     any = true
     player.tell(Text.of(`§a+${take} ${b.name} §7납품 (${now}/${b.need})`))
     if (now >= b.need) btComplete(server, i, b, String(name))
@@ -154,8 +175,12 @@ ServerEvents.tick(event => {
   const server = event.server
   const day = Math.floor(Number(server.overworld().getDayTime()) / 24000)
   const cycle = Math.floor(day / BT_EVERY)
-  if (cycle !== btGetI(server, 'bt_day')) {
-    btSetI(server, 'bt_day', cycle)
+  var prev = 0
+  try { prev = LS.bountyCycle(server) | 0 } catch (e) { lsWarn('ls_bounty:cycle', e); return }
+  if (cycle !== prev) {
+    // 주기 번호를 **먼저** 올린다. 굴리기가 중간에 실패해도 매 틱 다시 시도하지 않게 —
+    // 실패가 초당 한 번씩 로그를 뒤덮으면 원인을 못 찾는다.
+    try { LS.setBountyCycle(server, cycle) } catch (e) { lsWarn('ls_bounty:cycle-set', e); return }
     btRoll(server)
   }
 })
@@ -169,11 +194,9 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of('§6═══ ✎ 오늘의 현상금 ═══'))
       const KIND_TXT = { hunt: '§7사냥', supply: '§b납품', elite: '§c토벌' }
       for (let i = 1; i <= BT_COUNT; i++) {
-        var b = btDec(btGetS(s, 'bt' + i))
+        var b = btSlot(s, i)
         if (!b) { ctx.source.sendSystemMessage(Text.of('§8(내일 새벽에 게시됩니다)')); break }
-        var done = btGetI(s, 'bt' + i + '_done')
-        var have = btGetI(s, 'bt' + i + '_have')
-        var st = done ? '§a✔ 완료' : `§e${have}/${b.need}`
+        var st = b.done ? '§a✔ 완료' : `§e${b.have}/${b.need}`
         ctx.source.sendSystemMessage(Text.of(`${KIND_TXT[b.kind]} §f${b.name} §7×${b.need} — ${st} §8· 보상 ${b.reward} Ducat`))
       }
       ctx.source.sendSystemMessage(Text.of('§8납품은 아이템 들고 /bounty deliver'))

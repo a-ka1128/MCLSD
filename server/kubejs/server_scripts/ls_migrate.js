@@ -32,6 +32,9 @@
 
 const MG_FLAG = 'ls_hero_migrated'
 const MG_SIEGE_FLAG = 'ls_siege_migrated'
+const MG_BD_FLAG = 'ls_bossdiff_migrated'
+const MG_TT_FLAG = 'ls_title_migrated'
+const MG_BT_FLAG = 'ls_bounty_migrated'
 const MG_FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer']
 
 // ── 공성 키 (이관 4단계) ──
@@ -181,6 +184,120 @@ function mgRunSiege(server, force) {
   return n
 }
 
+// ── 보스 난이도 라이브 오버라이드 (이관 5단계) ──
+// 「월드 리셋 시 사라지는 게 정상」인 값이라 안 옮겨도 된다고 볼 수도 있다. 그런데 **모드 이관은
+// 월드 리셋이 아니다.** 튜닝 중이던 값이 재시작 한 번에 조용히 사라지면, 그게 이 저장소가
+// 계속 잡아온 바로 그 실패 모양이다(명예 보드·희망 게이지).
+//
+// 키 목록을 갖지 않고 `bd_` 접두사를 훑는다. `ls_bossdiff.js` 의 BOSS_LIST 를 여기서 참조하면
+// 파일 간 결합이 생기고, 목록에 없는 보스에 걸어둔 값은 어차피 못 옮긴다.
+function mgRunBossDiff(server, force) {
+  const st = mgStore(server)
+  if (!force && st.getBoolean(MG_BD_FLAG)) return null
+
+  var n = 0
+  // 전역 — 옛 키는 `bd_g_hp` / `bd_g_dmg`. 둘을 한 번에 넣는다(모드가 둘을 같이 받는다).
+  try {
+    var gh = st.getInt('bd_g_hp'), gd = st.getInt('bd_g_dmg')
+    if (gh > 0 || gd > 0) { LS.setBossGlobal(server, gh, gd); n++ }
+  } catch (e) { lsWarn('ls_migrate:bd:global', e) }
+
+  // 보스별 — `bd_<id>_hp` / `_dmg` / `_abs`. id 에 콜론이 들어 있어 접미사로 갈라야 한다.
+  // hp·dmg 는 짝으로 넣어야 해서 먼저 id 별로 모은다.
+  var pend = {}
+  mgNamesWith(server, 'bd_').forEach(rest => {
+    var r = String(rest)
+    var cut = r.lastIndexOf('_')
+    if (cut <= 0) return
+    var id = r.substring(0, cut), kind = r.substring(cut + 1)
+    if (id === 'g') return                         // bd_g_hp / bd_g_dmg — 위에서 처리한 전역
+    if (kind !== 'hp' && kind !== 'dmg' && kind !== 'abs') return
+    var v = 0
+    try { v = st.getInt('bd_' + r) } catch (e) { lsWarn('ls_migrate:bd:read', e); return }
+    if (v <= 0) return                             // 0 = 오버라이드 없음
+    if (!pend[id]) pend[id] = { hp: 0, dmg: 0, abs: 0 }
+    pend[id][kind] = v
+  })
+
+  Object.keys(pend).forEach(id => {
+    try {
+      var e2 = pend[id]
+      if (e2.hp > 0 || e2.dmg > 0) LS.setBossDiff(server, id, e2.hp, e2.dmg)
+      if (e2.abs > 0) LS.setBossAbs(server, id, e2.abs)
+      n++
+    } catch (e) { lsWarn('ls_migrate:bd:' + id, e) }
+  })
+
+  st.putBoolean(MG_BD_FLAG, true)
+  return n
+}
+
+// ── 칭호 (이관 5단계) ──
+// 옛 키: `titles_<이름>` (CSV) · `title_active_<이름>`.
+// 접두사가 겹친다 — `title_active_철수` 는 `titles_` 로 시작하지 **않으니** 안 겹치지만,
+// 반대로 `titles_` 훑기가 `title_active_` 를 잡을 일도 없다. 그래도 명시적으로 걸러 둔다:
+// 접두사 훑기에서 한쪽이 다른 쪽을 삼키는 사고는 3단계에서 `relic_` / `relic_altar_` 로 이미 겪었다.
+function mgRunTitle(server, force) {
+  const st = mgStore(server)
+  if (!force && st.getBoolean(MG_TT_FLAG)) return null
+
+  var n = 0
+  mgNamesWith(server, 'titles_').forEach(who => {
+    try {
+      var csv = String(st.getString('titles_' + who) || '')
+      if (!csv) return
+      csv.split(',').forEach(k => {
+        var key = String(k).trim()
+        if (key) LS.grantTitle(server, who, key)
+      })
+      // 착용 칭호. grantTitle 이 첫 칭호를 자동 활성으로 잡아두므로 저장값으로 덮는다.
+      // 보유 목록에 없으면 모드가 거절한다 — 그게 맞다(유령 칭호를 옮기지 않는다).
+      var act = String(st.getString('title_active_' + who) || '')
+      if (act) LS.setActiveTitle(server, who, act)
+      n++
+    } catch (e) { lsWarn('ls_migrate:title:' + who, e) }
+  })
+
+  st.putBoolean(MG_TT_FLAG, true)
+  return n
+}
+
+// ── 현상금 (이관 5단계) ──
+// 옛 저장: `bt_day`(주기 번호) · `bt<n>`(= `kind|target|name|need|reward`) · `bt<n>_have` · `bt<n>_done`.
+// 굳이 옮기는 이유: 안 옮기면 **게시판이 빈 채로 최대 3일**이다(주기가 바뀌어야 다시 굴린다).
+// 그 사이 「오늘 할 것」이 사라지는데, 그건 이 시스템이 존재하는 이유 자체다.
+//
+// ※ 조각이 다섯이 아니면 버린다. 옛 코드가 그렇게 읽고 있었으니 여기서 되살릴 방법도 없다 —
+//   이름에 `|` 가 든 현상금은 이미 그때 사라졌다. 옮기면서 새로 만들어 낼 수는 없다.
+function mgRunBounty(server, force) {
+  const st = mgStore(server)
+  if (!force && st.getBoolean(MG_BT_FLAG)) return null
+
+  var n = 0
+  try {
+    var cyc = st.getInt('bt_day')
+    if (cyc > 0) LS.setBountyCycle(server, cyc)
+  } catch (e) { lsWarn('ls_migrate:bounty:cycle', e) }
+
+  for (var i = 1; i <= 3; i++) {
+    try {
+      var raw = String(st.getString('bt' + i) || '')
+      if (!raw) continue
+      var p = raw.split('|')
+      if (p.length !== 5) { lsWarn('ls_migrate:bounty:형식', new Error('bt' + i + ' = ' + raw)); continue }
+      LS.postBounty(server, i, p[0], p[1], p[2], parseInt(p[3]) || 1, parseInt(p[4]) || 0)
+      // postBounty 가 진행도를 0 으로 되돌리므로 순서가 중요하다 — 게시 → 진행도 → 완료.
+      var hv = st.getInt('bt' + i + '_have')
+      if (hv > 0) LS.addBountyProgress(server, i, hv)
+      if (st.getInt('bt' + i + '_done') > 0) LS.completeBounty(server, i)
+      n++
+    } catch (e) { lsWarn('ls_migrate:bounty:' + i, e) }
+  }
+
+  st.putBoolean(MG_BT_FLAG, true)
+  return n
+}
+
 ServerEvents.loaded(event => {
   const server = event.server
   if (!server) return
@@ -198,6 +315,30 @@ ServerEvents.loaded(event => {
     if (mgS === 0) console.log('[LS-MIGRATE] 공성 — 옛 키 없음 (새 월드로 본다)')
     else console.log(`[LS-MIGRATE] 공성 → 모드 장부 — 값 ${mgS}개 · ${LS.siegeSummary(server)}`)
   }
+
+  var mgB = null
+  try { mgB = mgRunBossDiff(server, false) } catch (e) { lsWarn('ls_migrate:bossdiff', e) }
+  if (mgB !== null) {
+    if (mgB === 0) console.log('[LS-MIGRATE] 보스 난이도 — 옛 키 없음 (파일 값만 쓰고 있었다)')
+    else console.log(`[LS-MIGRATE] 보스 난이도 → 모드 장부 — ${mgB}건 · ${LS.bossDiffSummary(server)}`)
+  }
+
+  // ⚠️ 이 옮기기는 `ls_title.js` 의 이름표 복구보다 **먼저** 끝나야 한다.
+  // 지금은 파일 이름 순서(ls_migrate < ls_title)로 핸들러 등록 순서가 그렇게 잡혀서 맞는다.
+  // 어긋나도 치명적이진 않다 — 접속할 때 한 번 더 붙이므로 한 판 늦게 보일 뿐이다.
+  var mgT = null
+  try { mgT = mgRunTitle(server, false) } catch (e) { lsWarn('ls_migrate:title', e) }
+  if (mgT !== null) {
+    if (mgT === 0) console.log('[LS-MIGRATE] 칭호 — 옛 키 없음 (새 월드로 본다)')
+    else console.log(`[LS-MIGRATE] 칭호 → 모드 장부 — ${mgT}명 · ${LS.titleSummary(server)}`)
+  }
+
+  var mgBt = null
+  try { mgBt = mgRunBounty(server, false) } catch (e) { lsWarn('ls_migrate:bounty', e) }
+  if (mgBt !== null) {
+    if (mgBt === 0) console.log('[LS-MIGRATE] 현상금 — 옛 키 없음 (새 월드로 본다)')
+    else console.log(`[LS-MIGRATE] 현상금 → 모드 장부 — ${mgBt}건 · ${LS.bountySummary(server)}`)
+  }
 })
 
 ServerEvents.commandRegistry(event => {
@@ -212,22 +353,34 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of(
         `§7성역 §8— ${LS.hasSanctuary(s) ? LS.sanctuaryX(s) + ', ' + LS.sanctuaryY(s) + ', ' + LS.sanctuaryZ(s) : '미지정'}`
         + ` §8· 관문 §7${LS.progress(s)}/4§8 · 금고 §7${LS.treasury(s)}`))
-      // 두 옮기기를 따로 표시한다 — 하나만 됐을 때 그걸 알아볼 수 있어야 한다.
+      ctx.source.sendSystemMessage(Text.of(`§7보스 난이도 §8— ${LS.bossDiffSummary(s)}`))
+      ctx.source.sendSystemMessage(Text.of(`§7칭호 §8— ${LS.titleSummary(s)}`))
+      ctx.source.sendSystemMessage(Text.of(`§7현상금 §8— ${LS.bountySummary(s)}`))
+      // 옮기기를 따로 표시한다 — 하나만 됐을 때 그걸 알아볼 수 있어야 한다.
       ctx.source.sendSystemMessage(Text.of(
         `§8옛 키 옮기기 — 성장 ${mgStore(s).getBoolean(MG_FLAG) ? '§7완료' : '§c아직'}`
-        + `§8 · 공성 ${mgStore(s).getBoolean(MG_SIEGE_FLAG) ? '§7완료' : '§c아직'}`))
+        + `§8 · 공성 ${mgStore(s).getBoolean(MG_SIEGE_FLAG) ? '§7완료' : '§c아직'}`
+        + `§8 · 보스난이도 ${mgStore(s).getBoolean(MG_BD_FLAG) ? '§7완료' : '§c아직'}`
+        + `§8 · 칭호 ${mgStore(s).getBoolean(MG_TT_FLAG) ? '§7완료' : '§c아직'}`
+        + `§8 · 현상금 ${mgStore(s).getBoolean(MG_BT_FLAG) ? '§7완료' : '§c아직'}`))
       return 1
     })
     // 다시 옮긴다. 멱등이라 여러 번 돌려도 결과가 같다 — 옛 키가 아직 남아 있는 한.
     .then(Commands.literal('remigrate').requires(s => s.hasPermission(2)).executes(ctx => {
       const s = ctx.source.server
-      var r = null, rs = null
+      var r = null, rs = null, rb = null, rt = null, rbt = null
       try { r = mgRun(s, true) } catch (e) { lsWarn('ls_migrate:cmd', e) }
       try { rs = mgRunSiege(s, true) } catch (e) { lsWarn('ls_migrate:cmd:siege', e) }
-      if (r === null && rs === null) { ctx.source.sendSystemMessage(Text.of('§c실패 — 로그 확인')); return 0 }
+      try { rb = mgRunBossDiff(s, true) } catch (e) { lsWarn('ls_migrate:cmd:bossdiff', e) }
+      try { rt = mgRunTitle(s, true) } catch (e) { lsWarn('ls_migrate:cmd:title', e) }
+      try { rbt = mgRunBounty(s, true) } catch (e) { lsWarn('ls_migrate:cmd:bounty', e) }
+      if (r === null && rs === null && rb === null && rt === null && rbt === null) { ctx.source.sendSystemMessage(Text.of('§c실패 — 로그 확인')); return 0 }
       if (r) ctx.source.sendSystemMessage(Text.of(
         `§a성장 다시 옮김 §7— 가호 ${r.fate} · 유물 ${r.relic} · 각성 ${r.star} · 제단 ${r.altar}`))
       if (rs !== null) ctx.source.sendSystemMessage(Text.of(`§a공성 다시 옮김 §7— 값 ${rs}개`))
+      if (rb !== null) ctx.source.sendSystemMessage(Text.of(`§a보스 난이도 다시 옮김 §7— ${rb}건`))
+      if (rt !== null) ctx.source.sendSystemMessage(Text.of(`§a칭호 다시 옮김 §7— ${rt}명`))
+      if (rbt !== null) ctx.source.sendSystemMessage(Text.of(`§a현상금 다시 옮김 §7— ${rbt}건`))
       ctx.source.sendSystemMessage(Text.of(`§8지금 장부: ${LS.heroSummary(s)}`))
       ctx.source.sendSystemMessage(Text.of(`§8            ${LS.siegeSummary(s)}`))
       return 1

@@ -28,6 +28,9 @@ public class LSData extends SavedData {
     private final TownData town = new TownData();
     private final HeroData hero = new HeroData();
     private final SiegeData siege = new SiegeData();
+    private final BossDiffData bossDiff = new BossDiffData();
+    private final TitleData titles = new TitleData();
+    private final BountyData bounty = new BountyData();
 
     // 성역 좌표 — 여러 시스템이 공유하는 가장 넓게 퍼진 상태다.
     // (공성·관문·구출·통계·귀환석이 전부 이걸 본다)
@@ -47,6 +50,23 @@ public class LSData extends SavedData {
     // 위협도는 성역 좌표만큼 넓게 퍼져 있다: 희망 게이지·호데고스 대사·몹 스케일링이 전부 이걸 본다.
     public SiegeData siege() {
         return siege;
+    }
+
+    // 보스 난이도 라이브 오버라이드 — `/bossdiff` (이관 5단계).
+    // 영구 기본값은 여기가 아니라 `ls_config.js` 에 있다. 이유는 BossDiffData 머리말에.
+    public BossDiffData bossDiff() {
+        return bossDiff;
+    }
+
+    // 칭호 — 보유 목록과 착용 (이관 5단계).
+    // 부여하는 쪽이 네 파일(유물·구출·균열·공성)이라 장부가 한 곳이어야 한다.
+    public TitleData titles() {
+        return titles;
+    }
+
+    // 현상금 — 게시 중인 3건과 진행도 (이관 5단계).
+    public BountyData bounty() {
+        return bounty;
     }
 
     // 관문 진행도 0~4 — 클리어한 봉인 수.
@@ -89,6 +109,9 @@ public class LSData extends SavedData {
         data.town.load(tag.getCompound("town"), registries);
         data.hero.load(tag.getCompound("hero"), registries);
         data.siege.load(tag.getCompound("siege"), registries);
+        data.bossDiff.load(tag.getCompound("bossDiff"), registries);
+        data.titles.load(tag.getCompound("titles"), registries);
+        data.bounty.load(tag.getCompound("bounty"), registries);
         CompoundTag s = tag.getCompound("sanctuary");
         data.sancSet = s.getBoolean("set");
         data.sancX = s.getInt("x");
@@ -103,6 +126,9 @@ public class LSData extends SavedData {
         tag.put("town", town.save(registries));
         tag.put("hero", hero.save(registries));
         tag.put("siege", siege.save(registries));
+        tag.put("bossDiff", bossDiff.save(registries));
+        tag.put("titles", titles.save(registries));
+        tag.put("bounty", bounty.save(registries));
         CompoundTag s = new CompoundTag();
         s.putBoolean("set", sancSet);
         s.putInt("x", sancX);

@@ -565,6 +565,193 @@ public class LSKubeBridge implements KubeJSPlugin {
             }
         }
 
+        // ── 보스 난이도 라이브 오버라이드 (이관 5단계) ──
+        // 여기 있는 건 «/bossdiff 로 건 값» 뿐이다. 영구 기본값(ls_config.js)은 스크립트가 계속
+        // 소유한다 — 그래서 아래 getter 는 전부 **0 = 오버라이드 없음** 을 돌려주고,
+        // 파일 값으로 내려가는 판단은 스크립트(bdEffHp 등)에 남는다. 2층 구조를 안 바꾼 것이다.
+        public int bossGlobalHpOverride(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).bossDiff().globalHp();
+        }
+
+        public int bossGlobalDmgOverride(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).bossDiff().globalDmg();
+        }
+
+        public void setBossGlobal(MinecraftServer server, int hp, int dmg) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.bossDiff().setGlobal(hp, dmg);
+            data.dirty();
+        }
+
+        public int bossHpOverride(MinecraftServer server, String id) {
+            return server == null ? 0 : LSData.get(server).bossDiff().hp(id);
+        }
+
+        public int bossDmgOverride(MinecraftServer server, String id) {
+            return server == null ? 0 : LSData.get(server).bossDiff().dmg(id);
+        }
+
+        public int bossAbsOverride(MinecraftServer server, String id) {
+            return server == null ? 0 : LSData.get(server).bossDiff().abs(id);
+        }
+
+        // hp·dmg 를 따로 두지 않고 한 번에 받는 이유: `/bossdiff set` 이 늘 둘을 같이 준다.
+        // 나눠 두면 한쪽만 부른 호출부가 생기고, 그게 «공격력만 안 먹는» 버그가 된다.
+        public void setBossDiff(MinecraftServer server, String id, int hp, int dmg) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.bossDiff().setHp(id, hp);
+            data.bossDiff().setDmg(id, dmg);
+            data.dirty();
+        }
+
+        public void setBossAbs(MinecraftServer server, String id, int abs) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.bossDiff().setAbs(id, abs);
+            data.dirty();
+        }
+
+        // 오버라이드가 걸린 보스만 CSV 로. 스크립트가 33종 전체를 훑지 않아도 되게 —
+        // 훑는 쪽이 목록을 갖고 있으면 모드팩에서 보스가 늘 때 그 목록이 조용히 낡는다.
+        public String bossOverriddenCsv(MinecraftServer server) {
+            return server == null ? "" : String.join(",", LSData.get(server).bossDiff().overridden());
+        }
+
+        public String bossDiffSummary(MinecraftServer server) {
+            return server == null ? "" : LSData.get(server).bossDiff().summary();
+        }
+
+        public void resetBossDiff(MinecraftServer server) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.bossDiff().reset();
+            data.dirty();
+        }
+
+        // ── 칭호 (이관 5단계) ──
+        // 카탈로그(12종의 이름·색)는 `ls_title.js` 에 남는다. 여기는 장부만 갖는다.
+        // 목록은 CSV 로 주고받는다 — 4단계 노드와 같은 이유로, 이관과 형식 변경을 같이 하지 않는다.
+        public String titlesOwnedCsv(MinecraftServer server, String name) {
+            return server == null ? "" : String.join(",", LSData.get(server).titles().owned(name));
+        }
+
+        public String activeTitle(MinecraftServer server, String name) {
+            return server == null ? "" : LSData.get(server).titles().active(name);
+        }
+
+        // **새로 받았을 때만 true.** 옛 코드는 부여와 방송이 한 덩어리라 조용히 주는 경로를
+        // 만들 수 없었다. 연출은 호출부가 이 반환값으로 가른다.
+        public boolean grantTitle(MinecraftServer server, String name, String key) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.titles().grant(name, key)) return false;
+            data.dirty();
+            return true;
+        }
+
+        // 보유하지 않은 칭호면 false — 불변식은 TitleData 가 건다.
+        // 빈 문자열은 「표시 안 함」이고 항상 성공한다.
+        public boolean setActiveTitle(MinecraftServer server, String name, String key) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.titles().setActive(name, key)) return false;
+            data.dirty();
+            return true;
+        }
+
+        // 착용자 전원 — 재시작 뒤 팀 prefix 를 한 번에 되살리려면 목록이 필요하다.
+        // 접속 이벤트에서만 복구하면 «접속 안 한 사람의 이름표가 남들 눈에 빈 채로» 남는다.
+        public String titleWearersCsv(MinecraftServer server) {
+            return server == null ? "" : String.join(",", LSData.get(server).titles().namesWithActive());
+        }
+
+        public String titleSummary(MinecraftServer server) {
+            return server == null ? "" : LSData.get(server).titles().summary();
+        }
+
+        // ── 현상금 (이관 5단계) ──
+        // 후보 목록(사냥 8·납품 8·정예 6)과 보상 배율은 `ls_bounty.js` 에 남는다.
+        // 여기 오는 건 **굴린 결과**뿐이다. 필드를 하나씩 주고받는 이유는 옛 저장이
+        // `'hunt|minecraft:zombie|좀비|25|60'` 이었기 때문이다 — 이름에 `|` 하나만 들어가면
+        // 그 현상금이 조용히 사라졌다(BountyData 머리말).
+        public int bountyCycle(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).bounty().cycle();
+        }
+
+        public void setBountyCycle(MinecraftServer server, int n) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.bounty().setCycle(n);
+            data.dirty();
+        }
+
+        // 새로 건다 — 진행도 초기화가 **여기 안에 들어 있다.** 옛 코드는 굴리기와 초기화가
+        // 다른 루프라, 한쪽만 돌면 새 현상금이 「이미 완료」로 시작할 수 있었다.
+        public void postBounty(MinecraftServer server, int slot, String kind, String target,
+                               String name, int need, int reward) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.bounty().post(slot, kind, target, name, need, reward);
+            data.dirty();
+        }
+
+        public boolean bountyPosted(MinecraftServer server, int slot) {
+            return server != null && LSData.get(server).bounty().posted(slot);
+        }
+
+        public String bountyKind(MinecraftServer server, int slot) {
+            return server == null ? "" : LSData.get(server).bounty().kind(slot);
+        }
+
+        public String bountyTarget(MinecraftServer server, int slot) {
+            return server == null ? "" : LSData.get(server).bounty().target(slot);
+        }
+
+        public String bountyName(MinecraftServer server, int slot) {
+            return server == null ? "" : LSData.get(server).bounty().name(slot);
+        }
+
+        public int bountyNeed(MinecraftServer server, int slot) {
+            return server == null ? 0 : LSData.get(server).bounty().need(slot);
+        }
+
+        public int bountyReward(MinecraftServer server, int slot) {
+            return server == null ? 0 : LSData.get(server).bounty().reward(slot);
+        }
+
+        public int bountyHave(MinecraftServer server, int slot) {
+            return server == null ? 0 : LSData.get(server).bounty().have(slot);
+        }
+
+        public boolean bountyDone(MinecraftServer server, int slot) {
+            return server != null && LSData.get(server).bounty().done(slot);
+        }
+
+        // 더한 뒤의 값을 돌려준다. 읽고·더하고·쓰는 세 줄을 한 줄로 접은 것이다 —
+        // 킬 추적과 납품이 같은 칸을 만지므로 그 사이가 벌어지면 한쪽이 덮인다.
+        public int addBountyProgress(MinecraftServer server, int slot, int n) {
+            if (server == null) return 0;
+            LSData data = LSData.get(server);
+            int now = data.bounty().addProgress(slot, n);
+            data.dirty();
+            return now;
+        }
+
+        // 이미 완료였으면 false — 보상이 두 번 나가는 걸 막는 자리가 여기 하나다.
+        public boolean completeBounty(MinecraftServer server, int slot) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.bounty().complete(slot)) return false;
+            data.dirty();
+            return true;
+        }
+
+        public String bountySummary(MinecraftServer server) {
+            return server == null ? "" : LSData.get(server).bounty().summary();
+        }
+
         // 화면을 열어둔 사람에게 갱신을 밀어준다 (스크립트가 금고를 바꾼 직후 등)
         // ── 부활 규칙 ──
         // 리스폰 직후 ls_revive.js 가 부른다. 무적 창과 「별빛 쇠약」의 피해 감소는

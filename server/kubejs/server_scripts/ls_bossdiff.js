@@ -1,7 +1,15 @@
 // Last Stardust — 보스 난이도 다이얼 (보스별 + 전역)
 // 보스 스폰 시 체력·공격력에 배율(%) 적용. 기본 100 = 모드 원본.
-// /bossdiff 로 실시간 조절, persistentData 저장 (월드 리셋 시 초기화됨 = 정상).
-// 배율 저장: bd_g_hp/bd_g_dmg(전역), bd_<id>_hp/bd_<id>_dmg(보스별, 0=전역 따름).
+// /bossdiff 로 실시간 조절 (월드 리셋 시 초기화됨 = 정상).
+//
+// ── 저장: 이관 5단계로 모드가 소유한다 (2026-08-06) ──
+// 옛 방식은 `p.putInt('bd_' + id + '_hp', ...)` — **NBT 키를 문자열로 조립**하고 있었다.
+// 보스 id 에 콜론이 들어가는데 그게 그대로 키가 되고, 오타 하나면 조용히 다른 키에 쓰고
+// 읽는 쪽은 「오버라이드 없음(0)」으로 읽는다. 예외도 로그도 안 난다.
+// 지금은 `LS.bossHpOverride` / `LS.setBossDiff` 로 모드(LSData.bossDiff)에 묻는다.
+//
+// ※ **2층 구조는 그대로다.** 영구 기본값(ls_config.js)은 여전히 이 스크립트가 읽는다 —
+//   `/reload` 로 고치는 튜닝 값이라 스크립트가 맞는 자리다. 모드가 가진 건 라이브 오버라이드뿐.
 
 const BOSS_LIST = [
   // Cataclysm (8)
@@ -29,16 +37,28 @@ BOSS_LIST.forEach(id => { BOSS_SET[id] = true })
 
 // ── 값의 출처는 2층이다 ──
 //   1층: ls_config.js (kubejs 폴더 = 월드 밖) — 영구 기본값. 월드를 리셋해도 남는다.
-//   2층: persistentData (월드 세이브)        — /bossdiff 로 건 라이브 오버라이드. 리셋 시 사라진다.
+//   2층: LSData.bossDiff (모드 · 월드 세이브) — /bossdiff 로 건 라이브 오버라이드. 리셋 시 사라진다.
 // 읽을 때는 2층이 있으면 2층, 없으면 1층을 쓴다. 0 = "오버라이드 없음".
-function bdStore(server) { return server.overworld().persistentData }
+//
+// 다리 호출은 전부 감싼다. 모드가 없거나 메서드 이름이 어긋나면 여기서 터지는데, 그러면
+// **보스 스폰 핸들러 전체가 죽어서** 난이도가 아니라 보스 자체가 이상해진다.
+// 실패했을 때 「오버라이드 없음(0)」으로 내려가면 파일 값이 그대로 쓰인다 — 안전한 쪽이다.
 function bdCfg() { return (typeof LS_CONFIG !== 'undefined' && LS_CONFIG.boss) ? LS_CONFIG.boss : { globalHp: 100, globalDmg: 100, perBoss: {} } }
 function bdCfgBoss(id) { const c = bdCfg().perBoss || {}; return c[id] || null }
 
-function bdGlobalHp(server) { const v = bdStore(server).getInt('bd_g_hp'); return v > 0 ? v : bdCfg().globalHp }
-function bdGlobalDmg(server) { const v = bdStore(server).getInt('bd_g_dmg'); return v > 0 ? v : bdCfg().globalDmg }
+// 다리를 이름으로 골라 부르지 않는다(`LS[fn](...)`). Rhino 에서 되긴 하지만, 이름이 틀려도
+// 「메서드가 없다」가 런타임에야 나오고 오타는 문법 검사에 안 걸린다. 여덟 줄 늘어나는 대신
+// 스캐너(`scan_dead_kubejs.py` A절)가 없는 메서드를 빌드 전에 잡아준다.
+function bdOvGHp(server) { try { return LS.bossGlobalHpOverride(server) | 0 } catch (e) { lsWarn('ls_bossdiff:ov-ghp', e); return 0 } }
+function bdOvGDmg(server) { try { return LS.bossGlobalDmgOverride(server) | 0 } catch (e) { lsWarn('ls_bossdiff:ov-gdmg', e); return 0 } }
+function bdOvHp(server, id) { try { return LS.bossHpOverride(server, id) | 0 } catch (e) { lsWarn('ls_bossdiff:ov-hp', e); return 0 } }
+function bdOvDmg(server, id) { try { return LS.bossDmgOverride(server, id) | 0 } catch (e) { lsWarn('ls_bossdiff:ov-dmg', e); return 0 } }
+function bdOvAbs(server, id) { try { return LS.bossAbsOverride(server, id) | 0 } catch (e) { lsWarn('ls_bossdiff:ov-abs', e); return 0 } }
+
+function bdGlobalHp(server) { const v = bdOvGHp(server); return v > 0 ? v : bdCfg().globalHp }
+function bdGlobalDmg(server) { const v = bdOvGDmg(server); return v > 0 ? v : bdCfg().globalDmg }
 function bdEffHp(server, id) {
-  const p = bdStore(server).getInt('bd_' + id + '_hp'); if (p > 0) return p
+  const p = bdOvHp(server, id); if (p > 0) return p
   const c = bdCfgBoss(id); if (c && c.hp > 0) return c.hp
   return bdGlobalHp(server)
 }
@@ -47,18 +67,36 @@ function bdEffHp(server, id) {
 // 반면 튜닝의 입력은 «4명이 1분» 같은 목표 시간이고, 거기서 나오는 건 절대값이다.
 // 모드가 업데이트로 원본을 바꿔도 우리 목표는 안 흔들린다. 0 = 지정 없음(= % 경로).
 function bdEffAbs(server, id) {
-  const p = bdStore(server).getInt('bd_' + id + '_abs'); if (p > 0) return p
+  const p = bdOvAbs(server, id); if (p > 0) return p
   const c = bdCfgBoss(id); if (c && c.absHp > 0) return c.absHp
   return 0
 }
 function bdEffDmg(server, id) {
-  const p = bdStore(server).getInt('bd_' + id + '_dmg'); if (p > 0) return p
+  const p = bdOvDmg(server, id); if (p > 0) return p
   const c = bdCfgBoss(id); if (c && c.dmg > 0) return c.dmg
   return bdGlobalDmg(server)
 }
+// 목록에 보여야 할 보스 전부 = BOSS_LIST ∪ 「오버라이드가 걸린 것」.
+// 합집합을 쓰는 이유: BOSS_LIST 는 손으로 관리하는 33종이라 모드팩이 바뀌면 낡는다. 목록에서
+// 빠진 보스에 걸어둔 값이 있으면 **/bossdiff list 에 안 보이고 /bossdiff reset 으로도 안 지워지는**
+// 유령이 된다. reset 은 이제 모드가 표를 통째로 비우고, 목록은 여기서 합친다.
+function bdAllIds(server) {
+  var out = BOSS_LIST.slice()
+  var seen = {}
+  BOSS_LIST.forEach(x => { seen[x] = true })
+  try {
+    String(LS.bossOverriddenCsv(server) || '').split(',').forEach(x => {
+      var t = String(x).trim()
+      if (t && !seen[t]) { seen[t] = true; out.push(t) }
+    })
+  } catch (e) { lsWarn('ls_bossdiff:all-ids', e) }
+  return out
+}
+
 // 값이 어디서 왔는지 (표시용)
 function bdSrc(server, id, kind) {
-  if (bdStore(server).getInt('bd_' + id + '_' + kind) > 0) return '라이브'
+  const live = kind === 'hp' ? bdOvHp(server, id) : bdOvDmg(server, id)
+  if (live > 0) return '라이브'
   const c = bdCfgBoss(id); if (c && c[kind] > 0) return '파일'
   return '전역'
 }
@@ -158,7 +196,7 @@ ServerEvents.commandRegistry(event => {
     .executes(ctx => {
       const s = ctx.source.server
       ctx.source.sendSystemMessage(Text.of(`§6보스 난이도 §7— 전역 체력 §e${bdGlobalHp(s)}%§7 · 공격 §e${bdGlobalDmg(s)}%§7 (보스 ${BOSS_LIST.length}종)`))
-      const liveG = bdStore(s).getInt('bd_g_hp') > 0 || bdStore(s).getInt('bd_g_dmg') > 0
+      const liveG = bdOvGHp(s) > 0 || bdOvGDmg(s) > 0
       ctx.source.sendSystemMessage(Text.of(liveG
         ? '§c● 라이브 오버라이드 적용 중 §7— 월드 리셋 시 사라진다. 남기려면 §e/bossdiff export'
         : '§a● ls_config.js 파일 값 사용 중 §7— 월드 리셋에도 유지된다'))
@@ -169,9 +207,9 @@ ServerEvents.commandRegistry(event => {
     .then(Commands.literal('global').requires(s => s.hasPermission(2))
       .then(Commands.argument('hp', Arguments.INTEGER.create(event))
         .then(Commands.argument('dmg', Arguments.INTEGER.create(event)).executes(ctx => {
-          const p = bdStore(ctx.source.server)
-          p.putInt('bd_g_hp', Math.max(1, Arguments.INTEGER.getResult(ctx, 'hp')))
-          p.putInt('bd_g_dmg', Math.max(1, Arguments.INTEGER.getResult(ctx, 'dmg')))
+          // 하한(1)은 모드가 건다 — 자르는 곳이 하나면 호출부가 빠뜨릴 수 없다.
+          LS.setBossGlobal(ctx.source.server,
+            Arguments.INTEGER.getResult(ctx, 'hp'), Arguments.INTEGER.getResult(ctx, 'dmg'))
           ctx.source.sendSystemMessage(Text.of(`§a전역 보스 난이도: 체력 ${bdGlobalHp(ctx.source.server)}% · 공격 ${bdGlobalDmg(ctx.source.server)}% §7(새로 스폰되는 보스부터 적용)`))
           return 1
         }))))
@@ -181,9 +219,8 @@ ServerEvents.commandRegistry(event => {
           .then(Commands.argument('dmg', Arguments.INTEGER.create(event)).executes(ctx => {
             const id = bossId(ctx)
             if (!BOSS_SET[id]) return bossFail(ctx, id)
-            const p = bdStore(ctx.source.server)
-            p.putInt('bd_' + id + '_hp', Math.max(1, Arguments.INTEGER.getResult(ctx, 'hp')))
-            p.putInt('bd_' + id + '_dmg', Math.max(1, Arguments.INTEGER.getResult(ctx, 'dmg')))
+            LS.setBossDiff(ctx.source.server, id,
+              Arguments.INTEGER.getResult(ctx, 'hp'), Arguments.INTEGER.getResult(ctx, 'dmg'))
             ctx.source.sendSystemMessage(Text.of(`§a${id} → 체력 ${bdEffHp(ctx.source.server, id)}% · 공격 ${bdEffDmg(ctx.source.server, id)}%`))
             return 1
           })))))
@@ -194,7 +231,7 @@ ServerEvents.commandRegistry(event => {
           const id = bossId(ctx)
           if (!BOSS_SET[id]) return bossFail(ctx, id)
           const v = Math.max(0, Arguments.INTEGER.getResult(ctx, 'hp'))
-          bdStore(ctx.source.server).putInt('bd_' + id + '_abs', v)
+          LS.setBossAbs(ctx.source.server, id, v)
           ctx.source.sendSystemMessage(Text.of(v > 0
             ? `§a${id} → 체력 §e절대 ${v} §7(%는 무시된다 · 새로 스폰되는 보스부터)`
             : `§a${id} → 절대 체력 해제 §7(체력 ${bdEffHp(ctx.source.server, id)}% 로 복귀)`))
@@ -214,9 +251,9 @@ ServerEvents.commandRegistry(event => {
       const s = ctx.source.server
       ctx.source.sendSystemMessage(Text.of(`§6전역: 체력 ${bdGlobalHp(s)}% · 공격 ${bdGlobalDmg(s)}% §7| 개별 오버라이드:`))
       let any = false
-      BOSS_LIST.forEach(id => {
+      bdAllIds(s).forEach(id => {
         const ab = bdEffAbs(s, id)
-        const ph = bdStore(s).getInt('bd_' + id + '_hp'); const pd = bdStore(s).getInt('bd_' + id + '_dmg')
+        const ph = bdOvHp(s, id); const pd = bdOvDmg(s, id)
         // 절대 지정은 파일 값이어도 보여준다 — 이제 이쪽이 주 튜닝 수단이라 안 보이면 놓친다.
         if (ab > 0) { any = true; ctx.source.sendSystemMessage(Text.of(`§7 ${id}: 체력 §e절대 ${ab}§7 · 공격 ${bdEffDmg(s, id)}%`)) }
         else if (ph > 0 || pd > 0) { any = true; ctx.source.sendSystemMessage(Text.of(`§7 ${id}: 체력 ${bdEffHp(s, id)}% · 공격 ${bdEffDmg(s, id)}%`)) }
@@ -226,9 +263,11 @@ ServerEvents.commandRegistry(event => {
     }))
     // 라이브 오버라이드만 지운다 → ls_config.js 의 파일 값으로 되돌아간다
     .then(Commands.literal('reset').requires(s => s.hasPermission(2)).executes(ctx => {
-      const s = ctx.source.server; const p = bdStore(s)
-      p.putInt('bd_g_hp', 0); p.putInt('bd_g_dmg', 0)
-      BOSS_LIST.forEach(id => { p.putInt('bd_' + id + '_hp', 0); p.putInt('bd_' + id + '_dmg', 0); p.putInt('bd_' + id + '_abs', 0) })
+      const s = ctx.source.server
+      // 예전엔 BOSS_LIST 를 훑으며 키마다 0 을 넣었다. 그러면 **목록에 없는 보스에 걸어둔
+      // 오버라이드는 안 지워진다** — 모드팩이 보스를 늘리면 목록이 낡으니 실제로 생길 수 있다.
+      // 이제는 모드가 자기 표를 통째로 비운다.
+      LS.resetBossDiff(s)
       ctx.source.sendSystemMessage(Text.of(`§a라이브 오버라이드 초기화 — ls_config.js 값으로 복귀 §7(전역 ${bdGlobalHp(s)}% / ${bdGlobalDmg(s)}%)`))
       return 1
     }))
@@ -239,25 +278,22 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of(`§f    globalHp: ${bdGlobalHp(s)},`))
       ctx.source.sendSystemMessage(Text.of(`§f    globalDmg: ${bdGlobalDmg(s)},`))
       ctx.source.sendSystemMessage(Text.of('§f    perBoss: {'))
-      let n = 0
-      BOSS_LIST.forEach(id => {
+      // 줄을 **한 번만** 만든다. 예전엔 채팅용과 로그용으로 같은 루프를 두 벌 돌렸는데,
+      // 한쪽만 고치면 «채팅에는 있는데 로그에는 없는» 항목이 생기고 그 로그를 그대로 붙여넣게 된다.
+      const lines = []
+      bdAllIds(s).forEach(id => {
         const hp = bdEffHp(s, id); const dmg = bdEffDmg(s, id); const ab = bdEffAbs(s, id)
-        if (ab > 0) { n++; ctx.source.sendSystemMessage(Text.of(`§f      '${id}': { absHp: ${ab}, dmg: ${dmg} },`)); return }
+        if (ab > 0) { lines.push(`      '${id}': { absHp: ${ab}, dmg: ${dmg} },`); return }
         // 전역값과 같으면 굳이 적지 않는다
         if (hp === bdGlobalHp(s) && dmg === bdGlobalDmg(s)) return
-        n++
-        ctx.source.sendSystemMessage(Text.of(`§f      '${id}': { hp: ${hp}, dmg: ${dmg} },`))
+        lines.push(`      '${id}': { hp: ${hp}, dmg: ${dmg} },`)
       })
+      lines.forEach(l => ctx.source.sendSystemMessage(Text.of('§f' + l)))
       ctx.source.sendSystemMessage(Text.of('§f    }'))
-      if (!n) ctx.source.sendSystemMessage(Text.of('§8(개별 설정 없음 — 전역값만 옮기면 된다)'))
+      if (!lines.length) ctx.source.sendSystemMessage(Text.of('§8(개별 설정 없음 — 전역값만 옮기면 된다)'))
       ctx.source.sendSystemMessage(Text.of('§7※ 서버 로그에도 같은 내용이 남는다 — 복사하기 편함'))
       console.log('[LS-BOSSDIFF] export → globalHp:' + bdGlobalHp(s) + ' globalDmg:' + bdGlobalDmg(s))
-      BOSS_LIST.forEach(id => {
-        const hp = bdEffHp(s, id); const dmg = bdEffDmg(s, id); const ab = bdEffAbs(s, id)
-        if (ab > 0) { console.log(`      '${id}': { absHp: ${ab}, dmg: ${dmg} },`); return }
-        if (hp === bdGlobalHp(s) && dmg === bdGlobalDmg(s)) return
-        console.log(`      '${id}': { hp: ${hp}, dmg: ${dmg} },`)
-      })
+      lines.forEach(l => console.log(l))
       return 1
     })))
 })
