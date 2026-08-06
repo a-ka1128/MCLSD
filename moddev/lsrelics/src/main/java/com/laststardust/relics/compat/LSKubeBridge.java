@@ -988,6 +988,187 @@ public class LSKubeBridge implements KubeJSPlugin {
             return server == null ? "" : LSData.get(server).rescue().summary();
         }
 
+        // ── 하늘 (이관 6단계에서 합류) ──
+        // 공성이 쓰고 `ls_daynight`(시간 진행) · `ls_voice`(밤 앰비언트 억제)가 읽는다.
+        // 공성 자체는 4단계에 옮겼는데 이 둘만 persistentData 에 남아 있었다 — 마지막 경계 넘김.
+        public boolean timeLocked(MinecraftServer server) {
+            return server != null && LSData.get(server).siege().timeLocked();
+        }
+
+        public void setTimeLocked(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.siege().setTimeLocked(v);
+            data.dirty();
+        }
+
+        public int nightRatePct(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).siege().nightRatePct();
+        }
+
+        public void setNightRatePct(MinecraftServer server, int pct) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.siege().setNightRatePct(pct);
+            data.dirty();
+        }
+
+        // ── 안내자의 목소리 (이관 6단계 = 마지막) ──
+        // 대사 10종의 문장·채널·쿨다운·예산 여부는 `ls_voice.js` 에 남는다.
+        // 여기가 아는 건 «무엇을 언제 말했나» 뿐이다.
+        //
+        // 예산 상한(VC_BUDGET_MAX)도 스크립트가 갖는다 — 그래서 `voiceBudget` 은 아직 정해지지
+        // 않았으면 **-1** 을 준다. 스크립트가 그걸 보고 상한으로 채운다.
+        public int voiceBudget(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).voice().budget();
+        }
+
+        public void setVoiceBudget(MinecraftServer server, int n, int max) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.voice().setBudget(n, max);
+            data.dirty();
+        }
+
+        // 남았으면 하나 쓰고 true. 읽고·빼고·쓰는 세 걸음을 한 번으로 접었다.
+        public boolean takeVoiceBudget(MinecraftServer server) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.voice().takeBudget()) return false;
+            data.dirty();
+            return true;
+        }
+
+        public int voiceBudgetDay(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).voice().budgetDay();
+        }
+
+        public void setVoiceBudgetDay(MinecraftServer server, int d) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.voice().setBudgetDay(d);
+            data.dirty();
+        }
+
+        public boolean voiceMuted(MinecraftServer server) {
+            return server != null && LSData.get(server).voice().mute();
+        }
+
+        public void setVoiceMuted(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.voice().setMute(v);
+            data.dirty();
+        }
+
+        public boolean voiceOnce(MinecraftServer server, String id) {
+            return server != null && LSData.get(server).voice().once(id);
+        }
+
+        public void setVoiceOnce(MinecraftServer server, String id, boolean v) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.voice().setOnce(id, v);
+            data.dirty();
+        }
+
+        public int voiceCd(MinecraftServer server, String id) {
+            return server == null ? 0 : LSData.get(server).voice().cd(id);
+        }
+
+        public void setVoiceCd(MinecraftServer server, String id, int ticks) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.voice().setCd(id, ticks);
+            data.dirty();
+        }
+
+        public boolean voicePend(MinecraftServer server, String id) {
+            return server != null && LSData.get(server).voice().pend(id);
+        }
+
+        public void setVoicePend(MinecraftServer server, String id, boolean v) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.voice().setPend(id, v);
+            data.dirty();
+        }
+
+        // 지금 인덱스를 주고 **동시에** 다음으로 넘긴다. 옛 코드는 읽기와 쓰기가 두 줄이라,
+        // 그 사이에 다른 발화가 끼면 같은 대사가 두 번 연달아 나왔다.
+        public int nextVoiceRot(MinecraftServer server, String id, int size) {
+            if (server == null) return 0;
+            LSData data = LSData.get(server);
+            int i = data.voice().nextRot(id, size);
+            data.dirty();
+            return i;
+        }
+
+        // 되돌린 1회성 대사 수를 준다. **회전 인덱스는 안 지운다** — 「어디까지 읽었나」라
+        // 초기화 대상이 아니다(지우면 리셋할 때마다 같은 첫 줄이 나온다).
+        public int resetVoiceLines(MinecraftServer server) {
+            if (server == null) return 0;
+            LSData data = LSData.get(server);
+            int n = data.voice().resetLines();
+            data.dirty();
+            return n;
+        }
+
+        // 감시 스냅샷 — **사본이 아니라 진도표다.**
+        public int voiceSeenRf(MinecraftServer server)   { return server == null ? 0 : LSData.get(server).voice().seenRf(); }
+        public int voiceSeenBand(MinecraftServer server) { return server == null ? 0 : LSData.get(server).voice().seenBand(); }
+        public int voiceSeenWall(MinecraftServer server) { return server == null ? 0 : LSData.get(server).voice().seenWall(); }
+        public boolean voiceSeenNight(MinecraftServer server) { return server != null && LSData.get(server).voice().seenNight(); }
+
+        public void setVoiceSeenRf(MinecraftServer server, int n) {
+            if (server == null) return;
+            LSData d = LSData.get(server); d.voice().setSeenRf(n); d.dirty();
+        }
+
+        public void setVoiceSeenBand(MinecraftServer server, int n) {
+            if (server == null) return;
+            LSData d = LSData.get(server); d.voice().setSeenBand(n); d.dirty();
+        }
+
+        public void setVoiceSeenWall(MinecraftServer server, int n) {
+            if (server == null) return;
+            LSData d = LSData.get(server); d.voice().setSeenWall(n); d.dirty();
+        }
+
+        public void setVoiceSeenNight(MinecraftServer server, boolean v) {
+            if (server == null) return;
+            LSData d = LSData.get(server); d.voice().setSeenNight(v); d.dirty();
+        }
+
+        // **처음 보는 사람이면 true 를 주면서 동시에 표시한다.** 확인과 표시가 두 줄이면
+        // 그 사이에 예외가 나서 첫 접속 인사가 접속할 때마다 반복될 수 있다.
+        public boolean markVoiceKnown(MinecraftServer server, String name) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.voice().markKnown(name)) return false;
+            data.dirty();
+            return true;
+        }
+
+        public int voiceLastDay(MinecraftServer server, String name) {
+            return server == null ? 0 : LSData.get(server).voice().lastDay(name);
+        }
+
+        public int voiceLastRf(MinecraftServer server, String name) {
+            return server == null ? 0 : LSData.get(server).voice().lastRf(name);
+        }
+
+        public void stampVoiceSeen(MinecraftServer server, String name, int day, int rf) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.voice().stamp(name, day, rf);
+            data.dirty();
+        }
+
+        public String voiceSummary(MinecraftServer server) {
+            return server == null ? "" : LSData.get(server).voice().summary();
+        }
+
         // 화면을 열어둔 사람에게 갱신을 밀어준다 (스크립트가 금고를 바꾼 직후 등)
         // ── 부활 규칙 ──
         // 리스폰 직후 ls_revive.js 가 부른다. 무적 창과 「별빛 쇠약」의 피해 감소는

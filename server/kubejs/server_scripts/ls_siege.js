@@ -20,10 +20,13 @@
 //
 // 판정·연출·명령은 여기 남는다. 웨이브 구성·보상 계산은 `/reload` 로 고치는 값이라 스크립트가 맞다.
 //
-// `sfStore` 만 남는다 — 밤 길이(`ls_nrate_pct`)·하늘 정지(`ls_time_locked`)를 `ls_daynight.js` 와
-// 주고받는 자리다. (봉화 `pb_names` 도 여기서 읽었는데, 2026-08-06 이관 5단계로 `LS.beaconCount` 가 됐다.)
-function sfStore(server) { return server.overworld().persistentData }
-// 마을 발전 레벨 읽기 (ls_town.js가 씀)
+// **이 파일에 persistentData 접근이 하나도 안 남았다 (2026-08-06, 이관 6단계).**
+// 마지막까지 남아 있던 건 `sfStore` 였고, 밤 길이(`ls_nrate_pct`)·하늘 정지(`ls_time_locked`)를
+// `ls_daynight.js`·`ls_voice.js` 와 주고받는 자리였다. 둘 다 «공성이 쓰고 남이 읽는» 구조라
+// `SiegeData` 로 옮겼다 — 4단계에서 옮긴 나머지 26개와 성격이 같았는데 이것만 빠져 있었다.
+// (봉화 `pb_names` 도 여기서 읽었는데, 이관 5단계로 `LS.beaconCount` 가 됐다.)
+//
+// 마을 발전 레벨 읽기
 // ※ 금고·마을은 lsrelics 모드(LSData)가 소유한다. 전역 바인딩 LS 를 통해 접근한다 —
 //   persistentData 의 'ls_treasury' 를 직접 건드리면 모드의 금고와 갈라져 보상이 도착하지 않는다.
 function townLvl(server, t) { return LS.townLevel(server, t) }
@@ -173,7 +176,7 @@ function beginFinale(server) {
   setFinale(server, 1)
   LS.setTrueSpawned(server, false) // 진 형태 초기화
   setThreat(server, MAX_THREAT)
-  sfStore(server).putInt('ls_nrate_pct', 70) // 1밤: 밤 길이 1.4배
+  LS.setNightRatePct(server, 70) // 1밤: 밤 길이 1.4배
   server.runCommandSilent('title @a title {"text":"가장 긴 밤","color":"dark_purple","bold":true}')
   server.runCommandSilent('title @a subtitle {"text":"근원을 잃은 어둠이 마지막 힘을 그러모은다","color":"red"}')
   playAll(server, 'minecraft:entity.wither.spawn', 1, 0.5)
@@ -186,7 +189,7 @@ function spawnFinalBoss(server) {
   try { server.runCommandSilent('enhancedcelestials setLunarEvent enhancedcelestials:blood_moon') } catch (err) { lsWarn('ls_siege:148', err) } // 마지막 밤 = 혈월
   server.runCommandSilent(`summon ${FINAL_BOSS_ID} ${c.x + 0.5} ${c.y + 12} ${c.z + 0.5} {Tags:["ls_final_boss"],PersistenceRequired:1b}`)
   setFinale(server, 90)
-  sfStore(server).putBoolean('ls_time_locked', true) // 하늘이 멈춘다
+  LS.setTimeLocked(server, true) // 하늘이 멈춘다
   server.runCommandSilent('title @a title {"text":"어둠의 심장","color":"dark_red","bold":true}')
   server.runCommandSilent('title @a subtitle {"text":"놈이 죽기 전까지 아침은 오지 않는다","color":"gray"}')
   playAll(server, 'minecraft:entity.wither.spawn', 1, 0.4)
@@ -225,7 +228,7 @@ function finaleVictory(server) {
   setFinale(server, 100)
   setThreat(server, 0)
   LS.setDawnbreak(server, true) // 여명 가속 시작
-  sfStore(server).putInt('ls_nrate_pct', 0)
+  LS.setNightRatePct(server, 0)
   server.runCommandSilent('title @a title {"text":"별빛이 돌아온다","color":"gold","bold":true}')
   server.runCommandSilent('title @a subtitle {"text":"긴 어둠이 끝났다 — 세상은 너희의 것이다","color":"yellow"}')
   playAll(server, 'minecraft:ui.toast.challenge_complete', 1, 1)
@@ -837,11 +840,11 @@ ServerEvents.tick(event => {
         setFinale(server, next)
         LS.setFinaleNightOk(server, false)
         if (next === FINALE_NIGHTS) {
-          sfStore(server).putInt('ls_nrate_pct', 40) // 마지막 밤: 2.5배 길이 (보스가 시간을 쥔다)
+          LS.setNightRatePct(server, 40) // 마지막 밤: 2.5배 길이 (보스가 시간을 쥔다)
           say(server, '§4☽ 다음 밤이 마지막이다 — 어둠의 심장이 온다. §c만반의 준비를 해주세요.')
           playAll(server, 'minecraft:entity.wither.ambient', 0.8, 0.6)
         } else {
-          sfStore(server).putInt('ls_nrate_pct', 55) // 2밤: 1.8배 길이
+          LS.setNightRatePct(server, 55) // 2밤: 1.8배 길이
           say(server, `§a${fin}번째 밤을 버텨냈다. §7다음 밤은 더 길다...`)
         }
       } else {
@@ -996,7 +999,7 @@ ServerEvents.tick(event => {
     var curDawn = dayTime(server)
     if (curDawn >= 23600 || curDawn < 12000) {
       LS.setDawnbreak(server, false)
-      sfStore(server).putBoolean('ls_time_locked', false)
+      LS.setTimeLocked(server, false)
       playAll(server, 'minecraft:block.beacon.activate', 1, 1.4)
     } else {
       server.runCommandSilent('time add 400')
@@ -1175,8 +1178,8 @@ ServerEvents.commandRegistry(event => {
       LS.setFinaleNightOk(s, false)
       LS.setDawnbreak(s, false)
       LS.setTrueSpawned(s, false)
-      sfStore(s).putBoolean('ls_time_locked', false)
-      sfStore(s).putInt('ls_nrate_pct', 0)
+      LS.setTimeLocked(s, false)
+      LS.setNightRatePct(s, 0)
       ctx.source.sendSystemMessage(Text.of('§7최종장 중단·초기화 (시간 잠금 해제)')); return 1
     }))
     .then(Commands.literal('trueform').requires(s => s.hasPermission(2)).executes(ctx => {

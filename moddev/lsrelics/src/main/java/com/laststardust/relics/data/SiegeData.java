@@ -81,6 +81,16 @@ public class SiegeData {
     private int day;
     private boolean wasNight;
 
+    // ── 하늘 ── (이관 6단계에서 합류, 2026-08-06)
+    // 이 둘은 공성이 쓰고 **다른 두 파일이 읽는다**: `ls_daynight.js`(시간 진행)와
+    // `ls_voice.js`(밤 앰비언트 억제). 공성 자체는 4단계에 옮겼는데 이 둘만 persistentData 에
+    // 남아 있었다 — 마지막까지 남은 파일 경계를 넘는 키다.
+    //
+    // 공성 섹션에 두는 이유: **쓰는 쪽이 공성 하나**다. 최종장이 하늘을 멈추고, 밤 길이를
+    // 물결마다 늘린다. 읽는 쪽이 둘이라고 해서 주인이 흐려지는 건 아니다.
+    private boolean timeLocked;   // 최종장: 하늘이 멈춘다
+    private int nightRatePct;     // 밤 길이 오버라이드(%). 0 = 오버라이드 없음
+
     // ── 이력 ──
     private boolean firstSiegeDone;
 
@@ -195,6 +205,13 @@ public class SiegeData {
     public boolean wasNight() { return wasNight; }
     public void setWasNight(boolean v) { wasNight = v; }
 
+    // ── 하늘 ──
+    public boolean timeLocked() { return timeLocked; }
+    public void setTimeLocked(boolean v) { timeLocked = v; }
+
+    public int nightRatePct() { return nightRatePct; }
+    public void setNightRatePct(int pct) { nightRatePct = Math.max(0, pct); }
+
     // ── 이력 ──
     public boolean firstSiegeDone() { return firstSiegeDone; }
     public void setFirstSiegeDone(boolean v) { firstSiegeDone = v; }
@@ -242,6 +259,8 @@ public class SiegeData {
         d.putInt("annTier", annTier);
         d.putInt("day", day);
         d.putBoolean("wasNight", wasNight);
+        d.putBoolean("timeLocked", timeLocked);
+        d.putInt("nightRatePct", nightRatePct);
         tag.put("day", d);
 
         return tag;
@@ -282,6 +301,8 @@ public class SiegeData {
         annTier = d.getInt("annTier");
         day = d.getInt("day");
         wasNight = d.getBoolean("wasNight");
+        timeLocked = d.getBoolean("timeLocked");
+        nightRatePct = Math.max(0, d.getInt("nightRatePct"));
     }
 
     // 이관 확인용 (/lsdata).

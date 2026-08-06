@@ -38,6 +38,14 @@ const MG_BT_FLAG = 'ls_bounty_migrated'
 const MG_PB_FLAG = 'ls_beacon_migrated'
 const MG_CS_FLAG = 'ls_casino_migrated'
 const MG_RS_FLAG = 'ls_rescue_migrated'
+const MG_VC_FLAG = 'ls_voice_migrated'
+// 대사 id — `ls_voice.js` 의 VC_LINES 키와 같다. 여기 목록을 따로 두는 이유는 옛 키가
+// `vc_once_<id>` / `vc_cd_<id>` / `vc_rot_<id>` 라 **접두사 훑기로는 id 를 못 떼어내기 때문**이다
+// (`vc_p_day_철수` 같은 것도 `vc_` 로 시작한다).
+const MG_VOICE_IDS = [
+  'wipe', 'first_siege', 'gate_1', 'gate_2', 'gate_3', 'gate_4',
+  'threat_high', 'threat_crit', 'wall_break', 'night'
+]
 // 생존자 키 — `ls_rescue.js` 의 SURVIVORS 와 같은 순서다. 여기 목록을 따로 두는 이유는
 // 옛 키가 `rs_done_<키>` 라 **접두사 훑기로는 못 찾기 때문**이다(`rs_x`·`rs_y` 도 `rs_` 로 시작한다).
 const MG_RESCUE_KEYS = ['smith', 'herb', 'farmer', 'bard', 'archive', 'watch']
@@ -411,6 +419,76 @@ function mgRunRescue(server, force) {
   return n
 }
 
+// ── 안내자의 목소리 + 하늘 (이관 6단계 = 마지막) ──
+// 옛 저장: `vc_mute` · `vc_budget`/`vc_budget_day`/`vc_budget_init` ·
+//          `vc_once_<id>`/`vc_cd_<id>`/`vc_rot_<id>`/`vc_pend_<id>` ·
+//          `vc_seen_rf`/`vc_seen_band`/`vc_seen_wall`/`vc_seen_night` ·
+//          `vc_p_known_<이름>`/`vc_p_day_<이름>`/`vc_p_rf_<이름>` ·
+//          그리고 공성이 쓰던 `ls_time_locked`/`ls_nrate_pct`.
+//
+// **1회성 플래그를 반드시 옮겨야 한다.** 안 옮기면 「첫 공세 격퇴」와 관문 해방 대사 넷이
+// 다시 «안 한 것»이 되어, 다음 트리거에서 이미 지나간 서사가 통째로 다시 재생된다.
+// 감시 스냅샷도 마찬가지다 — `vc_seen_rf` 가 0 이면 관문 4개가 «방금 다 열린 것»으로 잡혀
+// 대사 넷이 한꺼번에 쏟아진다.
+function mgRunVoice(server, force) {
+  const st = mgStore(server)
+  if (!force && st.getBoolean(MG_VC_FLAG)) return null
+
+  var n = 0
+  try {
+    if (st.getBoolean('vc_mute')) { LS.setVoiceMuted(server, true); n++ }
+    // 예산은 init 플래그가 서 있을 때만 옮긴다. 안 서 있으면 「아직 안 정해짐」이고,
+    // 그건 모드 쪽 -1 과 같은 뜻이라 그대로 두는 게 맞다.
+    if (st.getBoolean('vc_budget_init')) {
+      LS.setVoiceBudget(server, st.getInt('vc_budget'), 4)   // 4 = VC_BUDGET_MAX
+      LS.setVoiceBudgetDay(server, st.getInt('vc_budget_day'))
+      n++
+    }
+  } catch (e) { lsWarn('ls_migrate:voice:budget', e) }
+
+  // 대사별 상태. 회전 인덱스는 nextVoiceRot 으로만 올릴 수 있어서, 옛 값만큼 헛돌린다 —
+  // 세터를 따로 뚫는 것보다 낫다. 여는 순간 세터가 생기면 「읽고 쓰는」 옛 모양이 되살아난다.
+  MG_VOICE_IDS.forEach(id => {
+    try {
+      if (st.getBoolean('vc_once_' + id)) { LS.setVoiceOnce(server, id, true); n++ }
+      var cd = st.getInt('vc_cd_' + id)
+      if (cd > 0) { LS.setVoiceCd(server, id, cd); n++ }
+      if (st.getBoolean('vc_pend_' + id)) { LS.setVoicePend(server, id, true); n++ }
+      var rot = st.getInt('vc_rot_' + id)
+      for (var r = 0; r < rot && r < 64; r++) LS.nextVoiceRot(server, id, 64)
+    } catch (e) { lsWarn('ls_migrate:voice:' + id, e) }
+  })
+
+  // 감시 스냅샷
+  try {
+    LS.setVoiceSeenRf(server, st.getInt('vc_seen_rf'))
+    LS.setVoiceSeenBand(server, st.getInt('vc_seen_band'))
+    LS.setVoiceSeenWall(server, st.getInt('vc_seen_wall'))
+    LS.setVoiceSeenNight(server, st.getBoolean('vc_seen_night'))
+  } catch (e) { lsWarn('ls_migrate:voice:watch', e) }
+
+  // 사람별 — `vc_p_known_<이름>` 에서 이름을 떼어낸다.
+  mgNamesWith(server, 'vc_p_known_').forEach(who => {
+    try {
+      if (!st.getBoolean('vc_p_known_' + who)) return
+      LS.markVoiceKnown(server, who)
+      LS.stampVoiceSeen(server, who, st.getInt('vc_p_day_' + who), st.getInt('vc_p_rf_' + who))
+      n++
+    } catch (e) { lsWarn('ls_migrate:voice:p:' + who, e) }
+  })
+
+  // 하늘 — 공성이 쓰던 마지막 두 키.
+  // **하늘 정지가 켜진 채로 옮기지 못하면 시간이 영영 안 흐른다**(최종장 도중 재시작).
+  try {
+    if (st.getBoolean('ls_time_locked')) { LS.setTimeLocked(server, true); n++ }
+    var pct = st.getInt('ls_nrate_pct')
+    if (pct > 0) { LS.setNightRatePct(server, pct); n++ }
+  } catch (e) { lsWarn('ls_migrate:voice:sky', e) }
+
+  st.putBoolean(MG_VC_FLAG, true)
+  return n
+}
+
 ServerEvents.loaded(event => {
   const server = event.server
   if (!server) return
@@ -474,6 +552,13 @@ ServerEvents.loaded(event => {
     if (mgRs === 0) console.log('[LS-MIGRATE] 구출 — 옛 키 없음 (새 월드로 본다)')
     else console.log(`[LS-MIGRATE] 구출 → 모드 장부 — ${mgRs}명 · ${LS.rescueSummary(server)}`)
   }
+
+  var mgVc = null
+  try { mgVc = mgRunVoice(server, false) } catch (e) { lsWarn('ls_migrate:voice', e) }
+  if (mgVc !== null) {
+    if (mgVc === 0) console.log('[LS-MIGRATE] 목소리 — 옛 키 없음 (새 월드로 본다)')
+    else console.log(`[LS-MIGRATE] 목소리 → 모드 장부 — 값 ${mgVc}개 · ${LS.voiceSummary(server)}`)
+  }
 })
 
 ServerEvents.commandRegistry(event => {
@@ -494,6 +579,7 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of(`§7봉화 §8— ${LS.beaconSummary(s)}`))
       ctx.source.sendSystemMessage(Text.of(`§7경마 §8— ${LS.casinoSummary(s)}`))
       ctx.source.sendSystemMessage(Text.of(`§7구출 §8— ${LS.rescueSummary(s)}`))
+      ctx.source.sendSystemMessage(Text.of(`§7목소리 §8— ${LS.voiceSummary(s)}`))
       // 옮기기를 따로 표시한다 — 하나만 됐을 때 그걸 알아볼 수 있어야 한다.
       ctx.source.sendSystemMessage(Text.of(
         `§8옛 키 옮기기 — 성장 ${mgStore(s).getBoolean(MG_FLAG) ? '§7완료' : '§c아직'}`
@@ -503,7 +589,8 @@ ServerEvents.commandRegistry(event => {
         + `§8 · 현상금 ${mgStore(s).getBoolean(MG_BT_FLAG) ? '§7완료' : '§c아직'}`
         + `§8 · 봉화 ${mgStore(s).getBoolean(MG_PB_FLAG) ? '§7완료' : '§c아직'}`
         + `§8 · 경마 ${mgStore(s).getBoolean(MG_CS_FLAG) ? '§7완료' : '§c아직'}`
-        + `§8 · 구출 ${mgStore(s).getBoolean(MG_RS_FLAG) ? '§7완료' : '§c아직'}`))
+        + `§8 · 구출 ${mgStore(s).getBoolean(MG_RS_FLAG) ? '§7완료' : '§c아직'}`
+        + `§8 · 목소리 ${mgStore(s).getBoolean(MG_VC_FLAG) ? '§7완료' : '§c아직'}`))
       return 1
     })
     // 다시 옮긴다. 멱등이라 여러 번 돌려도 결과가 같다 — 옛 키가 아직 남아 있는 한.
@@ -517,9 +604,10 @@ ServerEvents.commandRegistry(event => {
       try { rbt = mgRunBounty(s, true) } catch (e) { lsWarn('ls_migrate:cmd:bounty', e) }
       try { rpb = mgRunBeacon(s, true) } catch (e) { lsWarn('ls_migrate:cmd:beacon', e) }
       try { rcs = mgRunCasino(s, true) } catch (e) { lsWarn('ls_migrate:cmd:casino', e) }
-      var rrs = null
+      var rrs = null, rvc = null
       try { rrs = mgRunRescue(s, true) } catch (e) { lsWarn('ls_migrate:cmd:rescue', e) }
-      if (r === null && rs === null && rb === null && rt === null && rbt === null && rpb === null && rcs === null && rrs === null) { ctx.source.sendSystemMessage(Text.of('§c실패 — 로그 확인')); return 0 }
+      try { rvc = mgRunVoice(s, true) } catch (e) { lsWarn('ls_migrate:cmd:voice', e) }
+      if (r === null && rs === null && rb === null && rt === null && rbt === null && rpb === null && rcs === null && rrs === null && rvc === null) { ctx.source.sendSystemMessage(Text.of('§c실패 — 로그 확인')); return 0 }
       if (r) ctx.source.sendSystemMessage(Text.of(
         `§a성장 다시 옮김 §7— 가호 ${r.fate} · 유물 ${r.relic} · 각성 ${r.star} · 제단 ${r.altar}`))
       if (rs !== null) ctx.source.sendSystemMessage(Text.of(`§a공성 다시 옮김 §7— 값 ${rs}개`))
@@ -529,6 +617,7 @@ ServerEvents.commandRegistry(event => {
       if (rpb !== null) ctx.source.sendSystemMessage(Text.of(`§a봉화 다시 옮김 §7— ${rpb}기`))
       if (rcs !== null) ctx.source.sendSystemMessage(Text.of(`§a경마 다시 옮김 §7— 베팅 ${rcs}명`))
       if (rrs !== null) ctx.source.sendSystemMessage(Text.of(`§a구출 다시 옮김 §7— ${rrs}명`))
+      if (rvc !== null) ctx.source.sendSystemMessage(Text.of(`§a목소리 다시 옮김 §7— 값 ${rvc}개`))
       ctx.source.sendSystemMessage(Text.of(`§8지금 장부: ${LS.heroSummary(s)}`))
       ctx.source.sendSystemMessage(Text.of(`§8            ${LS.siegeSummary(s)}`))
       return 1

@@ -34,6 +34,7 @@ public class LSData extends SavedData {
     private final BeaconData beacons = new BeaconData();
     private final CasinoData casino = new CasinoData();
     private final RescueData rescue = new RescueData();
+    private final VoiceData voice = new VoiceData();
 
     // 성역 좌표 — 여러 시스템이 공유하는 가장 넓게 퍼진 상태다.
     // (공성·관문·구출·통계·귀환석이 전부 이걸 본다)
@@ -90,6 +91,12 @@ public class LSData extends SavedData {
         return rescue;
     }
 
+    // 안내자의 목소리 — 예산·대사별 상태·감시 스냅샷·사람별 마지막 접속 (이관 6단계 = 마지막).
+    // 감시 스냅샷은 **사본이 아니라 진도표**다 — 「어디까지 대사를 읽어줬나」.
+    public VoiceData voice() {
+        return voice;
+    }
+
     // 관문 진행도 0~4 — 클리어한 봉인 수.
     // 성역 좌표만큼 넓게 퍼져 있다: 몹 스케일링 티어·각성 관문 조건·최종장 발동·통계 표시가
     // 전부 이 값 하나를 본다. 그래서 여기 한 곳에만 둔다.
@@ -136,6 +143,7 @@ public class LSData extends SavedData {
         data.beacons.load(tag.getCompound("beacons"), registries);
         data.casino.load(tag.getCompound("casino"), registries);
         data.rescue.load(tag.getCompound("rescue"), registries);
+        data.voice.load(tag.getCompound("voice"), registries);
         CompoundTag s = tag.getCompound("sanctuary");
         data.sancSet = s.getBoolean("set");
         data.sancX = s.getInt("x");
@@ -156,6 +164,7 @@ public class LSData extends SavedData {
         tag.put("beacons", beacons.save(registries));
         tag.put("casino", casino.save(registries));
         tag.put("rescue", rescue.save(registries));
+        tag.put("voice", voice.save(registries));
         CompoundTag s = new CompoundTag();
         s.putBoolean("set", sancSet);
         s.putInt("x", sancX);
