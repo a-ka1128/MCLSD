@@ -90,7 +90,8 @@ public class CasinoData {
         return true;
     }
 
-    public boolean hasBet(String name) { return bets.containsKey(name); }
+    // 「이미 걸었나」를 따로 묻는 메서드는 두지 않는다 — placeBet 이 false 로 답한다.
+    // 물어보고 나서 거는 두 걸음이 있으면 그 사이가 벌어질 자리가 생긴다.
     public List<String> betters() { return new ArrayList<>(bets.keySet()); }
     public int betHorse(String name)  { Bet b = bets.get(name); return b == null ? 0 : b.horse; }
     public int betAmount(String name) { Bet b = bets.get(name); return b == null ? 0 : b.amount; }

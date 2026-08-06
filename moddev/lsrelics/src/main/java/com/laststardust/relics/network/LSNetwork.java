@@ -89,13 +89,26 @@ public final class LSNetwork {
             MinecraftServer server = player.getServer();
             if (server == null) return;
             server.getCommands().performPrefixedCommand(player.createCommandSourceStack(), "fate choose " + key);
+
+            // ── 거절당했으면 새 목록으로 다시 연다 (2026-08-06) ──
+            // 화면의 「남이 가진 가호」는 **열었을 때의 스냅샷**이다. 둘이 동시에 열어 둘 다 같은
+            // 가호를 고르면, 두 화면 모두 그게 비어 있다고 보여 준다. 서버가 나중 사람을 거절하는데
+            // 그때는 화면이 이미 닫힌 뒤라 채팅 한 줄만 남는다 — 「눌렀는데 아무 일도 안 일어났다」.
+            //
+            // 명령의 성공 여부를 보는 대신 **결과**를 본다: 가호가 안 생겼으면 실패한 것이다.
+            // (`performPrefixedCommand` 의 반환값은 KubeJS 가 등록한 명령에서 신뢰하기 어렵다.)
+            if (com.laststardust.relics.data.LSData.get(server).hero()
+                    .fate(player.getGameProfile().getName()).isEmpty()) {
+                com.laststardust.relics.LSCommands.openFateScreen(player);
+            }
         });
     }
 
     // 화면 열기는 클라에서만 의미가 있다. 클라 전용 클래스는 이 람다가 실행될 때 지연 로드되므로
     // 전용 서버에선 화면 클래스를 아예 건드리지 않는다.
     private static void handleOpen(FateOpenPayload payload, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> com.laststardust.relics.client.FateScreenOpener.open(payload.current()));
+        ctx.enqueueWork(() ->
+            com.laststardust.relics.client.FateScreenOpener.open(payload.current(), payload.taken()));
     }
 
     private static void handle(RelicInputPayload payload, IPayloadContext ctx) {

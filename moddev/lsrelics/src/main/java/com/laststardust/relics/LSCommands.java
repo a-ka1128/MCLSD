@@ -10,6 +10,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -381,14 +382,14 @@ public final class LSCommands {
                 }));
 
         // 가호 선택 화면 열기 — 모든 플레이어가 쓴다(/lsrelic 은 OP 전용이라 그 아래 두면 안 된다).
-        // 현재 가호는 KubeJS(persistentData)에만 있어 모드가 읽을 수 없으므로 인자로 받는다.
-        //   /fateui           선택 안 한 상태로 열기
-        //   /fateui <key>     이미 그 가호를 받은 상태로 열기 (선택 버튼 비활성)
+        //
+        // ── 인자가 사라졌다 (2026-08-06) ──
+        // 예전 주석은 «현재 가호는 KubeJS(persistentData)에만 있어 모드가 읽을 수 없으므로 인자로
+        // 받는다» 였다. **이관 3단계(2026-07-31)로 낡았다** — 장부는 `LSData.hero()` 다.
+        // 인자로 받는 동안은 스크립트가 넘겨준 값을 믿는 구조라, 그쪽이 한 번 어긋나면
+        // 「이미 가호가 있는데 선택 버튼이 열려 있는」 화면이 나올 수 있었다. 이제 직접 읽는다.
         event.getDispatcher().register(
-            Commands.literal("fateui")
-                .executes(ctx -> openFateScreen(ctx.getSource(), ""))
-                .then(Commands.argument("current", StringArgumentType.word())
-                    .executes(ctx -> openFateScreen(ctx.getSource(), StringArgumentType.getString(ctx, "current")))));
+            Commands.literal("fateui").executes(ctx -> openFateScreen(ctx.getSource())));
 
         // ── 마을(성역 재건) ──
         // 데이터·판정이 전부 모드에 있으므로 명령도 여기서 등록한다.
@@ -511,14 +512,39 @@ public final class LSCommands {
         return 1;
     }
 
-    private static int openFateScreen(CommandSourceStack src, String current) {
+    private static int openFateScreen(CommandSourceStack src) {
         ServerPlayer player = src.getPlayer();
         if (player == null) {
             src.sendFailure(Component.literal("플레이어만 사용할 수 있다."));
             return 0;
         }
-        PacketDistributor.sendToPlayer(player, new FateOpenPayload(current));
+        openFateScreen(player);
         return 1;
+    }
+
+    // 접속 자동 열기(`FateAutoOpen`)와 명령이 같이 쓴다. 화면을 여는 방법이 하나뿐이어야
+    // 「명령으로 열면 잠긴 목록이 보이는데 자동으로 열면 안 보이는」 어긋남이 안 생긴다.
+    public static void openFateScreen(ServerPlayer player) {
+        if (player == null) return;
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+        var hero = com.laststardust.relics.data.LSData.get(server).hero();
+        String me = player.getGameProfile().getName();
+        PacketDistributor.sendToPlayer(player,
+            new FateOpenPayload(hero.fate(me), takenCsv(hero, me)));
+    }
+
+    // 남이 이미 가진 가호를 `키:주인,키:주인` 으로. **내 것은 뺀다** — 내 가호는 `current` 가 나른다.
+    // 여덟 개짜리 화이트리스트를 도니 사람 수와 무관하게 여덟 번이다.
+    private static String takenCsv(com.laststardust.relics.data.HeroData hero, String me) {
+        StringBuilder sb = new StringBuilder();
+        for (FateCatalog.Fate f : FateCatalog.ALL) {
+            String owner = hero.ownerOf(f.key(), me);
+            if (owner.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(',');
+            sb.append(f.key()).append(':').append(owner);
+        }
+        return sb.toString();
     }
 
     // 인벤토리 전체(주손·보관칸·오프핸드)의 유물에 별을 새긴다.

@@ -208,7 +208,10 @@ PlayerEvents.loggedIn(event => {
   if (cur) {
     ftApply(server, player, cur) // 제거 후 재적용 — 현재 성급 수치로 갱신된다
   } else {
-    player.tell(Text.of('§6✦ 별의 가호를 아직 받지 않았습니다. §7— §e/fate §7로 선택 (1회, 변경 불가)'))
+    // ※ 화면은 모드가 띄운다 (`FateAutoOpen.java`, 접속 2초 뒤). 여기 채팅 줄은 **대비책**이다 —
+    //   화면을 ESC 로 닫았거나 열기가 실패했을 때 「그래서 뭘 해야 하나」가 남아 있어야 한다.
+    //   예전엔 이 줄이 전부였고, 첫 접속이면 모드팩 로딩 메시지 수십 줄에 묻혔다.
+    player.tell(Text.of('§6✦ 별의 가호를 아직 받지 않았습니다. §7— 창을 닫았다면 §e/fate §7로 다시 열 수 있습니다. §8(1회, 변경 불가)'))
   }
 })
 
@@ -238,13 +241,14 @@ ServerEvents.commandRegistry(event => {
 
   event.register(Commands.literal('fate')
     // 선택 화면(lsrelics 모드의 /fateui)을 연다 — 유물 아이콘과 소개를 보고 고른다.
-    // 모드 화면이 «이미 고른 가호»를 알아야 선택 버튼을 잠글 수 있는데, /fateui 는
-    // 인자로만 받는다(그쪽이 장부를 직접 읽지 않는다). 그래서 여기서 넘겨준다.
+    //
+    // ※ 2026-08-06: 예전엔 «이미 고른 가호»를 인자로 넘겨줬다(`fateui <key>`).
+    //   그때는 장부가 persistentData 라 모드가 못 읽었기 때문인데, 이관 3단계로 낡은 이유다.
+    //   지금은 `/fateui` 가 `LSData.hero()` 를 직접 읽고 **남이 가진 가호 목록까지** 함께 보낸다.
     .executes(ctx => {
-      const s = ctx.source.server; const p = ctx.source.player
+      const p = ctx.source.player
       if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
-      const cur = ftGet(s, p)
-      s.runCommandSilent(`execute as ${p.username} run ${cur ? 'fateui ' + cur : 'fateui'}`)
+      ctx.source.server.runCommandSilent(`execute as ${p.username} run fateui`)
       return 1
     })
     // 채팅 목록판 (화면을 못 쓰는 상황이나 빠르게 훑어볼 때)

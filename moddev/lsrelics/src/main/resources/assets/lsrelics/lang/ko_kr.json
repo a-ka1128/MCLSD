@@ -10,6 +10,8 @@
   "lsfate.gui.title": "별의 가호를 선택하라",
   "lsfate.gui.confirm": "이 길을 걷는다",
   "lsfate.gui.locked": "선택 완료",
+  "lsfate.gui.taken": "이미 임자가 있다",
+  "lsfate.gui.taken_by": "이 가호는 %s이(가) 이미 받았다. 다른 길을 골라라.",
   "lsfate.gui.already": "가호는 한 번만 선택할 수 있다. 유물은 제단에서 따로 얻는다.",
   "lsfate.gui.relic": "장차 다룰 유물",
   "lsfate.gui.grant": "지금 받는 것",

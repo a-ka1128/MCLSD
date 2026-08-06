@@ -1,8 +1,6 @@
 package com.laststardust.relics.data;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 import net.minecraft.core.HolderLookup;
@@ -50,8 +48,6 @@ public class RescueData {
     public int population() { return rescued.size(); }
 
     public boolean isRescued(String key) { return rescued.contains(key); }
-
-    public List<String> rescuedKeys() { return new ArrayList<>(rescued); }
 
     // 이미 구출한 생존자면 false — 인구가 두 번 늘지 않는 유일한 관문이다.
     public boolean settle(String key) {
