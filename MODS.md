@@ -122,6 +122,32 @@
 | Terralith | https://modrinth.com/mod/terralith | ⚙️ **Lithostitched** 필요 (또는 데이터팩 형태 사용) |
 | When Dungeons Arise | https://modrinth.com/mod/when-dungeons-arise | 로그라이크 던전·구조물 |
 | YUNG's Better Dungeons | https://www.curseforge.com/minecraft/mc-mods/yungs-better-dungeons-neoforge | ⚙️ **YUNG's API** |
+| Structory | https://www.stardustlabs.net/ | 전리품 없는 **분위기용 폐허.** 세상이 한때 사람이 살던 곳처럼 보이게 |
+| ⛔ Structory: Towers | 〃 | **켜지 말 것 — 이 jar 는 깨져 있다.** 아래 |
+
+> **⛔ `Structory_Towers_26.2_v1.0.17.jar` 는 켜면 서버가 안 뜬다 (2026-08-06 확인)**
+>
+> `.disabled` 로 꺼져 있는 게 **선택이 아니라 어쩔 수 없어서**다. 켜 봤더니:
+>
+> ```
+> Missing ModLoader in file (Structory_Towers_26.2_v1.0.17.jar)
+> → 부팅 실패
+> ```
+>
+> 이 jar 의 `META-INF/neoforge.mods.toml` 에 **맨 앞 두 줄이 빠져 있다.** 같은 배포처의
+> 정상 Structory 와 비교하면 명확하다:
+>
+> | 정상 `Structory` | 깨진 `Structory: Towers` |
+> |---|---|
+> | `modLoader="lowcodefml"` | **없음** |
+> | `loaderVersion="[1,)"` | **없음** |
+> | `license="..."` | `license="..."` |
+>
+> NeoForge 는 `modLoader` 가 없으면 「모드 파일이 아니다」로 거부한다. **우리 설정 문제가 아니라
+> 그 파일 자체가 깨진 것**이라, 확장자를 바꾸는 것으로는 절대 안 고쳐진다.
+>
+> 쓰고 싶으면 **stardustlabs.net 에서 다시 받는다.** 받은 뒤 위 두 줄이 있는지부터 확인할 것.
+> (내용물은 멀쩡하다 — 탑·전초 22종이 들어 있다. 껍데기만 깨졌다.)
 
 ## Layer 5 — 전투 / PvE / RPG
 | 모드 | 링크 | 비고 |
@@ -158,6 +184,25 @@
 ## 의존 모드 (보통 Prism이 자동 추가)
 Balm · Lithostitched · YUNG's API · GeckoLib · Placebo · Apothic Attributes · Curios API ·
 playerAnimator · Cloth Config API · Moonlight Lib · Architectury API (요구 시) · Kotlin for Forge (요구 시)
+
+## 리소스팩 (🖥️ 클라 전용 — `resourcepacks/`)
+
+> **폴더에 넣는 것과 켜는 것은 다르다.** zip 을 `resourcepacks/` 에 두면 *목록에 뜨기만* 하고,
+> 옵션 화면에서 오른쪽으로 옮겨야 실제로 켜진다. 실제 활성 목록은 `options.txt` 의
+> `resourcePacks:` 한 줄이다 — **뒤에 올수록 앞의 것을 덮는다.**
+
+| 팩 | 상태 | 비고 |
+|---|---|---|
+| **Fresh Animations** 1.10.4 | ✅ 켬 (2026-08-06) | 몹 동작을 크게 살린다. ⚙️ **Entity Model Features + Entity Texture Features** 필요 — 둘 다 깔려 있다 |
+| **Symmetrical Swords** 1.0.1 | ✅ 켬 (2026-08-06) | 검을 들었을 때 좌우 대칭으로 그린다 |
+| ~~Red-eyed 1.1~~ | ❌ **삭제 (2026-08-06)** | 적대 몹 눈을 붉게 발광. 아래 |
+
+> **Red-eyed 를 뺀 이유.** 좀비·스켈레톤·크리퍼·피글린 등 76개 텍스처로 눈을 붉게 만드는 팩이고
+> 무드에는 맞았는데, **`pack_format` 을 15(1.20 대)로 선언한다.** 1.21.1 은 34 라 게임이
+> 「호환되지 않음」으로 분류한다. 강제로 켤 수는 있지만 그 상태를 문서 없이 남기면 다음 사람이
+> 「왜 빨간 경고가 떠 있지」를 다시 조사하게 된다.
+>
+> 같은 효과가 필요하면 **1.21 대응 팩을 새로 받는 편이 낫다.**
 
 ## 클라 전용 모드 (🖥️ — 서버 mods 폴더에 넣지 말 것)
 Sodium · Iris · Rethinking Voxels(셰이더) · FancyMenu · Konkrete · EMI · Jade · Xaero's Minimap · Xaero's World Map
