@@ -131,7 +131,24 @@ BASELINE = [
     (r"Plugin \S+ does not (load on server side|have required mod '\S+' loaded), skipping",
      "KubeJS 플러그인 선별 — 클라 전용 플러그인(BuiltinKubeJSClientPlugin)과 안 깐 모드용 "
      "연동(ftbfiltersystem)을 건너뛴다는 알림이다. 건너뛰는 게 정상 동작이다."),
+
+    (r"Could not find Sign for wood \S+\. Does this block even exist",
+     "Supplementaries 가 다른 모드의 나무 종류에 맞는 간판을 못 찾는다는 알림 "
+     "(regions_unexplored:alpha · cataclysm:chorus).\n"
+     "        **모드 목록이 바뀐 직후의 첫 기동에만 나온다** — 2026-08-06 에 두 번 관측했고"
+     " 둘 다 그 조건이었으며, 그냥 재시작하면 사라졌다. 그 두 나무의 걸이 간판만 안 생긴다."),
+
+    (r"The following mods have version differences that were not resolved",
+     "월드가 기억하는 모드 목록과 지금 목록이 다르다는 알림. **모드를 넣거나 뺀 직후의 첫 "
+     "기동에만 나오고**, 뒤이어 빠진 모드 이름이 나열된다. 그다음 기동부터는 안 나온다.\n"
+     "        ※ 나열된 이름이 **뺀 기억이 없는 모드**라면 그건 진짜 문제다 — 목록을 꼭 읽을 것."),
 ]
+
+# ── 일부러 기준선에 안 넣는 것 ──
+# `Can't keep up! Is the server overloaded?` — **이건 진짜 신호라 재우지 않는다.**
+# `/place structure` 같은 무거운 명령 한 번에도 뜨므로 「한 번 떴다」는 대개 무해하지만,
+# 자주 뜨면 그게 서버가 실제로 밀리고 있다는 뜻이다. 기준선에 넣으면 그 구분이 사라진다.
+# 뜨면 직전에 무슨 명령이 있었는지 보고, 짚이는 게 없으면 그때가 들여다볼 때다.
 
 BASELINE = [(re.compile(p), why) for p, why in BASELINE]
 
