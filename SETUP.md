@@ -33,6 +33,10 @@
 1. 서버 폴더 생성, 예: `D:\Study\MC\CustomServer1\server`.
 2. https://neoforged.net/ 에서 **NeoForge 1.21.1 서버 인스톨러** 다운로드 → 서버 폴더에서 실행:
    `java -jar neoforge-<버전>-installer.jar --installServer`
+
+   > **지금 서버는 `21.1.241` 로 깔려 있다** (`server/libraries/net/neoforged/neoforge/21.1.241/`).
+   > 인스톨러는 설치가 끝나면 쓸 일이 없어서 **2026-08-06 에 지웠다**(`.jar` 7.0MB + `.log` 0.5MB).
+   > 다시 필요하면 위 사이트에서 같은 버전을 받으면 된다 — 설치 결과물은 `libraries/` 에 남아 있다.
 3. **클라 모드**를 `server\mods`에 복사한 뒤, **클라 전용 모드는 삭제** (Sodium, Iris, Rethinking Voxels, EMI,
    Jade, Xaero's ×2 — MODS.md 참고). 나머지는 유지.
 4. 첫 실행 시 `eula.txt` 생성 → `eula=true` 로 변경.
