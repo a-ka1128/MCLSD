@@ -122,32 +122,35 @@
 | Terralith | https://modrinth.com/mod/terralith | ⚙️ **Lithostitched** 필요 (또는 데이터팩 형태 사용) |
 | When Dungeons Arise | https://modrinth.com/mod/when-dungeons-arise | 로그라이크 던전·구조물 |
 | YUNG's Better Dungeons | https://www.curseforge.com/minecraft/mc-mods/yungs-better-dungeons-neoforge | ⚙️ **YUNG's API** |
-| Structory | https://www.stardustlabs.net/ | 전리품 없는 **분위기용 폐허.** 세상이 한때 사람이 살던 곳처럼 보이게 |
-| ⛔ Structory: Towers | 〃 | **켜지 말 것 — 이 jar 는 깨져 있다.** 아래 |
+| Structory | https://modrinth.com/mod/structory | 전리품 없는 **분위기용 폐허.** 세상이 한때 사람이 살던 곳처럼 보이게 |
+| Structory: Towers **v1.0.16** | https://modrinth.com/mod/structory-towers | 탑·전초 22종. ⚠️ **1.0.17 은 쓰지 말 것** — 아래 |
 
-> **⛔ `Structory_Towers_26.2_v1.0.17.jar` 는 켜면 서버가 안 뜬다 (2026-08-06 확인)**
+> **⚠️ Structory: Towers 는 `1.0.16` 을 쓴다 — `1.0.17` 은 부팅을 깨뜨린다 (2026-08-06)**
 >
-> `.disabled` 로 꺼져 있는 게 **선택이 아니라 어쩔 수 없어서**다. 켜 봤더니:
+> 1.0.17 을 켜면:
 >
 > ```
-> Missing ModLoader in file (Structory_Towers_26.2_v1.0.17.jar)
-> → 부팅 실패
+> Missing ModLoader in file (Structory_Towers_26.2_v1.0.17.jar) → 부팅 실패
 > ```
 >
-> 이 jar 의 `META-INF/neoforge.mods.toml` 에 **맨 앞 두 줄이 빠져 있다.** 같은 배포처의
-> 정상 Structory 와 비교하면 명확하다:
+> **파일이 손상된 게 아니다.** 우리 사본의 sha1 이 Modrinth 공식값과 정확히 같았다
+> (`fa40253068…`) — 다시 받아도 같은 파일이 온다. **배포처의 패키징 실수다.**
 >
-> | 정상 `Structory` | 깨진 `Structory: Towers` |
-> |---|---|
-> | `modLoader="lowcodefml"` | **없음** |
-> | `loaderVersion="[1,)"` | **없음** |
-> | `license="..."` | `license="..."` |
+> 원인은 **한 jar 안에 설정 파일이 둘**이라는 것:
 >
-> NeoForge 는 `modLoader` 가 없으면 「모드 파일이 아니다」로 거부한다. **우리 설정 문제가 아니라
-> 그 파일 자체가 깨진 것**이라, 확장자를 바꾸는 것으로는 절대 안 고쳐진다.
+> | | `META-INF/mods.toml` (옛 형식) | `META-INF/neoforge.mods.toml` (새 형식) |
+> |---|---|---|
+> | 1.0.17 | `modLoader="lowcodefml"` ✅ | **빠짐** ❌ |
+> | 1.0.16 | ✅ | ✅ |
 >
-> 쓰고 싶으면 **stardustlabs.net 에서 다시 받는다.** 받은 뒤 위 두 줄이 있는지부터 확인할 것.
-> (내용물은 멀쩡하다 — 탑·전초 22종이 들어 있다. 껍데기만 깨졌다.)
+> NeoForge 21.1 은 **새 형식을 우선 읽고 옛 것을 안 본다.** 그래서 옛 파일에 값이 멀쩡히
+> 있어도 소용이 없다.
+>
+> `1.0.16` (sha1 `ed22fe659cb…`) 은 두 파일 모두 정상이고, 1.21.1 에서 잘 돈다 —
+> `/place`·`/locate` 로 확인했다. 1.0.17 은 지웠다.
+>
+> **다음에 올릴 때는 `unzip -p <jar> META-INF/neoforge.mods.toml | head -2` 로 먼저 본다.**
+> 이 한 줄이면 켜보기 전에 걸러진다.
 
 ## Layer 5 — 전투 / PvE / RPG
 | 모드 | 링크 | 비고 |
