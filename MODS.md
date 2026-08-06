@@ -46,21 +46,59 @@
 | 모드 | 링크 | 비고 |
 |---|---|---|
 | Waystones | https://modrinth.com/mod/waystones | ⚙️ **Balm** 필요 |
-| FTB Teams | https://www.curseforge.com/minecraft/mc-mods/ftb-teams-forge | ⚙️ **FTB Library**; 팀 금고의 기반 |
-| FTB Chunks | https://www.curseforge.com/minecraft/mc-mods/ftb-chunks-forge | 청크 점유 보호 (친한 그룹이면 선택) |
+| ~~FTB Teams~~ | — | ❌ **2026-08-06 제거** — 아래 |
+| ~~FTB Chunks~~ | — | ❌ **2026-08-06 제거** — 아래 |
 
 ## Layer 2 — 경제  ⚠️ 경제 모드는 하나만 선택
 | 모드 | 링크 | 비고 |
 |---|---|---|
-| Simple Economy | https://modrinth.com/mod/simple-economies | 서버사이드, 가상 잔액, **클라 모드 불필요** |
-| — 또는 EconomyMod | https://modrinth.com/mod/economymod | 인벤과 분리된 가상 잔액 |
-| KubeJS | https://modrinth.com/mod/kubejs | 공동 금고 + 업그레이드 게이팅 커스텀 (CUSTOM.md 참고) |
+| **KubeJS + lsrelics** | — | ✅ **채택.** 공동 금고(Ducat)는 `data/TownData` 가 소유. 도박장 칩은 에메랄드 실물 |
+| ~~SDM Economy / Shop / Core / UI~~ | — | ❌ **2026-08-06 제거** (4개) — 아래 |
+| ~~Simple Economy · EconomyMod~~ | — | 검토만 하고 안 깔았다 |
+
+> **SDM 넷을 뺀 이유 (2026-08-06)**
+>
+> FTB 를 지우자 **SDMShop 이 부팅을 깨뜨렸다** — `mods.toml` 에 선언하지 않고
+> `dev.ftb.mods.ftblibrary.snbt.config.SNBTConfig` 를 직접 쓰고 있었다.
+> **선언된 의존만 보고 「FTB 는 서로만 의존한다」고 판단한 것이 틀렸다.** 선언 안 한 의존은
+> jar 를 열어봐도 안 보이고, 부팅을 시켜봐야 나온다.
+>
+> 그래서 둘 중 하나였다 — FTB Library 만 되살리거나, SDM 을 같이 빼거나.
+> 열어보니 **상점이 완전히 비어 있었다**(상품 0개·탭 0개, 파일 21바이트). FTB 퀘스트가
+> 0개였던 것과 같은 상태다. 게다가 이 표의 원칙이 「경제 모드는 하나만」이고,
+> 실제로 쓰이는 건 우리 Ducat 금고다 — SDM 은 **두 번째 화폐가 될 뻔한 자리**였다.
+>
+> 백업은 남겼다(jar 4개). 상점을 정말 쓸 일이 생기면 그때는 FTB Library 도 같이 필요하다.
+
+**지금 이 서버의 돈은 둘뿐이다:** 공동 금고 **Ducat**(공성·현상금·구출·봉화가 쓰는 것)과
+도박장의 **에메랄드 실물**. 둘 다 우리 코드가 소유하므로 모드를 지워도 안 사라진다.
 
 ## Layer 3 — 목표 / 진행
 | 모드 | 링크 | 비고 |
 |---|---|---|
-| FTB Quests | https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge | ⚙️ **FTB Library** |
-| FTB XMod Compat | https://www.curseforge.com/minecraft/mc-mods/ftb-xmod-compat | ⚠️ KubeJS ↔ FTB Quests 연결에 필요 |
+| ~~FTB Quests~~ | — | ❌ **2026-08-06 제거** — 아래 |
+| ~~FTB XMod Compat~~ | — | ❌ **2026-08-06 제거** (FTB 전용 연결 계층) |
+| **바닐라 도전과제 27종** | `data/lsrelics/advancement/` | ✅ **이게 목표·진행을 맡는다.** 표는 `tools/gen_advancements.py` |
+
+> **FTB 다섯을 뺀 이유 (2026-08-06)**
+>
+> `ftb-quests` · `ftb-teams` · `ftb-chunks` · `ftb-library` · `ftb-xmod-compat` — 다섯이 서로만
+> 의존해서 통째로 빠졌다(**바깥에서 이걸 필요로 하는 모드는 하나도 없었다**).
+>
+> 실제로 쓰이지 않고 있었다: 퀘스트 **0개**, 팀 데이터 5KB, 청크 점유 0건. 「Phase 7 에서
+> 서사를 넣겠다」로 1년 가까이 비어 있던 자리다. **깔려만 있고 안 쓰는 모드는 로그와 기동
+> 시간만 먹는다.**
+>
+> 대신 **바닐라 도전과제 27종**이 그 자리를 맡는다(2026-08-06). 차이가 큰 쪽이 오히려 낫다:
+> · FTB Quests 데이터는 `world/ftbquests/` 라 **월드 리셋에 날아간다.** 도전과제는 jar 안이라 남는다
+> · 별도 책 UI 를 안 열어도 `L` 키로 보인다
+> · 보상·선행조건이 없다 — 그건 이 서버에서 이미 유물·각성·관문이 하는 일이라 겹쳤다
+>
+> 서사(수기 12편·오프닝)는 **호데고스**(`ls_voice.js`, 대사 10종 + 3채널 연출)가 이미 맡고 있다.
+> 그쪽이 이 서버의 화자다 — 퀘스트 책보다 그편이 「어둠이 삼킨 세계」에 맞는다.
+>
+> 되돌리려면: 다섯 jar 를 다시 받고 `world/ftbquests`·`ftbteams`·`ftbchunks` 를 복구.
+> 백업은 안 남긴다 — 퀘스트가 0개라 복구할 내용이 없다.
 
 ## Layer 4 — 모험 / 월드
 | 모드 | 링크 | 비고 |
@@ -102,7 +140,7 @@
 | Chipped | https://modrinth.com/mod/chipped | 방대한 블록 변형 팔레트 |
 
 ## 의존 모드 (보통 Prism이 자동 추가)
-Balm · FTB Library · Lithostitched · YUNG's API · GeckoLib · Placebo · Apothic Attributes · Curios API ·
+Balm · Lithostitched · YUNG's API · GeckoLib · Placebo · Apothic Attributes · Curios API ·
 playerAnimator · Cloth Config API · Moonlight Lib · Architectury API (요구 시) · Kotlin for Forge (요구 시)
 
 ## 클라 전용 모드 (🖥️ — 서버 mods 폴더에 넣지 말 것)
