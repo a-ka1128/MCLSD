@@ -58,6 +58,25 @@ public class TitleData {
         return true;
     }
 
+    // 가지고 있지 않았으면 false.
+    // **착용 중이던 것을 뺏으면 착용도 같이 풀린다** — 「활성은 반드시 보유 안」이 이 클래스의
+    // 불변식이라, 여기서 안 풀면 그 순간 깨진다(이름표에는 있는데 목록엔 없는 유령).
+    public boolean revoke(String name, String key) {
+        Set<String> s = owned.get(name);
+        if (s == null || !s.remove(key)) return false;
+        if (s.isEmpty()) owned.remove(name);
+        if (key.equals(active.get(name))) active.remove(name);
+        return true;
+    }
+
+    // 사람 하나를 장부에서 통째로 지운다 — 시험용 가짜 이름을 치울 때 쓴다.
+    // 되돌린 칭호 수를 준다(없으면 0).
+    public int forget(String name) {
+        Set<String> s = owned.remove(name);
+        active.remove(name);
+        return s == null ? 0 : s.size();
+    }
+
     public String active(String name) {
         return active.getOrDefault(name, "");
     }

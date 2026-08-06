@@ -55,6 +55,12 @@ public class RescueData {
         return rescued.add(key);
     }
 
+    // 구출을 되돌린다 — 명부에서 빠지므로 **인구도 같이 준다**(인구가 명부의 크기라서).
+    // 안 구한 생존자면 false. `/rescue grant` 를 잘못 썼을 때의 유일한 되돌리기다.
+    public boolean unsettle(String key) {
+        return rescued.remove(key);
+    }
+
     // ── 원정 ──
     public boolean active() { return active; }
     public boolean built() { return built; }

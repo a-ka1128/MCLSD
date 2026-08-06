@@ -305,6 +305,22 @@ ServerEvents.commandRegistry(event => {
         if (!rsNew) { ctx.source.sendSystemMessage(Text.of(`§7${sv.name}은(는) 이미 구출됨 (인구 ${rsPop(s)})`)); return 0 }
         rsStore(s).putBoolean('town_npc_' + key, true)
         ctx.source.sendSystemMessage(Text.of(`§a${sv.name} 구출 처리 (인구 ${rsPop(s)})`)); return 1
+      })))
+    // ── 되돌리기 (2026-08-06) ──
+    // `/rescue grant` 를 잘못 썼을 때의 유일한 되돌리기다. 인구가 명부의 크기라
+    // **명부에서 빠지면 인구도 같이 준다** — 매일 수입도 같이 줄어든다.
+    .then(Commands.literal('ungrant').requires(s => s.hasPermission(2)).then(Commands.argument('key', Arguments.STRING.create(event))
+      .suggests((ctx, b) => { SURVIVORS.forEach(sv => b.suggest(sv.key)); return b.buildFuture() })
+      .executes(ctx => {
+        const s = ctx.source.server; const key = Arguments.STRING.getResult(ctx, 'key')
+        const sv = SURVIVORS.find(v => v.key === key)
+        if (!sv) { ctx.source.sendSystemMessage(Text.of('§c없는 생존자 키')); return 0 }
+        var ok = false
+        try { ok = !!LS.unsettleSurvivor(s, key) } catch (e) { lsWarn('ls_rescue:ungrant', e) }
+        if (!ok) { ctx.source.sendSystemMessage(Text.of(`§7${sv.name}은(는) 구출된 적이 없다`)); return 0 }
+        // 다음 월드용 NPC 표식도 같이 지운다 — 안 지우면 「구출 안 했는데 상인이 생기는」 상태가 된다.
+        rsStore(s).putBoolean('town_npc_' + key, false)
+        ctx.source.sendSystemMessage(Text.of(`§7${sv.name} 구출 취소 (인구 ${rsPop(s)})`)); return 1
       }))))
 })
 

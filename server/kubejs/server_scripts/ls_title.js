@@ -149,7 +149,34 @@ ServerEvents.commandRegistry(event => {
           if (!TITLES[key]) { ctx.source.sendSystemMessage(Text.of('§c없는 칭호 key')); return 0 }
           ttGrant(s, target, key)
           ctx.source.sendSystemMessage(Text.of(`§a${target} → [${TITLES[key].display}]`)); return 1
-        })))))
+        }))))
+    // ── 되돌리기 (2026-08-06) ──
+    // 주는 것만 있고 뺏는 것이 없었다. `/title grant` 를 잘못 쓰면 되돌릴 방법이 세이브를
+    // 손으로 고치는 것뿐이었고, 그건 방법이 아니다.
+    .then(Commands.literal('revoke').requires(s => s.hasPermission(2))
+      .then(Commands.argument('target', Arguments.STRING.create(event))
+        .then(keyArg().executes(ctx => {
+          const s = ctx.source.server
+          const target = Arguments.STRING.getResult(ctx, 'target')
+          const key = Arguments.STRING.getResult(ctx, 'key')
+          var ok = false
+          try { ok = !!LS.revokeTitle(s, target, key) } catch (e) { lsWarn('ls_title:revoke', e) }
+          if (!ok) { ctx.source.sendSystemMessage(Text.of('§c그 사람이 안 가진 칭호다')); return 0 }
+          // 착용 중이던 것이면 모드가 착용을 같이 풀었다 — 이름표도 여기서 지운다.
+          if (!ttActive(s, target)) ttClearPrefix(s, target)
+          ctx.source.sendSystemMessage(Text.of(`§7${target} 에게서 [${TITLES[key] ? TITLES[key].display : key}] 회수`)); return 1
+        }))))
+    // 사람 하나를 장부에서 통째로 지운다 — 시험용 가짜 이름을 치울 때.
+    .then(Commands.literal('forget').requires(s => s.hasPermission(2))
+      .then(Commands.argument('target', Arguments.STRING.create(event)).executes(ctx => {
+        const s = ctx.source.server
+        const target = Arguments.STRING.getResult(ctx, 'target')
+        var n = 0
+        try { n = LS.forgetTitles(s, target) | 0 } catch (e) { lsWarn('ls_title:forget', e) }
+        if (!n) { ctx.source.sendSystemMessage(Text.of('§7그 이름은 장부에 없다')); return 0 }
+        ttClearPrefix(s, target)
+        ctx.source.sendSystemMessage(Text.of(`§7${target} 을(를) 칭호 장부에서 지웠다 §8(칭호 ${n}개)`)); return 1
+      }))))
 })
 
 console.log('[Last Stardust] 칭호 시스템 로드됨 — ' + Object.keys(TITLES).length + '종')

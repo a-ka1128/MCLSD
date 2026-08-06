@@ -661,6 +661,36 @@ public class LSKubeBridge implements KubeJSPlugin {
             return true;
         }
 
+        // ── 되돌리기 (2026-08-06) ──
+        // 주는 명령만 있고 뺏는 명령이 없었다. `/title grant` 를 잘못 쓰면 되돌릴 방법이
+        // 세이브를 손으로 고치는 것뿐이었다 — 그건 방법이 아니다.
+        // **착용 중이던 것을 뺏으면 착용도 같이 풀린다**(TitleData 의 불변식).
+        public boolean revokeTitle(MinecraftServer server, String name, String key) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.titles().revoke(name, key)) return false;
+            data.dirty();
+            return true;
+        }
+
+        // 사람 하나를 칭호 장부에서 통째로 지운다. 되돌린 칭호 수를 준다.
+        public int forgetTitles(MinecraftServer server, String name) {
+            if (server == null) return 0;
+            LSData data = LSData.get(server);
+            int n = data.titles().forget(name);
+            if (n > 0) data.dirty();
+            return n;
+        }
+
+        // 구출을 되돌린다 — **인구도 같이 준다**(인구가 명부의 크기라서).
+        public boolean unsettleSurvivor(MinecraftServer server, String key) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.rescue().unsettle(key)) return false;
+            data.dirty();
+            return true;
+        }
+
         // 착용자 전원 — 재시작 뒤 팀 prefix 를 한 번에 되살리려면 목록이 필요하다.
         // 접속 이벤트에서만 복구하면 «접속 안 한 사람의 이름표가 남들 눈에 빈 채로» 남는다.
         public String titleWearersCsv(MinecraftServer server) {
