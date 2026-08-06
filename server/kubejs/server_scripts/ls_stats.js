@@ -81,7 +81,11 @@ function cerStart(server) {
 }
 function cerLine(server, step) {
   const K = stTop(server, 'k'), D = stTop(server, 'd'), SG = stTop(server, 'sg'), B = stTop(server, 'b'), C = stTopContrib(server)
-  const pop = stStore(server).getInt('town_pop')
+  // 인구 — 이관 5단계로 모드가 소유한다 (2026-08-06). 예전엔 `town_pop` 을 직접 읽었는데,
+  // `ls_rescue.js` 만 옮겼으면 **폐막식이 「인구 0명」으로 닫혔다.** 오류 없이.
+  // 이 파일에는 그 사고의 전례가 있다 — 명예 보드가 몇 주 동안 「CSV 첫 사람, 0점」을 1위로 냈다.
+  var pop = 0
+  try { pop = LS.population(server) | 0 } catch (e) { lsWarn('ls_stats:pop', e) }
   switch (step) {
     case 1:
       server.runCommandSilent('title @a title {"text":"Last Stardust","color":"gold","bold":true}')

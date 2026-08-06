@@ -752,6 +752,242 @@ public class LSKubeBridge implements KubeJSPlugin {
             return server == null ? "" : LSData.get(server).bounty().summary();
         }
 
+        // ── 정화 봉화 (이관 5단계) ──
+        // **`beaconCount` 를 세 파일이 부른다** — `ls_beacon`(목록) · `ls_siege`(위협 하한) ·
+        // `ls_hope`(희망 게이지). 옛날엔 뒤의 둘이 `pb_names` CSV 를 각자 읽어 쉼표를 셌다.
+        // 쓰는 쪽만 옮겼으면 그 둘이 조용히 0 을 세고, **위협 하한 완화가 사라지고 희망 게이지가
+        // 봉화를 못 보게** 된다. 오류는 안 난다. 그래서 세는 곳을 여기 하나로 만들었다.
+        public int beaconCount(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).beacons().count();
+        }
+
+        public String beaconNamesCsv(MinecraftServer server) {
+            return server == null ? "" : String.join(",", LSData.get(server).beacons().names());
+        }
+
+        public boolean hasBeacon(MinecraftServer server, String name) {
+            return server != null && LSData.get(server).beacons().has(name);
+        }
+
+        public int beaconX(MinecraftServer server, String name) { return beaconPos(server, name, 0); }
+        public int beaconY(MinecraftServer server, String name) { return beaconPos(server, name, 1); }
+        public int beaconZ(MinecraftServer server, String name) { return beaconPos(server, name, 2); }
+
+        private int beaconPos(MinecraftServer server, String name, int axis) {
+            if (server == null) return 0;
+            var p = LSData.get(server).beacons().pos(name);
+            return axis == 0 ? p.getX() : axis == 1 ? p.getY() : p.getZ();
+        }
+
+        // 이미 있는 이름이면 false — 덮어쓰지 않는다.
+        public boolean addBeacon(MinecraftServer server, String name, int x, int y, int z) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.beacons().add(name, x, y, z)) return false;
+            data.dirty();
+            return true;
+        }
+
+        // 이름과 좌표가 한 항목이라 같이 사라진다. 옛 코드는 CSV 에서 이름만 빼고
+        // `pb_<이름>_x/y/z` 를 남겼다 — 지워진 봉화의 좌표가 세이브에 영원히 쌓였다.
+        public boolean removeBeacon(MinecraftServer server, String name) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.beacons().remove(name)) return false;
+            data.dirty();
+            return true;
+        }
+
+        // 가장 가까운 봉화까지의 수평 거리 — 없으면 -1. **판정(96m)은 스크립트가 한다.**
+        // 최소 거리는 `/reload` 로 만지는 튜닝 값이라 그쪽이 맞는 자리다.
+        public double nearestBeaconDistance(MinecraftServer server, int x, int z) {
+            return server == null ? -1 : LSData.get(server).beacons().nearestDistance(x, z);
+        }
+
+        public String nearestBeaconName(MinecraftServer server, int x, int z) {
+            return server == null ? "" : LSData.get(server).beacons().nearestName(x, z);
+        }
+
+        public String beaconSummary(MinecraftServer server) {
+            return server == null ? "" : LSData.get(server).beacons().summary();
+        }
+
+        // ── 별똥말 경마 (이관 5단계) ──
+        // 말 이름·배당·목표 거리는 `ls_casino.js` 에 남는다. 여기 오는 건 진행 상태뿐이다.
+        // 주사위 결투는 아예 안 온다 — 60초짜리 메모리 상태라 저장할 이유가 없다.
+        public int racePhase(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).casino().phase();
+        }
+
+        public int raceTimer(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).casino().timer();
+        }
+
+        public void setRacePhase(MinecraftServer server, int phase) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.casino().setPhase(phase);
+            data.dirty();
+        }
+
+        public void setRaceTimer(MinecraftServer server, int t) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.casino().setTimer(t);
+            data.dirty();
+        }
+
+        // 개장 — 단계·타이머·말 위치·베팅을 한 번에 세운다. 옛 코드는 다섯 줄이 나란히 있었고,
+        // 하나만 빠지면 지난 경기 위치에서 출발하는 경마가 됐다.
+        public void openRace(MinecraftServer server, int seconds) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.casino().openRace(seconds);
+            data.dirty();
+        }
+
+        // 폐장 — 정산은 호출부가 먼저 끝내고 부른다.
+        public void closeRace(MinecraftServer server) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.casino().closeRace();
+            data.dirty();
+        }
+
+        public int horsePos(MinecraftServer server, int horse) {
+            return server == null ? 0 : LSData.get(server).casino().pos(horse);
+        }
+
+        public int advanceHorse(MinecraftServer server, int horse, int n) {
+            if (server == null) return 0;
+            LSData data = LSData.get(server);
+            int now = data.casino().advance(horse, n);
+            data.dirty();
+            return now;
+        }
+
+        // 이미 건 사람이면 false — 칩을 두 번 걷지 않게 하는 자리가 여기 하나다.
+        public boolean placeRaceBet(MinecraftServer server, String name, int horse, int amount) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.casino().placeBet(name, horse, amount)) return false;
+            data.dirty();
+            return true;
+        }
+
+        public String raceBettersCsv(MinecraftServer server) {
+            return server == null ? "" : String.join(",", LSData.get(server).casino().betters());
+        }
+
+        public int raceBetHorse(MinecraftServer server, String name) {
+            return server == null ? 0 : LSData.get(server).casino().betHorse(name);
+        }
+
+        public int raceBetAmount(MinecraftServer server, String name) {
+            return server == null ? 0 : LSData.get(server).casino().betAmount(name);
+        }
+
+        public int raceBetCount(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).casino().betCount();
+        }
+
+        public String casinoSummary(MinecraftServer server) {
+            return server == null ? "" : LSData.get(server).casino().summary();
+        }
+
+        // ── 생존자 구출 (이관 5단계) ──
+        // 생존자 6명의 명부(이름·직업·간수)는 `ls_rescue.js` 에 남는다.
+        // **인구는 저장하지 않는다** — 구출 명부의 크기다. 옛날엔 `town_pop` 이 따로 있어서
+        // 이미 구출한 사람에게 `/rescue grant` 를 한 번 더 쓰면 인구만 늘었고,
+        // 그러면 매일 들어오는 수입(인구×8)이 영구히 부풀었다.
+        public int population(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).rescue().population();
+        }
+
+        public boolean isRescued(MinecraftServer server, String key) {
+            return server != null && LSData.get(server).rescue().isRescued(key);
+        }
+
+        // 이미 구출한 생존자면 false — 인구가 두 번 늘지 않는 유일한 관문이다.
+        public boolean settleSurvivor(MinecraftServer server, String key) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.rescue().settle(key)) return false;
+            data.dirty();
+            return true;
+        }
+
+        public boolean rescueActive(MinecraftServer server) {
+            return server != null && LSData.get(server).rescue().active();
+        }
+
+        public boolean rescueBuilt(MinecraftServer server) {
+            return server != null && LSData.get(server).rescue().built();
+        }
+
+        public int rescueIdx(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).rescue().idx();
+        }
+
+        public int rescueX(MinecraftServer server) { return server == null ? 0 : LSData.get(server).rescue().x(); }
+        public int rescueY(MinecraftServer server) { return server == null ? 0 : LSData.get(server).rescue().y(); }
+        public int rescueZ(MinecraftServer server) { return server == null ? 0 : LSData.get(server).rescue().z(); }
+
+        public int rescueGuards(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).rescue().guards();
+        }
+
+        // 정찰 개시 — 다섯 값이 한 번에 선다.
+        public void beginScout(MinecraftServer server, int index, int x, int z) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.rescue().beginScout(index, x, z);
+            data.dirty();
+        }
+
+        // 감금지 노출 — 이미 지어졌으면 false. **두 번 짓는 걸 막는 자리가 여기 하나다.**
+        // 옛 코드는 «지었다» 표식을 세우는 것과 실제로 짓는 것이 따로였다.
+        public boolean revealCamp(MinecraftServer server, int y, int guardCount) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.rescue().reveal(y, guardCount)) return false;
+            data.dirty();
+            return true;
+        }
+
+        // 남은 간수를 돌려준다. 읽고·빼고·쓰는 세 줄을 접었다 —
+        // 간수 둘이 같은 틱에 죽으면 옛 방식은 한쪽이 덮였다.
+        public int killGuard(MinecraftServer server) {
+            if (server == null) return 0;
+            LSData data = LSData.get(server);
+            int left = data.rescue().killGuard();
+            data.dirty();
+            return left;
+        }
+
+        // 성공·실패·취소 공통. 끝내는 방법이 하나뿐이면 어긋날 자리가 없다.
+        public void endRescue(MinecraftServer server) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.rescue().endRun();
+            data.dirty();
+        }
+
+        public int rescueDay(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).rescue().day();
+        }
+
+        public void setRescueDay(MinecraftServer server, int d) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.rescue().setDay(d);
+            data.dirty();
+        }
+
+        public String rescueSummary(MinecraftServer server) {
+            return server == null ? "" : LSData.get(server).rescue().summary();
+        }
+
         // 화면을 열어둔 사람에게 갱신을 밀어준다 (스크립트가 금고를 바꾼 직후 등)
         // ── 부활 규칙 ──
         // 리스폰 직후 ls_revive.js 가 부른다. 무적 창과 「별빛 쇠약」의 피해 감소는

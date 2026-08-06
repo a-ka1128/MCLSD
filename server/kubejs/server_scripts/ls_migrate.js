@@ -35,6 +35,12 @@ const MG_SIEGE_FLAG = 'ls_siege_migrated'
 const MG_BD_FLAG = 'ls_bossdiff_migrated'
 const MG_TT_FLAG = 'ls_title_migrated'
 const MG_BT_FLAG = 'ls_bounty_migrated'
+const MG_PB_FLAG = 'ls_beacon_migrated'
+const MG_CS_FLAG = 'ls_casino_migrated'
+const MG_RS_FLAG = 'ls_rescue_migrated'
+// 생존자 키 — `ls_rescue.js` 의 SURVIVORS 와 같은 순서다. 여기 목록을 따로 두는 이유는
+// 옛 키가 `rs_done_<키>` 라 **접두사 훑기로는 못 찾기 때문**이다(`rs_x`·`rs_y` 도 `rs_` 로 시작한다).
+const MG_RESCUE_KEYS = ['smith', 'herb', 'farmer', 'bard', 'archive', 'watch']
 const MG_FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer']
 
 // ── 공성 키 (이관 4단계) ──
@@ -298,6 +304,113 @@ function mgRunBounty(server, force) {
   return n
 }
 
+// ── 정화 봉화 (이관 5단계) ──
+// 옛 저장: `pb_names`(CSV) · `pb_<이름>_x/y/z`.
+// **반드시 옮겨야 한다** — 안 옮기면 봉화가 통째로 사라지고, 150 Ducat 씩 든 것이라 다시 세울
+// 수도 없다. 게다가 개수가 위협 하한과 희망 게이지에 들어가므로 세상 난이도가 조용히 올라간다.
+//
+// 이름 목록이 원본이다. `pb_<이름>_*` 를 접두사로 훑지 않는 이유: 옛 `/purifier remove` 가
+// 이름만 빼고 좌표를 남겼기 때문에, 접두사로 훑으면 **이미 소등한 봉화가 되살아난다.**
+function mgRunBeacon(server, force) {
+  const st = mgStore(server)
+  if (!force && st.getBoolean(MG_PB_FLAG)) return null
+
+  var n = 0
+  try {
+    var csv = String(st.getString('pb_names') || '')
+    if (csv) {
+      csv.split(',').forEach(x => {
+        var who = String(x).trim()
+        if (!who) return
+        try {
+          if (LS.addBeacon(server, who,
+              st.getInt('pb_' + who + '_x'), st.getInt('pb_' + who + '_y'), st.getInt('pb_' + who + '_z'))) n++
+        } catch (e) { lsWarn('ls_migrate:beacon:' + who, e) }
+      })
+    }
+  } catch (e) { lsWarn('ls_migrate:beacon', e) }
+
+  st.putBoolean(MG_PB_FLAG, true)
+  return n
+}
+
+// ── 별똥말 경마 (이관 5단계) ──
+// 옛 저장: `cs_phase` · `cs_timer` · `cs_pos_1..5` · `cs_betters`(CSV) · `cs_bet_<이름>`(= `말|금액`).
+//
+// 「경마는 1분이면 끝나는데 옮길 가치가 있나」— **베팅은 실제 에메랄드다.** 재시작이 하필
+// 주행 중에 걸리면 사람들이 낸 칩이 조용히 사라진다. 그 실패는 되돌릴 방법도 없다.
+// 경마가 안 돌고 있으면(phase 0) 아무것도 안 옮긴다 — 흔한 쪽이 그쪽이다.
+function mgRunCasino(server, force) {
+  const st = mgStore(server)
+  if (!force && st.getBoolean(MG_CS_FLAG)) return null
+
+  var n = 0
+  try {
+    var ph = st.getInt('cs_phase')
+    if (ph > 0) {
+      LS.setRacePhase(server, ph)
+      LS.setRaceTimer(server, st.getInt('cs_timer'))
+      for (var i = 1; i <= 5; i++) {
+        var pv = st.getInt('cs_pos_' + i)
+        if (pv > 0) LS.advanceHorse(server, i, pv)
+      }
+      var csv = String(st.getString('cs_betters') || '')
+      if (csv) {
+        csv.split(',').forEach(x => {
+          var who = String(x).trim()
+          if (!who) return
+          try {
+            var b = String(st.getString('cs_bet_' + who) || '').split('|')
+            if (b.length !== 2) return
+            if (LS.placeRaceBet(server, who, parseInt(b[0]) || 0, parseInt(b[1]) || 0)) n++
+          } catch (e) { lsWarn('ls_migrate:casino:' + who, e) }
+        })
+      }
+    }
+  } catch (e) { lsWarn('ls_migrate:casino', e) }
+
+  st.putBoolean(MG_CS_FLAG, true)
+  return n
+}
+
+// ── 생존자 구출 (이관 5단계) ──
+// 옛 저장: `rs_done_<키>` · `rs_active`/`rs_built`/`rs_idx`/`rs_x`/`rs_y`/`rs_z`/`rs_guards` ·
+//          `town_pop` · `rs_day`.
+//
+// **`town_pop` 은 옮기지 않는다.** 인구는 이제 구출 명부의 크기라, 명부를 옮기면 인구는 따라온다.
+// 옛 `town_pop` 을 그대로 밀어 넣을 자리도 없고, 있었으면 그게 바로 이 이관이 없애려는
+// 「명부와 따로 사는 인구」다. 옛 값이 명부보다 크면 `/rescue grant` 를 여러 번 쓴 흔적이고,
+// 그건 되살릴 게 아니라 고쳐진 것이다.
+function mgRunRescue(server, force) {
+  const st = mgStore(server)
+  if (!force && st.getBoolean(MG_RS_FLAG)) return null
+
+  var n = 0
+  MG_RESCUE_KEYS.forEach(k => {
+    try {
+      if (!st.getBoolean('rs_done_' + k)) return
+      if (LS.settleSurvivor(server, k)) n++
+    } catch (e) { lsWarn('ls_migrate:rescue:' + k, e) }
+  })
+
+  // 진행 중이던 원정. 안 옮기면 정찰비 30 Ducat 을 낸 추적이 사라진다.
+  try {
+    if (st.getBoolean('rs_active')) {
+      LS.beginScout(server, st.getInt('rs_idx'), st.getInt('rs_x'), st.getInt('rs_z'))
+      // 감금지가 이미 지어져 있었으면 그 상태까지 되살린다 — 안 그러면 캠프가 두 번 지어진다.
+      if (st.getBoolean('rs_built')) LS.revealCamp(server, st.getInt('rs_y'), st.getInt('rs_guards'))
+    }
+  } catch (e) { lsWarn('ls_migrate:rescue:run', e) }
+
+  try {
+    var d = st.getInt('rs_day')
+    if (d > 0) LS.setRescueDay(server, d)
+  } catch (e) { lsWarn('ls_migrate:rescue:day', e) }
+
+  st.putBoolean(MG_RS_FLAG, true)
+  return n
+}
+
 ServerEvents.loaded(event => {
   const server = event.server
   if (!server) return
@@ -339,6 +452,28 @@ ServerEvents.loaded(event => {
     if (mgBt === 0) console.log('[LS-MIGRATE] 현상금 — 옛 키 없음 (새 월드로 본다)')
     else console.log(`[LS-MIGRATE] 현상금 → 모드 장부 — ${mgBt}건 · ${LS.bountySummary(server)}`)
   }
+
+  var mgPb = null
+  try { mgPb = mgRunBeacon(server, false) } catch (e) { lsWarn('ls_migrate:beacon', e) }
+  if (mgPb !== null) {
+    if (mgPb === 0) console.log('[LS-MIGRATE] 봉화 — 옛 키 없음 (새 월드로 본다)')
+    else console.log(`[LS-MIGRATE] 봉화 → 모드 장부 — ${mgPb}기 · ${LS.beaconSummary(server)}`)
+  }
+
+  var mgCs = null
+  try { mgCs = mgRunCasino(server, false) } catch (e) { lsWarn('ls_migrate:casino', e) }
+  if (mgCs !== null) {
+    // 0 은 「경마가 안 돌고 있었다」다 — 흔한 쪽이라 조용히 넘어간다.
+    if (mgCs > 0) console.log(`[LS-MIGRATE] 경마 → 모드 장부 — 베팅 ${mgCs}명 · ${LS.casinoSummary(server)}`)
+    else console.log('[LS-MIGRATE] 경마 — 진행 중이던 판 없음')
+  }
+
+  var mgRs = null
+  try { mgRs = mgRunRescue(server, false) } catch (e) { lsWarn('ls_migrate:rescue', e) }
+  if (mgRs !== null) {
+    if (mgRs === 0) console.log('[LS-MIGRATE] 구출 — 옛 키 없음 (새 월드로 본다)')
+    else console.log(`[LS-MIGRATE] 구출 → 모드 장부 — ${mgRs}명 · ${LS.rescueSummary(server)}`)
+  }
 })
 
 ServerEvents.commandRegistry(event => {
@@ -356,31 +491,44 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of(`§7보스 난이도 §8— ${LS.bossDiffSummary(s)}`))
       ctx.source.sendSystemMessage(Text.of(`§7칭호 §8— ${LS.titleSummary(s)}`))
       ctx.source.sendSystemMessage(Text.of(`§7현상금 §8— ${LS.bountySummary(s)}`))
+      ctx.source.sendSystemMessage(Text.of(`§7봉화 §8— ${LS.beaconSummary(s)}`))
+      ctx.source.sendSystemMessage(Text.of(`§7경마 §8— ${LS.casinoSummary(s)}`))
+      ctx.source.sendSystemMessage(Text.of(`§7구출 §8— ${LS.rescueSummary(s)}`))
       // 옮기기를 따로 표시한다 — 하나만 됐을 때 그걸 알아볼 수 있어야 한다.
       ctx.source.sendSystemMessage(Text.of(
         `§8옛 키 옮기기 — 성장 ${mgStore(s).getBoolean(MG_FLAG) ? '§7완료' : '§c아직'}`
         + `§8 · 공성 ${mgStore(s).getBoolean(MG_SIEGE_FLAG) ? '§7완료' : '§c아직'}`
         + `§8 · 보스난이도 ${mgStore(s).getBoolean(MG_BD_FLAG) ? '§7완료' : '§c아직'}`
         + `§8 · 칭호 ${mgStore(s).getBoolean(MG_TT_FLAG) ? '§7완료' : '§c아직'}`
-        + `§8 · 현상금 ${mgStore(s).getBoolean(MG_BT_FLAG) ? '§7완료' : '§c아직'}`))
+        + `§8 · 현상금 ${mgStore(s).getBoolean(MG_BT_FLAG) ? '§7완료' : '§c아직'}`
+        + `§8 · 봉화 ${mgStore(s).getBoolean(MG_PB_FLAG) ? '§7완료' : '§c아직'}`
+        + `§8 · 경마 ${mgStore(s).getBoolean(MG_CS_FLAG) ? '§7완료' : '§c아직'}`
+        + `§8 · 구출 ${mgStore(s).getBoolean(MG_RS_FLAG) ? '§7완료' : '§c아직'}`))
       return 1
     })
     // 다시 옮긴다. 멱등이라 여러 번 돌려도 결과가 같다 — 옛 키가 아직 남아 있는 한.
     .then(Commands.literal('remigrate').requires(s => s.hasPermission(2)).executes(ctx => {
       const s = ctx.source.server
-      var r = null, rs = null, rb = null, rt = null, rbt = null
+      var r = null, rs = null, rb = null, rt = null, rbt = null, rpb = null, rcs = null
       try { r = mgRun(s, true) } catch (e) { lsWarn('ls_migrate:cmd', e) }
       try { rs = mgRunSiege(s, true) } catch (e) { lsWarn('ls_migrate:cmd:siege', e) }
       try { rb = mgRunBossDiff(s, true) } catch (e) { lsWarn('ls_migrate:cmd:bossdiff', e) }
       try { rt = mgRunTitle(s, true) } catch (e) { lsWarn('ls_migrate:cmd:title', e) }
       try { rbt = mgRunBounty(s, true) } catch (e) { lsWarn('ls_migrate:cmd:bounty', e) }
-      if (r === null && rs === null && rb === null && rt === null && rbt === null) { ctx.source.sendSystemMessage(Text.of('§c실패 — 로그 확인')); return 0 }
+      try { rpb = mgRunBeacon(s, true) } catch (e) { lsWarn('ls_migrate:cmd:beacon', e) }
+      try { rcs = mgRunCasino(s, true) } catch (e) { lsWarn('ls_migrate:cmd:casino', e) }
+      var rrs = null
+      try { rrs = mgRunRescue(s, true) } catch (e) { lsWarn('ls_migrate:cmd:rescue', e) }
+      if (r === null && rs === null && rb === null && rt === null && rbt === null && rpb === null && rcs === null && rrs === null) { ctx.source.sendSystemMessage(Text.of('§c실패 — 로그 확인')); return 0 }
       if (r) ctx.source.sendSystemMessage(Text.of(
         `§a성장 다시 옮김 §7— 가호 ${r.fate} · 유물 ${r.relic} · 각성 ${r.star} · 제단 ${r.altar}`))
       if (rs !== null) ctx.source.sendSystemMessage(Text.of(`§a공성 다시 옮김 §7— 값 ${rs}개`))
       if (rb !== null) ctx.source.sendSystemMessage(Text.of(`§a보스 난이도 다시 옮김 §7— ${rb}건`))
       if (rt !== null) ctx.source.sendSystemMessage(Text.of(`§a칭호 다시 옮김 §7— ${rt}명`))
       if (rbt !== null) ctx.source.sendSystemMessage(Text.of(`§a현상금 다시 옮김 §7— ${rbt}건`))
+      if (rpb !== null) ctx.source.sendSystemMessage(Text.of(`§a봉화 다시 옮김 §7— ${rpb}기`))
+      if (rcs !== null) ctx.source.sendSystemMessage(Text.of(`§a경마 다시 옮김 §7— 베팅 ${rcs}명`))
+      if (rrs !== null) ctx.source.sendSystemMessage(Text.of(`§a구출 다시 옮김 §7— ${rrs}명`))
       ctx.source.sendSystemMessage(Text.of(`§8지금 장부: ${LS.heroSummary(s)}`))
       ctx.source.sendSystemMessage(Text.of(`§8            ${LS.siegeSummary(s)}`))
       return 1

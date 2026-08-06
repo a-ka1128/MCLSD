@@ -31,6 +31,9 @@ public class LSData extends SavedData {
     private final BossDiffData bossDiff = new BossDiffData();
     private final TitleData titles = new TitleData();
     private final BountyData bounty = new BountyData();
+    private final BeaconData beacons = new BeaconData();
+    private final CasinoData casino = new CasinoData();
+    private final RescueData rescue = new RescueData();
 
     // 성역 좌표 — 여러 시스템이 공유하는 가장 넓게 퍼진 상태다.
     // (공성·관문·구출·통계·귀환석이 전부 이걸 본다)
@@ -67,6 +70,24 @@ public class LSData extends SavedData {
     // 현상금 — 게시 중인 3건과 진행도 (이관 5단계).
     public BountyData bounty() {
         return bounty;
+    }
+
+    // 정화 봉화 — 이름·좌표 (이관 5단계).
+    // 개수가 공성 위협 하한과 희망 게이지에 들어가므로 성역 좌표만큼 널리 읽힌다.
+    public BeaconData beacons() {
+        return beacons;
+    }
+
+    // 별똥말 경마 — 단계·말 위치·베팅 (이관 5단계).
+    // 주사위 결투는 여기 없다 — 60초짜리 메모리 상태라 저장할 이유가 없다.
+    public CasinoData casino() {
+        return casino;
+    }
+
+    // 생존자 구출 — 원정·명부·인구 (이관 5단계).
+    // 인구는 저장된 숫자가 아니라 명부의 크기다 — 두 번 셀 방법이 없게.
+    public RescueData rescue() {
+        return rescue;
     }
 
     // 관문 진행도 0~4 — 클리어한 봉인 수.
@@ -112,6 +133,9 @@ public class LSData extends SavedData {
         data.bossDiff.load(tag.getCompound("bossDiff"), registries);
         data.titles.load(tag.getCompound("titles"), registries);
         data.bounty.load(tag.getCompound("bounty"), registries);
+        data.beacons.load(tag.getCompound("beacons"), registries);
+        data.casino.load(tag.getCompound("casino"), registries);
+        data.rescue.load(tag.getCompound("rescue"), registries);
         CompoundTag s = tag.getCompound("sanctuary");
         data.sancSet = s.getBoolean("set");
         data.sancX = s.getInt("x");
@@ -129,6 +153,9 @@ public class LSData extends SavedData {
         tag.put("bossDiff", bossDiff.save(registries));
         tag.put("titles", titles.save(registries));
         tag.put("bounty", bounty.save(registries));
+        tag.put("beacons", beacons.save(registries));
+        tag.put("casino", casino.save(registries));
+        tag.put("rescue", rescue.save(registries));
         CompoundTag s = new CompoundTag();
         s.putBoolean("set", sancSet);
         s.putInt("x", sancX);

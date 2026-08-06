@@ -20,7 +20,8 @@
 //
 // 판정·연출·명령은 여기 남는다. 웨이브 구성·보상 계산은 `/reload` 로 고치는 값이라 스크립트가 맞다.
 //
-// `sfStore` 만 남는다 — 봉화(`pb_names`)가 아직 스크립트 소유라 위협 하한 계산에서 읽어야 한다.
+// `sfStore` 만 남는다 — 밤 길이(`ls_nrate_pct`)·하늘 정지(`ls_time_locked`)를 `ls_daynight.js` 와
+// 주고받는 자리다. (봉화 `pb_names` 도 여기서 읽었는데, 2026-08-06 이관 5단계로 `LS.beaconCount` 가 됐다.)
 function sfStore(server) { return server.overworld().persistentData }
 // 마을 발전 레벨 읽기 (ls_town.js가 씀)
 // ※ 금고·마을은 lsrelics 모드(LSData)가 소유한다. 전역 바인딩 LS 를 통해 접근한다 —
@@ -74,9 +75,11 @@ function nodeCount(server) { return LS.nodeCount(server) }
 function threatFloor(server) {
   let f = nodeCount(server) * NODE_FLOOR
   if (townLvl(server, 'ramparts') >= 3) f -= 1 // 방벽 Lv3: 위협 하한 완화
-  // 정화 봉화 (ls_beacon.js): 2기당 위협 하한 -1 — 영토 수복이 세상을 진정시킨다
-  const pbCsv = String(sfStore(server).getString('pb_names') || '')
-  const pbCount = pbCsv ? pbCsv.split(',').length : 0
+  // 정화 봉화: 2기당 위협 하한 -1 — 영토 수복이 세상을 진정시킨다.
+  // 이관 5단계로 모드가 센다(2026-08-06). 예전엔 `pb_names` CSV 를 직접 읽어 쉼표를 셌는데,
+  // `ls_beacon.js` 만 옮겼으면 **여기가 조용히 0 을 세고 하한 완화가 사라졌다.**
+  var pbCount = 0
+  try { pbCount = LS.beaconCount(server) | 0 } catch (e) { lsWarn('ls_siege:beacons', e) }
   f -= Math.floor(pbCount / 2)
   return Math.max(0, Math.min(MAX_THREAT, f))
 }

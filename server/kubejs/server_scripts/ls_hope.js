@@ -36,9 +36,13 @@ const HO_SANC_R = 64
 
 function hoStore(server) { return server.overworld().persistentData }
 
+// 봉화 개수 — 이관 5단계로 모드가 소유한다 (2026-08-06).
+// 예전엔 여기서 `pb_names` CSV 를 직접 읽어 쉼표를 셌다. `ls_beacon.js` 의 함수를 부르지 않고
+// 각자 읽는 구조라, 그쪽만 옮겼으면 **여기가 조용히 0 을 세고 희망 게이지가 봉화를 못 보게** 된다.
+// 4단계에서 위협도·성벽으로 겪은 것과 완전히 같은 자리다.
 function hoBeacons(server) {
-  const csv = String(hoStore(server).getString('pb_names') || '')
-  return csv ? csv.split(',').length : 0
+  try { return LS.beaconCount(server) | 0 }
+  catch (e) { lsWarn('ls_hope:beacons', e); return 0 }
 }
 
 function hoTownSum(server) {
