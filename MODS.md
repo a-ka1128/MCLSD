@@ -27,7 +27,20 @@
 |---|---|---|
 | **Rethinking Voxels** 🖥️ | https://modrinth.com/shader/rethinking-voxels | **서버 표준 셰이더.** 컬러 복셀 조명 — 어둠 속 광원·유물 스킬 이펙트가 실제로 주변을 물들임. 무거움(호스트·고사양용) |
 | Shrimple Shaders 🖥️ | https://modrinth.com/shader/shrimple | 저사양 친구용 대체. 초경량 + 컬러 조명 유지 |
-| Distant Horizons 🖥️ | https://modrinth.com/mod/distant-horizons | (선택) LOD 원경. Iris 1.8+와 함께면 셰이더로 그려짐. 점박이 나면 셰이더 궁합 문제 → DH `Transparency=Complete` |
+| ~~Distant Horizons~~ 🖥️ | https://modrinth.com/mod/distant-horizons | ❌ **2026-08-06 제거.** 셰이더 궁합이 안 맞고 오류가 잦았다 — 아래 |
+
+> **Distant Horizons 를 뺀 이유 (2026-08-06)**
+>
+> 원경 LOD 를 그리는 모드인데, **Iris 셰이더와 궁합이 안 맞아 화면이 깨지고 오류가 잦았다.**
+> DH 는 자체 렌더 경로를 쓰기 때문에 셰이더팩이 그걸 따로 지원해야 하고, Rethinking Voxels 처럼
+> 무거운 복셀 조명 셰이더와는 특히 부딪힌다. 「점박이 나면 `Transparency=Complete`」 라고
+> 적어 뒀던 게 그 증상인데, 그걸로도 안 잡혔다.
+>
+> **원경은 이 서버의 핵심이 아니다.** 「어둠이 삼킨 세계」 무드는 가까운 곳의 빛과 그림자로
+> 만들고, 그건 Rethinking Voxels 가 한다. 원경을 얻으려고 그쪽을 흔드는 건 순서가 뒤바뀐 것이다.
+>
+> 지운 것: jar(30MB) · `config/DistantHorizons.toml` · `Distant_Horizons_server_data/`(LOD 캐시 83MB).
+> 다시 넣고 싶으면 셰이더를 **먼저** 정하고, 그 셰이더가 DH 를 지원하는지 확인한 뒤에 넣을 것.
 
 ## Layer 1 — 거점
 | 모드 | 링크 | 비고 |
