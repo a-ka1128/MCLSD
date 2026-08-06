@@ -1,52 +1,63 @@
 # -*- coding: utf-8 -*-
-"""성급별 파티 DPS 를 계산해 보스 절대 체력을 역산한다.
+"""성급별 파티 DPS 와 보스 절대 체력 — **실측을 기준으로 삼는다.**
 
-왜 «성급 배율로 나누기»가 안 되나:
-    ls_config.js 는 5성 DPS 에 ASCENSION 비(1.0/3.0 등)를 곱해 1성 DPS 를 냈다.
-    그런데 플레이어 피해에는 - 성급을 안 타는 덧셈 항 - 이 섞여 있다.
-    성소 축복의 Strength I (근접 공격력 +3.0)이 그것이다. 이 항이 있으면
-    1성 DPS 는 5성의 1/3 보다 - 높다 - . 반대로 GLOBAL_POWER=1.8 은 그 항에 안 곱해지므로
-    실효 배수는 1.8 보다 - 낮다 - . 두 오차가 반대 방향이라 어림으로는 못 맞춘다.
+── 2026-08-05 전면 재작성 ──
+옛 버전은 «5성 실측에서 보정상수 k 를 역산하고 GLOBAL_POWER 를 그 위에 곱하는» 모델이었다.
+그 모델이 편차 ±26% 를 예측했는데 실제로 재보니 ±11% 였다 — **절반 이하로 틀렸다.**
+원인은 둘이었다:
+  · k 를 맞춘 실측이 `GLOBAL_POWER x1.8` **도입 전** 값이라 배수가 이중으로 얹혔다
+  · (기본치, 실측) 이 한 쌍이라 한쪽만 고치면 k 가 변화를 그대로 흡수했다
+    (실제로 스틱스 기본치만 1.409 로 바꿨더니 결과가 81.2 → 81.7 로 거의 안 움직였다)
 
-    ※ ls_config.js 주석의 «스킬트리 고정 +3.0» 은 존재하지 않는다.
-      data/puffish_skills/.../combat/definitions.json 의 공격력 노드는 전부
-      melee/ranged/magic_damage 의 multiply_total 3% — 순수 곱셈이라 상쇄된다.
-      실제 덧셈 항은 축복 하나뿐이다.
+지금은 **8종 전부 실측값이 있다.** 그래서 모델링할 게 거의 남지 않았다 —
+이 파일이 하는 일은 «실측 → 성급 환산 → 보스 체력» 세 단계뿐이다.
 
-방법:
-    ① 5성 실측값(LSRelics.java)에서 그 유물의 - 곱셈 뭉치 K - 를 역산한다.
-       K 는 스킬트리·크리·기타 곱셈 전부를 뭉뚱그린 값이고, 측정 조건이 곧 실전 조건이다.
-    ② 그 K 로 임의 성급의 평타 DPS 를 다시 만든다. 덧셈 항은 성급을 안 탄다.
-    ③ 스킬은 성급과 GLOBAL 에 정비례로 둔다(dmg() 의 weaponAttack*0.3 항은 무시 —
-       5성 스킬 피해 앞에서 작고, 무시하면 체력을 - 보수적으로 - 낮게 잡는 쪽이다).
+── 성급 환산이 단순한 이유 (축복 밖 기준) ──
+`RelicEventHandlers.onRelicAttributes` 가 **평타에도** `power = ASC[star] x GLOBAL` 을 곱하고,
+스킬은 `RelicSkills.dmg()` 가 같은 `power` 를 쓴다. **둘 다 ASC 에 정비례**한다.
+그래서 축복 밖에서는:
+
+    DPS(성급) = DPS(5성) x ASC[성급] / ASC[5]
+
+정비례를 깨는 항은 둘뿐이고 둘 다 여기선 작거나 없다:
+  · 스킬의 `weaponAttack x 0.3` — 성급을 안 타지만 스킬 피해의 2~3% 라 무시한다
+  · 성소 축복의 Strength I `+3.0` — **성역 64칸 안에서만 걸린다**(`ls_towneffect.js`).
+    관문 제단은 2000~5000m 밖이라 **보스전에는 안 걸린다.**
+
+→ 옛 버전은 이 축복을 항상 켜진 것으로 보고 «축복 안» 기준으로 체력을 냈다. **그게 틀렸다.**
+   관문 보스는 축복 밖에서 싸운다. 아래 기본 출력이 축복 밖인 이유다.
+   (축복이 걸리는 건 성역에서 싸우는 **공성**이고, 그건 참고용으로만 낸다.)
 """
 import sys
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-G = 1.8                      # RelicSkills.GLOBAL_POWER
 ASC = {1: 1.0, 2: 1.5, 3: 2.0, 4: 2.5, 5: 3.0}
-BLESS_FLAT = 3.0             # 성소 Lv4 별빛 축복 = Strength I (근접에만, 덧셈)
+G = 1.8                # RelicSkills.GLOBAL_POWER — ASC 와 함께 평타·스킬에 똑같이 걸린다
+BLESS_FLAT = 3.0       # 성소 Lv4 축복 Strength I (근접, 덧셈) · 성역 64칸 안에서만
+BLESS_PROJ = 1.25      # 같은 축복의 원거리 몫 (apothic_attributes:projectile_damage +25%)
 
-# (표시명, 아이템 공격력, 공속, 근접?, 5성 실측 DPS, 평타 비중)
-# 실측·비중 출처: LSRelics.java 「측정 기준」 (60초 · 5성 · 방어도 0 · 축복 안)
+PARTY = 4
+SECONDS = 60
+
+# ── 2026-08-05 실측 (60초 · 5성 · **축복 밖** · 방어도 0 · relicScale 적용 후) ──
+# 근거: docs/DECISIONS.md 1-B 「최종 확인」. 여덟 종 전부 목표 ±2.2% 안에 들어온 값이다.
+# (표시명, 5성 DPS, 평타 비중, 근접?, 아이템 공격력)
+#   · 아이템 공격력은 «축복 안» 환산에만 쓴다(원거리는 None).
+#   · 스틱스는 백어택만 = «보통 플레이» 를 대표값으로 쓴다. 정면 91.5 / 풀딜 112.1 은 아래 주석.
 RELICS = [
-    ('이지스',     4.673, 1.6, True,  50.7, 0.70),
-    ('타이탄',     7.292, 1.0, True,  53.1, 0.75),
-    ('게볼그',     4.666, 1.5, True,  54.2, 0.75),
-    # ⚠️ 스틱스 — 인게임 값은 2026-07-31 부로 **1.409** 다(1.225 ×1.15, LSRelics.ASSASSIN).
-    #    여기 1.225 를 남겨둔 건 오타가 아니다. 이 표의 (기본치, 실측) 은 **한 쌍**이고,
-    #    k = 실측/이론 으로 보정상수를 역산하는 구조라 **한쪽만 바꾸면 k 가 그 변화를 그대로
-    #    흡수해 결과가 안 움직인다**(실제로 1.409 만 넣어 봤더니 81.2 → 81.7 이었다).
-    #    그래서 «마지막으로 실측한 쌍»을 그대로 두고, 월요일 /dummy 로 새 바닥값을 재서
-    #    **둘을 같이** 갱신한다. 그때까지 이 표의 스틱스는 실제보다 약 5% 낮게 나온다.
-    #    예측값: 5성 더미 85.4 · 백어택 96.5 (docs/DECISIONS.md 1절)
-    ('스틱스',     1.225, 2.4, True,  50.7, 0.80),   # 백어택·크리 없는 바닥값 (변경 전 쌍)
-    ('시리우스',   None,  None, False, 56.0, 0.70),
-    ('솔라리스',   None,  None, False, 56.7, 0.70),
-    ('셀레스티아', None,  None, False, 56.8, 0.70),
-    ('파나케이아', None,  None, False, 50.5, 0.70),
+    ('솔라리스',   102.2, 0.55, False, None),
+    ('스틱스',     101.7, 0.51, True,  1.409),   # 백어택만 · 정면 91.5 · 풀딜 112.1
+    ('셀레스티아', 100.5, 0.41, False, None),
+    ('시리우스',    98.2, 0.60, False, None),     # 궁극기 1.33회/60초 환산한 지속값
+    ('타이탄',      97.4, 0.74, True,  7.292),
+    ('게볼그',      95.7, 0.57, True,  4.666),    # 2판 평균 (95.5 / 95.9)
+    ('이지스',      88.8, 0.64, True,  4.673),
+    ('파나케이아',  87.8, 0.81, False, None),     # 08-04 값 · 유지 결정이라 재측정 안 함
 ]
+
+# 스틱스의 세 값 — 조작 숙련도로 갈린다. 파티 평균에는 「백어택만」을 쓴다.
+STYX = {'정면': 91.5, '백어택만': 101.7, '풀딜': 112.1}
 
 # (관문, 파티 성급, 딜 유지율, 추가 계수, 설명)
 GATES = [
@@ -59,55 +70,74 @@ GATES = [
     ('T4 네더라이트 괴물', 4, 0.55, 1.00, ''),
 ]
 
-PARTY = 4
-SECONDS = 60
+# 지금 ls_config.js 에 들어 있는 값 — 계산 결과와 대조해 보여준다.
+IN_GAME = {'T1 강철거인': 3980, 'T2 이그니스': 7630,
+           'T3 건틀렛': 6810, 'T4 네더라이트 괴물': 11340}
 
 
 def dps(relic, star):
-    name, base, speed, melee, measured5, share = relic
-    auto5 = measured5 * share
-    skill5 = measured5 * (1.0 - share)
+    """축복 밖. ASC 정비례 — 위 머리말 참조."""
+    return relic[1] * ASC[star] / ASC[5]
 
+
+def dps_blessed(relic, star):
+    """축복 안(성역 64칸). 공성 참고용 — **관문 보스 체력에는 쓰지 않는다.**
+
+    근접은 덧셈(+3.0)이라 성급이 낮을수록 비중이 커진다. 원거리는 곱셈(x1.25)이라 균일하다.
+    둘 다 **평타에만** 걸린다고 본다 — 스킬은 우리 코드가 직접 계산해 넣는 고정 피해라
+    무기 공격력 속성을 대부분 안 탄다.
+    """
+    name, d5, share, melee, base = relic
+    auto = d5 * share * ASC[star] / ASC[5]
+    skill = d5 * (1.0 - share) * ASC[star] / ASC[5]
     if melee:
-        # ① 5성 실측에서 곱셈 뭉치 K 를 역산 (GLOBAL 도입 전 기준)
-        raw5 = ((1.0 + base) * ASC[5] + BLESS_FLAT) * speed
-        k = auto5 / raw5
-        # ② 덧셈 항은 성급을 안 탄다. GLOBAL 은 유물 항에만 곱해진다.
-        auto = ((1.0 + base) * ASC[star] * G + BLESS_FLAT) * speed * k
+        # 평타 한 방 = (1.0 + 아이템공격력) x ASC x G. 거기에 +3.0 이 더해진다.
+        swing = (1.0 + base) * ASC[star] * G
+        auto *= (swing + BLESS_FLAT) / swing
     else:
-        # 원거리 축복은 projectile_damage +25% = 곱셈이라 5성 실측에 이미 녹아 있다.
-        auto = auto5 * (ASC[star] / ASC[5]) * G
-
-    skill = skill5 * (ASC[star] / ASC[5]) * G
+        auto *= BLESS_PROJ
     return auto + skill
 
 
 def main():
-    print('GLOBAL_POWER = %.2f · 축복 덧셈 +%.1f (근접만) · 파티 %d명 · 목표 %d초'
-          % (G, BLESS_FLAT, PARTY, SECONDS))
+    print('실측 기준 2026-08-05 · 60초 · 5성 · 축복 밖 · 방어도 0 · 파티 %d명' % PARTY)
+    print('성급 환산 = ASC 정비례 (평타·스킬 둘 다 ASC x GLOBAL 을 탄다)')
 
-    print('\n성급별 1인 DPS (축복 안 · 방어도 0)')
-    print('%-12s %7s %8s %8s %8s %8s %8s' % ('유물', '5성실측', '1성', '2성', '3성', '4성', '5성'))
+    print('\n성급별 1인 DPS (축복 밖 — 관문 보스전 조건)')
+    print('%-12s %8s %8s %8s %8s %8s' % ('유물', '1성', '2성', '3성', '4성', '5성(실측)'))
     for r in RELICS:
-        row = [dps(r, s) for s in range(1, 6)]
-        print('%-12s %7.1f %8.1f %8.1f %8.1f %8.1f %8.1f' % (r[0], r[4], *row))
+        print('%-12s %8.1f %8.1f %8.1f %8.1f %8.1f'
+              % (r[0], *[dps(r, s) for s in range(1, 6)]))
 
-    avg = {}
-    print('\n파티 평균 1인 DPS  (괄호 = 단순히 5성을 성급비로 나눴을 때)')
+    avg = {s: sum(dps(r, s) for r in RELICS) / len(RELICS) for s in range(1, 6)}
+    bavg = {s: sum(dps_blessed(r, s) for r in RELICS) / len(RELICS) for s in range(1, 6)}
+
+    print('\n파티 평균 1인 DPS')
+    print('%-8s %10s %10s %8s' % ('성급', '축복 밖', '축복 안', '차이'))
     for s in range(1, 6):
-        avg[s] = sum(dps(r, s) for r in RELICS) / len(RELICS)
-        naive = sum(r[4] for r in RELICS) / len(RELICS) * (ASC[s] / ASC[5]) * G
-        print('  %d성  %6.1f   (%.1f)  차이 %+.0f%%' % (s, avg[s], naive, (avg[s] / naive - 1) * 100))
+        print('%-7d성 %10.1f %10.1f %+7.0f%%' % (s, avg[s], bavg[s], (bavg[s] / avg[s] - 1) * 100))
+    print('  ※ 축복은 성역 64칸 안에서만 걸린다. 낮은 성급일수록 덧셈(+3.0)의 비중이 커서 차이가 크다.')
 
-    print('\n보스 절대 체력 역산')
-    print('%-22s %5s %8s %7s %10s %10s' % ('관문', '성급', '1인DPS', '유지율', '계산값', '반올림'))
+    print('\n스틱스 — 조작 숙련도로 갈린다 (파티 평균에는 「백어택만」을 썼다)')
+    for k, v in STYX.items():
+        print('   %-8s %6.1f   평균 대비 %+5.1f%%' % (k, v, (v / avg[5] - 1) * 100))
+
+    print('\n보스 절대 체력 역산 (축복 밖 — 관문 제단은 성역에서 2000~5000m 밖이다)')
+    print('%-22s %5s %8s %7s %9s %9s %9s'
+          % ('관문', '성급', '1인DPS', '유지율', '계산값', '반올림', '지금값'))
     for name, star, uptime, extra, note in GATES:
         hp = avg[star] * PARTY * SECONDS * uptime * extra
-        print('%-22s %4d성 %8.1f %7.2f %10.0f %10d   %s'
-              % (name, star, avg[star], uptime, hp, round(hp / 50) * 50, note))
+        rounded = round(hp / 50) * 50
+        cur = IN_GAME.get(name, 0)
+        gap = (cur / rounded - 1) * 100 if rounded else 0
+        print('%-22s %4d성 %8.1f %7.2f %9.0f %9d %9d (%+.0f%%)'
+              % (name, star, avg[star], uptime, hp, rounded, cur, gap))
+        if note:
+            print('%-22s %s' % ('', note))
 
-    print('\n※ 유지율(0.45~0.60)이 유일한 추정치다. 첫 전투에서 시간을 재고 덮어쓴다:')
-    print('    새 체력 = 지금 체력 x (60 / 실제걸린초)')
+    print('\n※ 유지율(0.45~0.60)이 **유일한 추정치**다. 나머지는 전부 실측이다.')
+    print('   첫 전투에서 전투 기록계가 실측 DPS 와 권장 체력을 스스로 낸다 —')
+    print('   그 값이 이 표보다 낫다. `/bossdiff abs <id> <hp>` 로 덮어쓰고 `export`.')
     return 0
 
 
