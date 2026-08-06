@@ -32,25 +32,36 @@ KubeJS 는 붙이기 빨랐지만, 하루 동안 **문법 검사로는 안 잡�
 | 마을 정의 | `data/TownCatalog.java` — 4트랙 × 4레벨 (밸런스 다이얼) |
 | 마을 상태 | `data/TownData.java` — 단계·**보관함**·기여도·플래그·금고 |
 | 성장 상태 | `data/HeroData.java` — **가호·유물 수령·각성 성급·직업별 제단** (이관 3단계) |
+| 공성 상태 | `data/SiegeData.java` — 위협도·성벽·균열 노드·최종장·진행 중인 공세 (이관 4단계) |
+| 보스 난이도 | `data/BossDiffData.java` — **라이브 오버라이드만.** 기본값은 `ls_config.js` (이관 5단계) |
+| 칭호 | `data/TitleData.java` — 보유 목록 + 착용. 활성은 반드시 보유 안 (이관 5단계) |
+| 현상금 | `data/BountyData.java` — 게시 3칸과 진행도 (이관 5단계) |
+| 봉화 | `data/BeaconData.java` — 이름·좌표. **개수를 공성·희망이 읽는다** (이관 5단계) |
+| 경마 | `data/CasinoData.java` — 단계·말 위치·베팅 (이관 5단계) |
+| 구출 | `data/RescueData.java` — 원정·명부. **인구 = 명부의 크기** (이관 5단계) |
 | 마을 판정 | `town/TownService.java` — 완성 가능 여부·집행. **판정은 여기 한 곳** |
 | 마을 창 | `town/TownMenu.java` + `client/TownHubScreen`·`TownTrackScreen` |
 | 유물 8종·스킬·각성 새김 | `item/`, `RelicSkills`, `LSCommands` |
 | 가호 선택 화면 | `client/FateSelectScreen`, `FateCatalog` |
 
-### 아직 스크립트 (`server/kubejs/server_scripts`) — 24파일 5,868줄 (2026-07-31 저녁)
+### 아직 스크립트 (`server/kubejs/server_scripts`) — 24파일 6,465줄 (2026-08-06)
 
-`ls_siege`(1238) · `ls_voice`(542) · `ls_rift`(434) · `ls_fate`(323) · `ls_ascend`(281) ·
-`ls_rescue`(275) · `ls_enrage`(265) · `ls_bossdiff`(265) · `ls_casino`(245) · `ls_migrate`(237) ·
-`ls_beacon`(203) · `ls_relic`(200) · `ls_bounty`(192) · `ls_hope`(191) · `ls_stats`(166) ·
-`ls_mobscale`(133) · `ls_util`(126) · `ls_title`(119) · `ls_config`(117) · `ls_towneffect`(94) ·
+`ls_siege`(1241) · `ls_voice`(542) · `ls_migrate`(538) · `ls_rift`(434) · `ls_fate`(323) ·
+`ls_rescue`(309) · `ls_bossdiff`(301) · `ls_ascend`(281) · `ls_enrage`(265) · `ls_casino`(265) ·
+`ls_beacon`(228) · `ls_mobscale`(222) · `ls_bounty`(215) · `ls_relic`(207) · `ls_hope`(195) ·
+`ls_stats`(170) · `ls_title`(155) · `ls_config`(132) · `ls_util`(126) · `ls_towneffect`(94) ·
 `ls_daynight`(93) · `ls_revive`(53) · `ls_keys`(53) · `last_stardust_rules`(23)
 
 > 줄 수는 세는 순간 낡는다. 갱신하려면 `wc -l server/kubejs/server_scripts/*.js`.
 >
-> **줄었을 것 같지만 늘었다** — 이관 4단계로 `ls_siege` 의 저장 코드가 빠졌는데도 1082 → 1238 이다.
+> **줄었을 것 같지만 늘었다** — 4단계 뒤 5,868 이었는데 5단계 뒤 6,465 다.
 > 이관은 «스크립트를 줄이는 일»이 아니라 «데이터의 주인을 하나로 만드는 일»이라서 그렇다.
 > 판정·연출·명령은 그대로 남고, 오히려 그 자리에 «왜 이렇게 했나»가 주석으로 붙는다.
-> 줄 수로 이관 진척을 재면 안 된다 — `LSData` 섹션 개수와 B절 스캐너가 진짜 지표다.
+> 5단계에서 늘어난 600줄 중 300은 `ls_migrate`(옛 키 옮기기 6종)이고, 그건 **한동안 문제가
+> 없으면 통째로 지울 파일**이다.
+>
+> 줄 수로 이관 진척을 재면 안 된다 — `LSData` 섹션 개수(지금 **9개**)와 B절 스캐너가 진짜 지표다.
+> B절이 옛 키를 「`ls_migrate.js` 에서만 읽는다」로 잡으면 그게 이관이 끝났다는 서명이다.
 
 ### 은퇴
 
@@ -96,6 +107,35 @@ LS.heroSummary(server)                                       // /lsdata 표시�
 
 // 전투 판정
 LS.reviveRule(player)                // 부활 직후 무적 창 + 별빛 쇠약 (ReviveRules.java)
+
+// ── 이관 5단계 (완료 2026-08-06) ──
+// 보스 난이도 — **라이브 오버라이드만.** 영구 기본값은 ls_config.js 에 남는다(2층 구조 유지)
+LS.bossGlobalHpOverride/bossGlobalDmgOverride · setBossGlobal
+LS.bossHpOverride/bossDmgOverride/bossAbsOverride · setBossDiff · setBossAbs
+LS.bossOverriddenCsv · resetBossDiff          // reset 은 모드가 표를 통째로 비운다
+
+// 칭호 — grantTitle 은 «새로 받았을 때만» true (연출을 호출부가 가른다)
+LS.titlesOwnedCsv · activeTitle · grantTitle · setActiveTitle · titleWearersCsv
+
+// 현상금 — 필드를 하나씩 주고받는다 (`|` 로 이어붙이지 않는다)
+LS.bountyCycle/setBountyCycle · postBounty · bountyPosted/Kind/Target/Name/Need/Reward/Have/Done
+LS.addBountyProgress · completeBounty          // 완료는 한 번만 true — 이중 지급 방지선
+
+// 봉화 — **beaconCount 를 세 파일이 부른다** (ls_beacon · ls_siege 위협 하한 · ls_hope 희망)
+LS.beaconCount · beaconNamesCsv · hasBeacon · beaconX/Y/Z
+LS.addBeacon · removeBeacon · nearestBeaconDistance/nearestBeaconName
+
+// 경마 — 주사위 결투는 안 온다(60초짜리 메모리 상태)
+LS.racePhase/raceTimer · setRacePhase/setRaceTimer · openRace/closeRace
+LS.horsePos · advanceHorse · placeRaceBet · raceBettersCsv/raceBetHorse/raceBetAmount/raceBetCount
+
+// 구출 — **population 은 구출 명부의 크기다** (ls_stats 폐막식도 이걸 읽는다)
+LS.population · isRescued · settleSurvivor
+LS.rescueActive/Built/Idx/X/Y/Z/Guards · beginScout · revealCamp · killGuard · endRescue
+LS.rescueDay/setRescueDay
+
+// /lsdata 표시용
+LS.bossDiffSummary · titleSummary · bountySummary · beaconSummary · casinoSummary · rescueSummary
 ```
 
 **이게 없으면 금고가 둘로 갈린다** — 모드의 금고와 스크립트의 `persistentData['ls_treasury']` 가
@@ -103,7 +143,7 @@ LS.reviveRule(player)                // 부활 직후 무적 창 + 별빛 쇠약
 
 현재 경유 중: `ls_siege` · `ls_rift` · `ls_beacon` · `ls_bounty` · `ls_rescue` · `ls_stats` ·
 `ls_ascend` · `ls_mobscale` · `ls_voice` · `ls_towneffect` · `ls_revive` · `ls_fate` · `ls_relic` ·
-`ls_hope` · `ls_migrate`
+`ls_hope` · `ls_migrate` · `ls_bossdiff` · `ls_title` · `ls_casino` (18/24)
 
 > 대조는 `python tools/scan_dead_kubejs.py` 가 자동으로 한다 (A절) — 스크립트가 부르는데
 > 자바에 없는 메서드는 **그 줄에서 런타임에 터진다.** 문법 검사로는 절대 안 걸린다.
@@ -122,7 +162,22 @@ LS.reviveRule(player)                // 부활 직후 무적 창 + 별빛 쇠약
 | 2 | **진행도** (`rf_progress`) | ✅ **완료** — `LSData.progress()`. 상한(0~4)도 그쪽이 건다 |
 | 3 | **가호·유물·각성** (`fate_*`·`relic_*`·`star_*`) | ✅ **완료 (2026-07-31)** — `LSData.hero()`. 상한(1~5)·중복 직업 판정도 그쪽이 건다 |
 | 4 | **공성** (`ls_siege` 1200+줄) | ✅ **완료 (2026-07-31)** — `LSData.siege()`. 키 26개 + **바깥에서 읽던 6곳** |
-| 5 | 나머지 (`bounty`·`casino`·`rescue`·`beacon`·`bossdiff`·`title`) | ⬜ **다음.** 서로 거의 독립 |
+| 5 | 나머지 (`bossdiff`·`title`·`bounty`·`beacon`·`casino`·`rescue`) | ✅ **완료 (2026-08-06)** — 섹션 6개. **바깥에서 읽던 3곳**도 같이 |
+| 6 | `ls_voice` (542줄) | ⬜ **마지막.** 다른 시스템의 상태 전이를 감시하는 구조라 감시 대상이 먼저 자리를 잡아야 한다 |
+
+> **5단계에서 옮긴 이유는 「크다」가 아니라 「키를 문자열로 조립한다」였다.** 여섯 중 셋이 그랬다:
+> `'bd_' + id + '_hp'`(보스 id 의 콜론이 NBT 키가 된다) · `titles_<이름>` CSV ·
+> `'hunt|minecraft:zombie|좀비|25|60'`(이름에 `|` 하나면 그 현상금이 조용히 사라진다).
+> 셋 다 오타·구분자 사고가 예외 없이 «없음/0» 으로 읽힌다.
+>
+> **그리고 4단계와 똑같이, 진짜 일은 읽는 쪽이었다** — `pb_names` 를 `ls_siege`(위협 하한)와
+> `ls_hope`(희망 게이지)가, `town_pop` 을 `ls_stats`(폐막식)가 각자 직접 읽고 있었다.
+> 쓰는 쪽만 옮겼으면 하한 완화가 사라지고 · 희망 게이지가 봉화를 못 보고 ·
+> 폐막식이 「인구 0명」으로 닫혔다. 오류 없이.
+>
+> 이관하며 드러난 것 하나: **인구를 두 번 셀 수 있었다.** `rs_done_<키>` 와 `town_pop` 이
+> 따로 살았고 올리는 곳이 둘인데 둘 다 표식을 안 봤다. 지금 인구는 저장되는 값이 아니라
+> **구출 명부의 크기**다 — 두 벌이 없으면 어긋날 수도 없다.
 
 > **4단계에서 진짜 일은 자바가 아니라 읽는 쪽이었다.** 키 26개 중 다섯이 파일 경계를 넘어가는데,
 > 그쪽은 `ls_siege.js` 의 접근 함수를 부르지 않고 각자 persistentData 를 직접 읽고 있었다.
@@ -136,8 +191,8 @@ LS.reviveRule(player)                // 부활 직후 무적 창 + 별빛 쇠약
 > 실제로 `ls_stats.js` 의 명예 보드가 그렇게 몇 주 동안 «CSV 첫 사람, 0점»을 1위로 내보내고 있었다
 > (`ls_town.js` 가 `.disabled` 되면서 `town_c_<name>` 을 쓰는 쪽만 사라졌다). 그 검출이 B절이다.
 
-`ls_voice`(533)는 **가장 마지막**이 낫다 — 다른 시스템의 상태 전이를 감시하는 구조라,
-감시 대상이 먼저 자리를 잡아야 한다.
+`ls_voice`(542)만 남았다. 감시 대상이 전부 자리를 잡았으니 이제 옮길 수 있다 —
+그게 끝나면 `LSKubeBridge` 와 `build.gradle` 의 KubeJS `compileOnly` 를 함께 지운다.
 
 ---
 
