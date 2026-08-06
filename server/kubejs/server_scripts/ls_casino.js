@@ -153,6 +153,7 @@ function csRaceFinish(server, winner) {
       if (h === winner && amt > 0) {
         csGive(server, n, amt * CS_PAYOUT)
         csSay(server, `§a  ★ ${n} 적중! +${amt * CS_PAYOUT} 에메랄드`)
+        lsAdv(server, n, 'casino_win')   // 도전과제 — **맞힌 사람 개인의 것**이다
       }
     } catch (e) { lsWarn('ls_casino:payout:' + n, e) }
   })

@@ -182,10 +182,12 @@ function rsComplete(server) {
     rsSay(server, '§5✦ 균열 정수 +1 §7— 구출된 자가 품고 있던 것 (성역에 떨어졌다)')
   } catch (err) { lsWarn('ls_rescue:161', err) }
   rsSay(server, `§8   ${s.job} — 세상이 리셋되면 정식 개업한다.`)
+  lsAdv(server, '@a', 'rescue_first')   // 도전과제 (ls_util.js) — 파티가 같이 구한 것이라 @a
   const nxt = rsNextIdx(server)
   if (nxt >= 0) rsSay(server, `§7다음 신호: §f${SURVIVORS[nxt].name} §8— /rescue scout (${RS_SCOUT_COST} Ducat)`)
   else {
     rsSay(server, '§6모든 생존자가 돌아왔다. §7성역에 다시 사람 사는 소리가 난다.')
+    lsAdv(server, '@a', 'rescue_all')
     server.players.forEach(p => { try { ttGrant(server, p.username, 'savior') } catch (e) { lsWarn('ls_rescue:167', e) } }) // 칭호 (ls_title.js)
   }
   console.log(`[LS-RESCUE] rescued ${s.key} pop=${rsPop(server)}`)

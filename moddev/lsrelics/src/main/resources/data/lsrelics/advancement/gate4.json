@@ -1,0 +1,29 @@
+{
+  "parent": "lsrelics:gate3",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "display": {
+    "icon": {
+      "id": "kubejs:rift_key_gold",
+      "count": 1
+    },
+    "title": {
+      "translate": "advancement.lsrelics.gate4.title"
+    },
+    "description": {
+      "translate": "advancement.lsrelics.gate4.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "sends_telemetry_event": false
+}

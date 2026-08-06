@@ -85,6 +85,7 @@ function rlGrant(server, player, force) {
   // 유물을 잃고 재지급받아도 각성이 날아가지 않게.
   try { asStamp(server, uname) } catch (e) { lsWarn('ls_relic:60', e) }
   try { ttGrant(server, uname, r.title) } catch (e) { lsWarn('ls_relic:61', e) } // 칭호 (ls_title.js — 공유 스코프)
+  lsAdv(server, uname, 'relic')   // 도전과제 (ls_util.js)
   rlCmd(server, `title ${uname} title {"text":"${r.name.replace(/§./g, '')}","color":"aqua","bold":true}`)
   rlCmd(server, `title ${uname} subtitle {"text":"유물이 당신을 택했다","color":"gray"}`)
   rlCmd(server, `execute as ${uname} at @s run playsound minecraft:block.beacon.power_select master @s ~ ~ ~ 1 1.2`)

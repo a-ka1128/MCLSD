@@ -143,6 +143,8 @@ function asAscend(server, player) {
   // ③ 각성
   LS.setStar(server, uname, next)
   asStamp(server, uname)
+  // 도전과제 — 2~5성만 있다(1성은 유물 수령과 같은 순간이라 `relic` 이 대신한다).
+  if (next >= 2 && next <= 5) lsAdv(server, uname, 'star' + next)
 
   // 최대 체력이 늘면 새 하트가 빈 칸으로 남는다 — 각성 보상이 손해처럼 보이지 않게 가득 채운다.
   const hpTable = asHealthTable(server, uname)

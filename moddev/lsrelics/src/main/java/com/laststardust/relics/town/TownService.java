@@ -20,6 +20,8 @@ import net.minecraft.world.item.Item;
 // KubeJS 시절엔 판정이 스크립트에, 표시가 모드에 나뉘어 있어 둘이 어긋나면
 // "버튼은 켜졌는데 눌러도 안 되는" 상태가 났다. 이제 한 곳에서만 판정한다.
 public final class TownService {
+
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
     private TownService() {}
 
     // 화면에 넘길 스냅샷을 만든다.
@@ -145,6 +147,44 @@ public final class TownService {
                     SoundSource.PLAYERS, 1.0f, 1.0f);
             }
         }
+
+        grantTownAdvancements(server, town, trackKey, lv + 1);
         return true;
+    }
+
+    // ── 도전과제 (2026-08-06) ──
+    // 마을은 **서버 전체가 함께 올리는 것**이라 접속자 전원에게 준다.
+    // 트랙 하나가 최대 단계에 닿으면 그 트랙의 것을, 넷이 전부 최대면 `town_all` 을 더 준다.
+    //
+    // 스크립트가 아니라 여기서 주는 이유: 마을 판정은 이 클래스 하나가 갖는다
+    // (`ARCHITECTURE.md` 원칙 3 — 판정은 한 곳에서). 지급을 KubeJS 로 넘기면
+    // 「완성됐는가」를 두 곳이 판단하게 되고, 그건 반드시 어긋난다.
+    private static void grantTownAdvancements(MinecraftServer server, TownData town,
+                                              String trackKey, int newLevel) {
+        TownCatalog.Track track = TownCatalog.byKey(trackKey);
+        if (track == null || track.next(newLevel) != null) return;   // 아직 최대가 아니다
+
+        grantAll(server, "town_" + trackKey);
+
+        for (TownCatalog.Track t : TownCatalog.ALL) {
+            if (t.next(town.level(t.key())) != null) return;         // 아직 남은 트랙이 있다
+        }
+        grantAll(server, "town_all");
+    }
+
+    // `/advancement grant` 를 쓰지 않고 직접 준다 — 명령 문자열을 조립하면 오타가
+    // 조용히 아무것도 안 하는 결과가 된다(KubeJS 쪽은 화이트리스트로 막았지만 여기는 자바다).
+    // 없는 도전과제 id 면 `getAdvancement` 가 null 을 주므로 그때 로그를 남긴다.
+    private static void grantAll(MinecraftServer server, String id) {
+        var loc = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+            com.laststardust.relics.LSRelics.MODID, id);
+        var adv = server.getAdvancements().get(loc);
+        if (adv == null) {
+            LOG.warn("[LS] 도전과제가 없다: {} — data/lsrelics/advancement/ 를 볼 것", loc);
+            return;
+        }
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            p.getAdvancements().award(adv, "granted");
+        }
     }
 }

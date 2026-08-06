@@ -186,6 +186,7 @@ function ftChoose(server, player, key) {
   const f = FATES[key]
   LS.setFate(server, player.username, key)
   ftApply(server, player, key)
+  lsAdv(server, player.username, 'root')   // 도전과제 뿌리 — 여기서부터 나무가 열린다
   // 시작 키트
   STARTER_KIT.concat(dyedArmor(f.color)).forEach(it => { server.runCommandSilent(`give ${player.username} ${it[0]} ${it[1]}`) })
   server.runCommandSilent(`title ${player.username} title {"text":"${f.icon} ${f.name}의 가호","color":"gold","bold":true}`)

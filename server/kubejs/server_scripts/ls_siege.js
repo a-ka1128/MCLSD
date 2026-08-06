@@ -94,6 +94,9 @@ function getThreat(server) { return LS.threat(server) }
 function setThreat(server, v) {
   const nv = Math.max(threatFloor(server), Math.min(MAX_THREAT, v))
   LS.setThreat(server, Math.max(0, nv))
+  // 도전과제 — 위협도를 바꾸는 곳이 열 군데 넘는데 **여기가 그 전부를 지나간다.**
+  // 호출부마다 붙이면 언젠가 한 곳을 빠뜨린다.
+  if (nv >= MAX_THREAT) lsAdv(server, '@a', 'threat_max')
 }
 function getTreasury(server) { return LS.treasury(server) }
 function addTreasury(server, amt) { LS.addTreasury(server, amt) }
@@ -236,6 +239,7 @@ function finaleVictory(server) {
   say(server, '§6★ 어둠의 심장이 멎었다. §e공성은 영원히 끝났다 — Last Stardust, 세상을 되찾았다.')
   // 최종 승리 칭호 (ls_title.js — 공유 스코프)
   server.players.forEach(p => { try { ttGrant(server, p.username, 'night_lord') } catch (e) { lsWarn('ls_siege:197', e) } })
+  lsAdv(server, '@a', 'finale')   // 도전과제 — 나무의 끝
   console.log('[LS-FINALE] VICTORY')
 }
 
@@ -491,6 +495,7 @@ function firstSiegeCleared(server) {
   playAll(server, 'minecraft:ui.toast.challenge_complete', 1, 1)
   say(server, `§b✦ 첫 공세를 버텨냈다 — §d균열 정수 +${FIRST_SIEGE_ESS}§7씩 주어졌다.`)
   say(server, '§7   §e제단§7에 정수를 바쳐 당신의 유물을 깨우세요. §8(/relic 로 확인)')
+  lsAdv(server, '@a', 'siege_first')   // 도전과제 (ls_util.js) — 파티가 같이 버틴 것이라 @a
   console.log('[LS-SIEGE] first siege cleared — relics unlocked')
 }
 
@@ -524,6 +529,7 @@ function finishSiege(server, outcome) {
     playAll(server, 'minecraft:ui.toast.challenge_complete', 1, 1)
     playAll(server, 'minecraft:entity.player.levelup', 0.7, 1.2)
     say(server, `§a✔ ${grand ? '대공세를 격퇴했다!' : '성역 방어 성공!'} §e공동 금고 +${reward} §7· 위협도↓(${getThreat(server)})`)
+    if (grand) lsAdv(server, '@a', 'siege_grand')   // 도전과제 (ls_util.js)
     // 공성 격퇴 = 반복 가능한 정수 공급처 (무기 각성과 마을 재건을 동시에 굴려야 하므로).
     // 대공세는 항상, 일반 공성은 고위협(HIGH_THREAT_ESS 이상)에서 완전 격퇴했을 때만 —
     // "위협도를 낮게 깔면 안전하지만 정수가 안 나온다"는 선택지를 만든다.
@@ -905,6 +911,7 @@ ServerEvents.tick(event => {
       playAll(server, 'minecraft:entity.generic.explode', 1, 0.5)
       playAll(server, 'minecraft:event.raid.horn', 1, 0.5)
       say(server, '§4▨ 성벽이 끝내 무너졌다.')
+      lsAdv(server, '@a', 'wall_break')   // 도전과제 — 실패도 기록이다
     }
 
     if (banging > 0) {
@@ -940,6 +947,7 @@ ServerEvents.tick(event => {
         playAll(server, 'minecraft:entity.generic.explode', 1, 0.5)
         playAll(server, 'minecraft:event.raid.horn', 1, 0.5)
         say(server, `§4▨ 성벽이 무너졌다! §c적들이 성역 안으로 몰려온다 — 수리(/wall repair) 전까지 방어선이 없습니다.`)
+        lsAdv(server, '@a', 'wall_break')   // 도전과제 — 실패도 기록이다
       }
     }
   }

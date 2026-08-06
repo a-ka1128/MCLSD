@@ -422,6 +422,7 @@ EntityEvents.death(event => {
       list.forEach(p => { if (Number(p.health) > 0) alive++ })
       if (alive === 0) {
         vWorld(server, '별빛이 모두 꺼졌다.')
+        lsAdv(server, '@a', 'wipe')   // 도전과제 (ls_util.js) — 전멸도 기록이다(Hades 식)
         server.scheduleInTicks(40, () => { try { vSpeak(server, 'wipe') } catch (err) { lsWarn('ls_voice:383', err) } })
       }
     } catch (err) { console.log('[LS-VOICE] wipe check fail: ' + err) }

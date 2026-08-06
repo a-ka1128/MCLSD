@@ -273,6 +273,9 @@ function completeTier(server) {
   rplay(server, 'minecraft:block.beacon.power_select', 1, 1.2)
   rsay(server, `§6★ ${t.name} 봉인 해방! §e세계 등급 → ${t.tier} §7· 공동 금고 +${t.reward}`)
   const done = idx + 1
+  // 도전과제 — **서버 전체가 이룬 것이라 `@a` 다.** 관문은 파티가 같이 깬 것이고,
+  // 그 자리에 없던 사람에게도 「이 서버는 여기까지 왔다」가 남아야 한다.
+  if (done >= 1 && done <= 4) lsAdv(server, '@a', 'gate' + done)
   if (done >= MAX_TIER) {
     // 마지막 게이트 → 피날레 무장 (남은 균열 노드를 파괴하면 '가장 긴 밤' 개막)
     // 최종장 무장은 모드(LSData.siege)가 소유한다 (이관 4단계, 2026-07-31).

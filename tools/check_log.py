@@ -49,7 +49,18 @@ LOG_ENCODING = 'utf-8'
 
 # 볼 줄: WARN · ERROR · FATAL, 그리고 우리 스크립트가 찍는 [LS-WARN].
 RE_LEVEL = re.compile(r'/(WARN|ERROR|FATAL)\]')
-RE_OURS = re.compile(r'\[LS-WARN\]|KubeJS.*(?:ERROR|error)')
+
+# ── 우리 것 ──
+# 처음엔 `KubeJS.*(ERROR|error)` 도 넣었는데, **「Reloaded with no KubeJS errors!」의 "errors" 에
+# 걸렸다.** 도구가 자기 오탐을 내면 그게 제일 나쁘다 — 그 한 줄 때문에 매번 「새 문제 1건」이
+# 뜨고, 결국 이 도구도 안 보게 된다(바로 이 도구를 만든 이유가 그거다).
+# KubeJS 의 진짜 오류는 `[KubeJS Server/ERROR]` 라 위 RE_LEVEL 이 이미 잡는다.
+RE_OURS = re.compile(r'\[LS-WARN\]')
+
+# **INFO 인데 봐야 하는 줄.** KubeJS 의 로드 요약은 오류가 있어도 INFO 로 찍힌다:
+#     Loaded 24/24 KubeJS server scripts ... with 2 errors and 0 warnings
+# 레벨만 보면 이걸 놓친다. 0 이 아닌 숫자일 때만 잡는다.
+RE_INFO_BAD = re.compile(r'with (?!0 errors and 0 warnings)\d+ errors? and \d+ warnings?')
 
 # ── 기준선 ──
 # (정규식, 왜 양성인가)
@@ -151,11 +162,16 @@ def main():
             line = raw.rstrip('\n')
             is_level = RE_LEVEL.search(line)
             is_ours = RE_OURS.search(line)
-            if not is_level and not is_ours:
+            is_info_bad = RE_INFO_BAD.search(line)
+            if not is_level and not is_ours and not is_info_bad:
                 continue
 
             # 우리 코드가 낸 것은 **기준선을 타지 않는다.** 고칠 것이지 재울 것이 아니다.
-            if is_ours and '[LS-WARN]' in line:
+            if is_ours:
+                ours.append((i, line))
+                continue
+            # 스크립트 로드에 오류가 있으면 그것도 우리 것이다 (INFO 로 찍혀도).
+            if is_info_bad:
                 ours.append((i, line))
                 continue
 

@@ -157,6 +157,9 @@ function pbRegister(server, player, name) {
   pbPlay(server, 'minecraft:block.beacon.activate', 1, 1)
   pbIgniteWave(server, px, py, pz)
   pbSay(server, `§b✦ 정화 봉화 점화: §f${name} §7(-${PB_COST} Ducat) — 반경 ${PB_RADIUS}m 정화 · 봉화 ${pbTotal}기 (2기당 위협 하한 -1)`)
+  // 도전과제 (ls_util.js) — 금고로 세운 것이라 파티 전체의 것이다.
+  lsAdv(server, '@a', 'beacon_first')
+  if (pbTotal >= 4) lsAdv(server, '@a', 'beacon_four')
   console.log(`[LS-BEACON] register ${name} at ${px},${py},${pz} total=${pbTotal}`)
   return 1
 }

@@ -1,0 +1,28 @@
+{
+  "parent": "lsrelics:star2",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "display": {
+    "icon": {
+      "id": "kubejs:star_seal",
+      "count": 1
+    },
+    "title": {
+      "translate": "advancement.lsrelics.star3.title"
+    },
+    "description": {
+      "translate": "advancement.lsrelics.star3.description"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "sends_telemetry_event": false
+}

@@ -1,0 +1,28 @@
+{
+  "parent": "lsrelics:root",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "display": {
+    "icon": {
+      "id": "minecraft:shield",
+      "count": 1
+    },
+    "title": {
+      "translate": "advancement.lsrelics.siege_first.title"
+    },
+    "description": {
+      "translate": "advancement.lsrelics.siege_first.description"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "sends_telemetry_event": false
+}
