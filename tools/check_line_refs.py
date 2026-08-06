@@ -28,6 +28,17 @@ RE_REF = re.compile(r'([A-Za-z_][A-Za-z_0-9]*\.(?:js|java)):(\d+)(?:-(\d+))?')
 # 상시로 울리는 경보는 무시하게 되고, 그러면 진짜 낡은 참조가 같이 묻힌다.
 RE_STACK = re.compile(r'^\s*at [A-Za-z_$][\w.$]*\(')
 
+# ── 날짜가 박힌 «그날의 보고서» 는 안 본다 (2026-08-06) ──
+# `SELF-CHECK-2026-07-31.md` 는 **「낡은 줄 번호」를 조사한 보고서**다. 본문에 «이 문서가
+# 가리키는 ls_siege.js:399 는 빈 줄이다» 같은 예시가 그대로 적혀 있고, 그건 - 틀린 게 맞다 - .
+# 검사기가 그 예시를 다시 지적하면 영구 오탐이 되고, 상시로 울리는 경보는 무시하게 된다
+# (RE_STACK 을 만든 것과 같은 이유다). 스택 트레이스처럼 «그때의 기록»이라 고치면 거짓이 된다.
+#
+# 여기 이름을 더할 때 기준: **날짜가 박혀 있고, 그 시점의 상태를 적은 문서인가.**
+# 살아 있는 문서(ARCHITECTURE·TODO·TOWN·TEST-PLAN)는 절대 넣지 않는다 — 그쪽이 낡는 게
+# 진짜 문제고, 이 도구는 그걸 잡으려고 만들었다.
+SKIP_DOCS = {'SELF-CHECK-2026-07-31.md'}
+
 
 def find(fname):
     for d in SEARCH:
@@ -45,7 +56,11 @@ def main():
                 docs.append(os.path.join(d, f))
 
     total = stale = unknown = 0
+    skipped = 0
     for doc in docs:
+        if os.path.basename(doc) in SKIP_DOCS:
+            skipped += 1
+            continue
         rows = []
         for i, line in enumerate(open(doc, encoding='utf-8'), 1):
             if RE_STACK.match(line):
@@ -75,7 +90,9 @@ def main():
             for i, ref, verdict in rows:
                 print('  L%-4d %-28s %s' % (i, ref, verdict))
 
-    print('\n총 %d 개 · 확실히 낡음 %d · 사람 확인 필요 %d' % (total, stale, unknown))
+    print('\n총 %d 개 · 확실히 낡음 %d · 사람 확인 필요 %d%s'
+          % (total, stale, unknown,
+             (' · 건너뛴 문서 %d (SKIP_DOCS)' % skipped) if skipped else ''))
     return 0
 
 
