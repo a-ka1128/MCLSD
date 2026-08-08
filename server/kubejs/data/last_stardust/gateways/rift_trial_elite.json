@@ -29,7 +29,7 @@
 					"type": "gateways:stack",
 					"stack": {
 						"id": "minecraft:gold_ingot",
-						"count": 8
+						"count": 12
 					}
 				}
 			],
@@ -63,7 +63,7 @@
 					"type": "gateways:stack",
 					"stack": {
 						"id": "minecraft:diamond",
-						"count": 3
+						"count": 4
 					}
 				}
 			],
@@ -101,7 +101,7 @@
 				{
 					"type": "gateways:entity_loot",
 					"entity": "minecraft:evoker",
-					"rolls": 3
+					"rolls": 1
 				},
 				{
 					"type": "gateways:stack",
@@ -165,7 +165,7 @@
 		{
 			"type": "gateways:loot_table",
 			"loot_table": "minecraft:chests/end_city_treasure",
-			"rolls": 4,
+			"rolls": 3,
 			"desc": "rewards.gateways.loot_table.end_city"
 		},
 		{

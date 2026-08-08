@@ -57,7 +57,7 @@
 					"type": "gateways:stack",
 					"stack": {
 						"id": "minecraft:iron_ingot",
-						"count": 8
+						"count": 12
 					}
 				}
 			],
@@ -95,13 +95,13 @@
 				{
 					"type": "gateways:entity_loot",
 					"entity": "minecraft:evoker",
-					"rolls": 2
+					"rolls": 1
 				},
 				{
 					"type": "gateways:stack",
 					"stack": {
 						"id": "minecraft:diamond",
-						"count": 2
+						"count": 3
 					}
 				}
 			],
@@ -113,7 +113,7 @@
 		{
 			"type": "gateways:loot_table",
 			"loot_table": "minecraft:chests/simple_dungeon",
-			"rolls": 8,
+			"rolls": 3,
 			"desc": "rewards.gateways.loot_table.simple_dungeon"
 		},
 		{

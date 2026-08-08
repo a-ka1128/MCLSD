@@ -17,8 +17,11 @@ ServerEvents.recipes(event => {
   // 별먼지는 탐험 재화라 축이 다르고, **1개**로 잡아 축복 리롤(3~8개)과 경쟁하지 않게 한다.
   // 2개만 돼도 「열쇠 하나 = 리롤 반 번」이 되어 아무도 안 쓴다.
   event.shapeless('kubejs:rift_key', ['kubejs:stardust', 'minecraft:gold_ingot', 'minecraft:gold_ingot', 'minecraft:amethyst_shard', 'minecraft:amethyst_shard'])
-  event.shapeless('kubejs:rift_key_elite', ['kubejs:rift_essence', 'kubejs:rift_essence', 'minecraft:diamond', 'minecraft:diamond', 'minecraft:amethyst_shard'])
-  event.shapeless('kubejs:rift_key_gold', ['kubejs:rift_essence', 'kubejs:rift_essence', 'kubejs:rift_essence', 'minecraft:gold_block', 'minecraft:emerald_block'])
+  event.shapeless('kubejs:rift_key_elite', ['kubejs:rift_essence', 'minecraft:diamond', 'minecraft:diamond', 'minecraft:amethyst_shard'])
+  // 황금만 두 재화를 다 요구한다 — 전투(파편)와 탐험(별먼지)을 둘 다 한 사람만 여는 자리.
+  // 에메랄드블록은 뺐다: 보상에서 에메랄드를 없앤 마당에 원가로만 남기면
+  // 균열이 도박장 칩을 «빨아먹는» 반대 방향이 된다.
+  event.shapeless('kubejs:rift_key_gold', ['kubejs:rift_essence', 'kubejs:rift_essence', 'kubejs:stardust', 'minecraft:gold_block', 'minecraft:diamond_block'])
 })
 
 // ── 우클릭 → 관문 개방 ──

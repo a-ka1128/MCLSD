@@ -70,13 +70,13 @@
 				{
 					"type": "gateways:entity_loot",
 					"entity": "minecraft:evoker",
-					"rolls": 3
+					"rolls": 1
 				},
 				{
 					"type": "gateways:stack",
 					"stack": {
 						"id": "minecraft:gold_block",
-						"count": 3
+						"count": 2
 					}
 				}
 			],
@@ -88,7 +88,7 @@
 		{
 			"type": "gateways:loot_table",
 			"loot_table": "minecraft:chests/buried_treasure",
-			"rolls": 5,
+			"rolls": 3,
 			"desc": "rewards.gateways.loot_table.buried_treasure"
 		},
 		{
