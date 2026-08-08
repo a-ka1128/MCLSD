@@ -33,9 +33,25 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class FateSelectScreen extends Screen {
 
     private static final int PANEL_W = 420;
-    private static final int PANEL_H = 272;
     private static final int LIST_W = 132;
     private static final int ROW_H = 20;
+
+    // ── 패널 높이는 «가호 수»에서 나온다 (2026-08-09) ──
+    // 272 로 박혀 있었다. 8종일 때 맞춰 잡은 값이라 10종이 되자 마지막 줄(하르모니아)이
+    // 바닥 안내문 위로 겹쳐 찍혔다. 상수로 두면 가호를 늘릴 때마다 같은 일이 난다.
+    //   34  머리말(제목 + 구분선)   ·  N × 20  목록
+    //   72  목록 아래 여백 + 안내문 두 줄 + 확정 버튼
+    private static final int HEAD_H = 34;
+    private static final int FOOT_H = 72;
+
+    private static int panelH() {
+        return HEAD_H + FateCatalog.ALL.size() * ROW_H + FOOT_H;
+    }
+
+    /** 화면이 낮으면 패널이 잘린다 — 세로 여백 8px 을 남기고 그 안으로 접는다. */
+    private int fitH() {
+        return Math.min(panelH(), this.height - 16);
+    }
 
     private static final int C_BACKDROP   = 0xE0101018; // 패널 바탕
     private static final int C_BORDER     = 0xFF3A3F55;
@@ -97,12 +113,12 @@ public class FateSelectScreen extends Screen {
     @Override
     protected void init() {
         panelX = (this.width - PANEL_W) / 2;
-        panelY = (this.height - PANEL_H) / 2;
+        panelY = (this.height - fitH()) / 2;
 
         confirm = Button.builder(
                 Component.translatable(locked ? "lsfate.gui.locked" : "lsfate.gui.confirm"),
                 b -> choose())
-            .bounds(panelX + PANEL_W - 122, panelY + PANEL_H - 30, 110, 20)
+            .bounds(panelX + PANEL_W - 122, panelY + fitH() - 30, 110, 20)
             .build();
         addRenderableWidget(confirm);
         refreshConfirm();
@@ -155,8 +171,8 @@ public class FateSelectScreen extends Screen {
         super.render(g, mouseX, mouseY, partialTick);
 
         // 패널
-        g.fill(panelX, panelY, panelX + PANEL_W, panelY + PANEL_H, C_BACKDROP);
-        drawBorder(g, panelX, panelY, PANEL_W, PANEL_H, C_BORDER);
+        g.fill(panelX, panelY, panelX + PANEL_W, panelY + fitH(), C_BACKDROP);
+        drawBorder(g, panelX, panelY, PANEL_W, fitH(), C_BORDER);
 
         // 제목
         g.drawCenteredString(this.font, this.title, panelX + PANEL_W / 2, panelY + 12, 0xFFFFD98A);
@@ -167,7 +183,7 @@ public class FateSelectScreen extends Screen {
 
         // 바닥 안내. 잠겨 있으면 그 이유를, 아니면 "유물은 지금 주는 게 아니다"를 알린다.
         // 큰 유물 아이콘 때문에 "고르면 저 무기를 준다"고 오해하기 쉬워서 반드시 붙여둔다.
-        int noteY = panelY + PANEL_H - 46;
+        int noteY = panelY + fitH() - 46;
         if (locked) {
             g.drawString(this.font, Component.translatable("lsfate.gui.already"),
                 panelX + 12, noteY, 0xFFE86A6A, false);
