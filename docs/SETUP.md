@@ -1,7 +1,7 @@
 # Last Stardust — 빌드 & 서버 세팅 가이드
 
 대상: **NeoForge 1.21.1**, 이 PC에서 자체 호스팅 (Ryzen 9 9950X3D, 61 GB RAM).
-페이즈 순서대로 진행하세요. Phase 7(KubeJS/퀘스트 커스텀)은 서버가 부팅된 **이후**에 합니다 — `CUSTOM.md` 참고.
+페이즈 순서대로 진행하세요. Phase 7(KubeJS/퀘스트 커스텀)은 서버가 부팅된 **이후**에 합니다 — `docs/archive/CUSTOM.md` 참고.
 
 ---
 
@@ -82,7 +82,7 @@
 5. 유용한 게임룰: `keepInventory`는 불필요(Corpse가 처리); 팬텀 스팸 거슬리면 `/gamerule doInsomnia false`.
 
 ## Phase 7 — 서버 정체성(커스텀), 안정화 후
-이제 Last Stardust 고유 시스템을 얹습니다 → **`CUSTOM.md`** 참고: 공동 금고, 미처리 관문 밤 공성,
+이제 Last Stardust 고유 시스템을 얹습니다 → **`docs/archive/CUSTOM.md`** 참고: 공동 금고, 미처리 관문 밤 공성,
 FTB Quests 정화 진행.
 
 ---

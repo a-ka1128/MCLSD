@@ -31,7 +31,7 @@ py -c "import json,glob; [print(f, [e.get('name') for e in json.load(open(f,enco
 |---|---|---|---|---|
 | 에레보스 (단검) | `assassin.json` | **Gloomsteel Knife** | nongko's 3D Weapons | 비상업 무료 |
 | 크라토스 (도끼) | `pioneer.json` | **Gilded Phoenix Greataxe** | nongko's 3D Weapons | 비상업 무료 |
-| 헤카테 (낫) | `hecate.json` | Lukah scythe | Scythes Vanilla Pack | **MIT** |
+| 헤카테 (낫) | `hecate.json` | Lukah scythe | Scythes Vanilla Pack | **MIT** (§6 에서 확정) |
 | 하르모니아 (띠) | `harmonia.json` | 〃 (**재채색 자리맡기**) | 〃 | **MIT** |
 
 - **nongko's 3D Weapons (Fantasy 3D Weapons CIT)** · 66종 · 128x
@@ -90,6 +90,44 @@ py -c "import json,glob; [print(f, [e.get('name') for e in json.load(open(f,enco
 
 07-23 밤 **2분 안에 16개가 나타난다** — 하나씩 만든 흐름이 아니라 한 번에 반입된 흐름이다.
 §3 의 출처를 찾는다면 그날 밤의 다운로드 기록이 가장 유력한 실마리다.
+
+## 6. 브라우저 기록 조사 (2026-08-09) — 07-23 은 유실 · 낫은 확정됨
+
+§5 의 「07-23 밤 다운로드 기록」을 찾으러 크롬·엣지 이력을 뒤진 결과.
+
+**07-23 은 복구 불가.** 크롬 기본 프로필의 다운로드 기록이 **2026-07-30 부터 시작한다**(63건).
+그 이전이 잘려 있어 07-23 밤에 무엇을 받았는지는 남아 있지 않다. 다른 프로필·엣지도 무관.
+`Downloads` 폴더에도 `.bbmodel` 이나 무기 팩 zip 이 하나도 없다(34개 항목 전수 확인).
+→ **§3 의 방패·활·지팡이는 이 경로로도 못 찾는다. 이미지 역검색 외에 남은 수단이 없다.**
+
+**대신 08-08 낫 작업 흔적이 남았고, 이게 §2 의 낫 출처를 흔든다.** 그날 14:01~14:06 방문 기록:
+
+| 시각 | 방문 |
+|---|---|
+| 14:01 | `voxel.shop/product/3826/scythes-pack-14-items` — **Polymart 계열 유료 마켓** |
+| 14:01 | `minecraft-model.com` — 무료 블록벤치 모델 라이브러리 · 검색어 **`Whip`**, **`Chain`** |
+| 14:06 | 구글 검색 **"Blood Scythe by Linaryx"** |
+
+`Chain` 검색은 우리 낫에 붙은 사슬(`chain_0`~`chain_weight`)과 정확히 대응한다. 모델 파일은
+그날 23:43 에 생겼다.
+
+### ✅ 해소됨 (2026-08-09) — 유료 마켓이 아니다
+
+위 의심은 **틀렸다.** 그 14:01 방문들은 후보를 훑던 흔적이고, **실제로 받은 것은 따로 있다.**
+23:04~23:10 에 Modrinth CDN 에서 두 팩을 내려받아 둘 다 렌더해 비교했고, 채택된 것은 두 번째다:
+
+| 받은 것 | 결과 |
+|---|---|
+| `Blood-Scythe-by-Linaryx_1.21.zip` (MIT) | 렌더해 보니 밋밋해서 **탈락** |
+| `scythe_vanilla_v1.2.zip` — Scythes Vanilla Pack | **채택** — 그 안의 `lukah_scythe` |
+
+- 정확한 경로: `assets/minecraft/models/item/scythe_vanilla/lukah_scythe.json` (요소 40개)
+- 라이선스는 Modrinth API 에서 직접 확인했다 — 프로젝트 `iHUIn5hZ`, **`license.id = "MIT"`**
+- **voxel.shop(유료)은 열어만 보고 받지 않았다.** 그 페이지는 403 으로 내용 확인조차 못 했다.
+- `Lukah` 는 팩 안의 «모델 이름»이지 저작자명이 아니다 — 그래서 사람 이름으로 검색해도 안 나왔다.
+  저작자 표시는 **팩 이름(Scythes Vanilla Pack)** 으로 하는 게 맞다.
+
+따라서 §2 의 낫·띠 두 줄은 **MIT 확정**이다. 재배포·수정에 문제가 없다.
 
 ---
 
