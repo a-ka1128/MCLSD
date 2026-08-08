@@ -18,7 +18,7 @@ THREAD_ID = thread_id("harmonia")
 CLASS = {
     "color": 0xE86A9A,   # 로즈 — 서포트 한 쌍이지만 히기에이아(에메랄드)와 한눈에 갈린다
     "icon": "🪢", "name": "하르모니아", "en": "HARMONIA",
-    "epithet": "흩어진 것을 묶는 자", "role": "원거리 지원 딜러",
+    "epithet": "흩어진 이들을 모으는 자", "role": "원거리 지원 딜러",
     "relic": "바르비톤",
     "image": "art/Harmonia.png",
     "lore": [

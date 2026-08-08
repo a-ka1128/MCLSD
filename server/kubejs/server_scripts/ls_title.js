@@ -27,7 +27,7 @@ const TITLES = {
   assassin_relic: { display: '어둠에서 온 자', color: 'dark_purple' },
   lancer_relic: { display: '운명을 꿰뚫는 자', color: 'red' },
   hecate_relic: { display: '횃불을 든 자', color: 'dark_aqua' },
-  harmonia_relic: { display: '흩어진 것을 묶는 자', color: 'light_purple' },
+  harmonia_relic: { display: '흩어진 이들을 모으는 자', color: 'light_purple' },
   night_lord: { display: '밤의 지배자', color: 'dark_purple' },
   rift_conqueror: { display: '균열 정복자', color: 'red' },
   savior: { display: '구원자', color: 'yellow' },
