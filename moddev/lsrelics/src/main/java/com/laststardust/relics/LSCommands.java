@@ -419,6 +419,175 @@ public final class LSCommands {
                             .executes(ctx -> setLevel(ctx.getSource(),
                                 StringArgumentType.getString(ctx, "track"),
                                 IntegerArgumentType.getInteger(ctx, "n")))))));
+
+        // ── 별의 축복 ──
+        //   /bless                       현황 (슬롯 4칸 · 해금 상태 · 리롤 비용)
+        //   /bless <slot>                빈 칸을 채운다 (무료 — 각성이 이미 파편을 먹었다)
+        //   /bless <slot> kind|value     리롤 (파편 / 별먼지)
+        //   /bless clear <이름> [slot]   관리자
+        //
+        // 전용 UI(`/bless` 창)가 오기 전까지 이게 유일한 입구다. UI 가 붙어도 명령은 남긴다 —
+        // 화면 없이 상태를 확인할 수 있어야 「버튼이 안 눌린다」의 원인을 가릴 수 있다.
+        event.getDispatcher().register(
+            Commands.literal("bless")
+                .executes(ctx -> blessOpen(ctx.getSource()))
+                .then(Commands.literal("status").executes(ctx -> blessStatus(ctx.getSource())))
+                .then(Commands.literal("clear").requires(s2 -> s2.hasPermission(2))
+                    .then(Commands.argument("who", StringArgumentType.word())
+                        .executes(ctx -> blessClear(ctx.getSource(),
+                            StringArgumentType.getString(ctx, "who")))))
+                // ── 관리자: 원하는 축복을 직접 박는다 ──
+                // 검증용이다. 18종을 «굴려서» 확인하려면 원하는 게 나올 때까지 리롤을 돌려야 하고,
+                // 그건 효과 하나 보는 데 파편을 수십 개 쓴다는 뜻이다. 값을 생략하면 최댓값 —
+                // 효과가 «도는지»를 보는 데는 최댓값이 제일 눈에 띈다.
+                .then(Commands.literal("set").requires(s2 -> s2.hasPermission(2))
+                    .then(Commands.argument("slot", StringArgumentType.word())
+                        .suggests((c, b) -> {
+                            for (var s2 : com.laststardust.relics.data.BlessingCatalog.Slot.values()) {
+                                b.suggest(s2.name().toLowerCase(java.util.Locale.ROOT));
+                            }
+                            return b.buildFuture();
+                        })
+                        .then(Commands.argument("id", StringArgumentType.word())
+                            .suggests((c, b) -> {
+                                com.laststardust.relics.data.BlessingCatalog.WEAPONS.forEach(x -> b.suggest(x.id()));
+                                com.laststardust.relics.data.BlessingCatalog.DEFENSE.forEach(x -> b.suggest(x.id()));
+                                return b.buildFuture();
+                            })
+                            .executes(ctx -> blessSet(ctx.getSource(),
+                                StringArgumentType.getString(ctx, "slot"),
+                                StringArgumentType.getString(ctx, "id"), Float.NaN))
+                            .then(Commands.argument("value", com.mojang.brigadier.arguments.FloatArgumentType.floatArg())
+                                .executes(ctx -> blessSet(ctx.getSource(),
+                                    StringArgumentType.getString(ctx, "slot"),
+                                    StringArgumentType.getString(ctx, "id"),
+                                    com.mojang.brigadier.arguments.FloatArgumentType.getFloat(ctx, "value")))))))
+                .then(Commands.argument("slot", StringArgumentType.word())
+                    .suggests((c, b) -> {
+                        for (var s2 : com.laststardust.relics.data.BlessingCatalog.Slot.values()) {
+                            b.suggest(s2.name().toLowerCase(java.util.Locale.ROOT));
+                        }
+                        return b.buildFuture();
+                    })
+                    .executes(ctx -> blessDo(ctx.getSource(),
+                        StringArgumentType.getString(ctx, "slot"), "bless"))
+                    .then(Commands.argument("what", StringArgumentType.word())
+                        .suggests((c, b) -> { b.suggest("kind"); b.suggest("value"); return b.buildFuture(); })
+                        .executes(ctx -> blessDo(ctx.getSource(),
+                            StringArgumentType.getString(ctx, "slot"),
+                            StringArgumentType.getString(ctx, "what"))))));
+    }
+
+    // ── 별의 축복 ──
+
+    private static com.laststardust.relics.data.BlessingCatalog.Slot slotOf(String s) {
+        for (var v : com.laststardust.relics.data.BlessingCatalog.Slot.values()) {
+            if (v.name().equalsIgnoreCase(s)) return v;
+        }
+        return null;
+    }
+
+    private static int blessOpen(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        com.laststardust.relics.blessing.BlessGui.open(p);
+        return 1;
+    }
+
+    private static int blessStatus(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        var server = src.getServer();
+        var data = com.laststardust.relics.data.LSData.get(server);
+        String name = p.getGameProfile().getName();
+        int star = data.hero().star(name);
+
+        boolean unlocked = com.laststardust.relics.blessing.BlessingService.altarUnlocked(server);
+        p.sendSystemMessage(Component.literal("§b✦ 별의 축복 §8— " + star + "성"
+            + (unlocked ? " §7· 제단 §a열림" : " §7· 제단 §c잠김 §8(공방 Lv2)")
+            + (com.laststardust.relics.blessing.BlessingService.altarUpgraded(server) ? " §7· §d강화됨" : "")));
+
+        for (var slot : com.laststardust.relics.data.BlessingCatalog.Slot.values()) {
+            String label = Component.translatable(slot.nameKey()).getString();
+            if (!slot.unlockedAt(star)) {
+                p.sendSystemMessage(Component.literal(
+                    "§8   [" + label + "] 잠김 — " + slot.star + "성 필요"));
+                continue;
+            }
+            var roll = data.blessing().get(name, slot);
+            if (roll == null) {
+                p.sendSystemMessage(Component.literal("§7   [" + label + "] §8비어 있음 — §e/bless "
+                    + slot.name().toLowerCase(java.util.Locale.ROOT)));
+                continue;
+            }
+            var def = roll.def();
+            String bn = def == null ? roll.id() : Component.translatable(def.nameKey()).getString();
+            p.sendSystemMessage(Component.literal("§f   [" + label + "] §r" + bn
+                + " §e" + com.laststardust.relics.blessing.BlessingService.fmt(roll.value()) + "%"
+                + " §8(" + Math.round(roll.percentile() * 100) + "%)"));
+        }
+        int kc = com.laststardust.relics.data.BlessingCatalog.kindCost(star);
+        int vc = com.laststardust.relics.data.BlessingCatalog.valueCost(star,
+            com.laststardust.relics.blessing.BlessingService.altarUpgraded(server));
+        p.sendSystemMessage(Component.literal("§8   리롤 — 종류 §d파편 " + kc + "§8 · 수치 §b별먼지 " + vc));
+        return 1;
+    }
+
+    private static int blessDo(CommandSourceStack src, String slotName, String what) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        var slot = slotOf(slotName);
+        if (slot == null) {
+            src.sendFailure(Component.literal("§c그런 칸이 없다: " + slotName
+                + " §8(chest · weapon_1 · legs · weapon_2)"));
+            return 0;
+        }
+        var action = switch (what) {
+            case "kind"  -> com.laststardust.relics.blessing.BlessingService.Action.REROLL_KIND;
+            case "value" -> com.laststardust.relics.blessing.BlessingService.Action.REROLL_VALUE;
+            default      -> com.laststardust.relics.blessing.BlessingService.Action.BLESS;
+        };
+        return com.laststardust.relics.blessing.BlessingService.apply(p, slot, action).ok() ? 1 : 0;
+    }
+
+    /** @param value NaN 이면 그 축복의 최댓값 — 효과가 도는지 보는 데는 최댓값이 제일 눈에 띈다. */
+    private static int blessSet(CommandSourceStack src, String slotName, String id, float value) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        var slot = slotOf(slotName);
+        if (slot == null) {
+            src.sendFailure(Component.literal("§c그런 칸이 없다: " + slotName));
+            return 0;
+        }
+        var def = com.laststardust.relics.data.BlessingCatalog.byId(id);
+        if (def == null) {
+            src.sendFailure(Component.literal("§c그런 축복이 없다: " + id));
+            return 0;
+        }
+        // 축이 안 맞으면 막는다 — 무기 칸에 방어 축복이 박히면 효과는 «걸리는데» 제단 화면엔
+        // 안 보인다(후보 목록이 축별로 갈려 있어서). 그 상태를 만들면 검증이 더 어려워진다.
+        if (def.axis() != slot.axis) {
+            src.sendFailure(Component.literal("§c" + id + " 은(는) "
+                + (def.axis() == com.laststardust.relics.data.BlessingCatalog.Axis.WEAPON ? "무기" : "방어")
+                + " 축복이다 — " + slotName + " 칸에는 못 넣는다."));
+            return 0;
+        }
+        float v = Float.isNaN(value) ? def.max() : value;
+        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+        data.blessing().set(p.getGameProfile().getName(), slot, id, v);
+        data.dirty();
+        com.laststardust.relics.blessing.BlessGui.sync(p, "");
+        src.sendSuccess(() -> Component.literal("§a✦ " + slotName + " ← " + id + " "
+            + com.laststardust.relics.blessing.BlessingService.fmt(v) + "%"), false);
+        return 1;
+    }
+
+    private static int blessClear(CommandSourceStack src, String who) {
+        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+        data.blessing().clearAll(who);
+        data.dirty();
+        src.sendSuccess(() -> Component.literal("§7" + who + " 의 축복을 전부 지웠다."), true);
+        return 1;
     }
 
     private static int openTown(CommandSourceStack src) {
@@ -436,8 +605,8 @@ public final class LSCommands {
             String name = def == null ? t.key() : Component.translatable(def.nameKey()).getString();
             String line = "§f" + (def == null ? "" : def.icon() + " ") + name
                 + " §7Lv" + t.level() + "/" + t.max()
-                + (t.isMax() ? " §6MAX" : " §8→ " + t.nextName() + " (" + t.itemName() + " "
-                    + t.have() + "/" + t.need() + " · " + t.ducat() + "D)");
+                + (t.isMax() ? " §6MAX" : " §8→ " + t.nextName().getString() + " ("
+                    + t.shortCost() + " · " + t.ducat() + "D)");
             src.sendSuccess(() -> Component.literal(line), false);
         }
         return 1;
@@ -577,6 +746,9 @@ public final class LSCommands {
         final int n = touched;
         src.sendSuccess(() -> Component.literal(
             "§6✦ §7각성 §e" + prev + "성 §7→ §e" + star + "성 §8(유물 " + n + "개)"), false);
+        // 성급이 바뀌면 축복 슬롯이 열리고 리롤 비용도 달라진다 — 클라 사본을 같이 갱신한다.
+        // 안 하면 「4성이 됐는데 하의칸이 여전히 잠겨 보인다」가 된다.
+        com.laststardust.relics.blessing.BlessGui.sync(player, "");
         player.level().playSound(null, player.blockPosition(),
             SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0f, 1.2f);
         return touched;

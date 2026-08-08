@@ -172,7 +172,7 @@ public class ChestLootModifier extends LootModifier {
         }
 
         // ③ 별먼지
-        Item dust = StardustRef.get();
+        Item dust = com.laststardust.relics.data.LSCurrency.stardust();
         if (dust != null) {
             int n = t.rollDust(rnd);
             if (n > 0) loot.add(new ItemStack(dust, n));

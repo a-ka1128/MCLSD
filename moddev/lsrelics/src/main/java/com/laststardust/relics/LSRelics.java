@@ -260,6 +260,7 @@ public class LSRelics {
         ITEMS.register(modEventBus);
         TABS.register(modEventBus);
         com.laststardust.relics.town.TownMenu.MENUS.register(modEventBus);
+        com.laststardust.relics.blessing.BlessMenu.MENUS.register(modEventBus);
         LOOT_MODIFIERS.register(modEventBus);
     }
 }

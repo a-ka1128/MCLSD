@@ -118,7 +118,9 @@ public class PanaceaStaff extends Item implements RelicActions {
         float missing = Math.max(0, ally.getMaxHealth() - ally.getHealth());
         float healed = Math.min(missing, amount);
         if (healed > 0) {
-            ally.heal(healed);
+            // 별의 축복 「치유 증폭」의 «주는» 절반 — LivingHealEvent 는 시전자를 안 알려주므로
+            // 회복을 넣는 동안만 깃발을 세운다(LsDamage.inSkill 과 같은 수법).
+            com.laststardust.relics.blessing.BlessingEffects.healingBy(caster, () -> ally.heal(healed));
             // 힐도 미움을 산다 — 힐러가 뒤에서 안전하기만 하면 역할 긴장이 없다.
             com.laststardust.relics.ThreatManager.addHealThreat(level, caster, healed);
         }

@@ -22,6 +22,13 @@ public final class BleedManager {
 
     private static final int INTERVAL = 10; // 0.5초마다
 
+    // 이름표 — LsDamage.currentLabel() 로 읽힌다.
+    //
+    // ⚠️ 상수로 빼둔 이유: 별의 축복 「출혈」이 **자기 자신의 도트에 다시 걸리지 않도록**
+    //    이 값을 비교한다(BlessingEffects.onDealt). 문자열로 흩어 두면 한쪽만 고쳤을 때
+    //    출혈이 스스로를 갱신해 **영구 지속**이 된다 — 오류도 안 나고 조용히 그렇게 된다.
+    public static final String LABEL = "출혈";
+
     private static final List<Bleed> ACTIVE = new ArrayList<>();
 
     private static final class Bleed {
@@ -53,7 +60,7 @@ public final class BleedManager {
             Bleed b = it.next();
             if (b.victim.isRemoved() || !b.victim.isAlive()) { it.remove(); continue; }
             if (b.ticksLeft % INTERVAL == 0) {
-                com.laststardust.relics.LsDamage.hit(b.victim, com.laststardust.relics.item.RelicSkills.relicSource(b.level, b.source), b.perTick, "출혈");
+                com.laststardust.relics.LsDamage.hit(b.victim, com.laststardust.relics.item.RelicSkills.relicSource(b.level, b.source), b.perTick, LABEL);
                 Vec3 c = b.victim.position();
                 b.level.sendParticles(ParticleTypes.DAMAGE_INDICATOR,
                     c.x, c.y + b.victim.getBbHeight() * 0.5, c.z, 3, 0.2, 0.2, 0.2, 0.0);

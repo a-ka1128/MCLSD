@@ -33,6 +33,46 @@ public final class LSNetwork {
         reg.playToServer(TownOpenPayload.TYPE, TownOpenPayload.STREAM_CODEC, LSNetwork::handleTownOpen);
         reg.playToServer(TownActionPayload.TYPE, TownActionPayload.STREAM_CODEC, LSNetwork::handleTownAction);
         reg.playToClient(TownViewPayload.TYPE, TownViewPayload.STREAM_CODEC, LSNetwork::handleTownView);
+        reg.playToServer(BlessActionPayload.TYPE, BlessActionPayload.STREAM_CODEC, LSNetwork::handleBlessAction);
+        reg.playToClient(BlessViewPayload.TYPE, BlessViewPayload.STREAM_CODEC, LSNetwork::handleBlessView);
+    }
+
+    // ── 별의 제단 ──
+    // 규칙(해금·성급·중복금지·비용)은 전부 BlessingService 한 곳에 있다. 마을과 같은 구조다.
+
+    private static void handleBlessAction(BlessActionPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (!(ctx.player() instanceof ServerPlayer player)) return;
+            if (!(player.containerMenu instanceof com.laststardust.relics.blessing.BlessMenu menu)) return;
+
+            // 클라가 보낸 문자열은 enum 과 대조해 거른다 — 그대로 믿으면 잠긴 칸도 굴릴 수 있다.
+            com.laststardust.relics.data.BlessingCatalog.Slot slot;
+            try {
+                slot = com.laststardust.relics.data.BlessingCatalog.Slot.valueOf(payload.slot());
+            } catch (IllegalArgumentException e) { return; }
+
+            // 올려둔 장비가 «그 칸»을 여는 게 맞는지도 서버가 다시 본다. 화면만 믿으면
+            // 유물을 올려놓고 상의칸을 굴리는 패킷을 손으로 보낼 수 있다.
+            if (!menu.visibleSlots().contains(slot)) return;
+
+            var action = switch (payload.action()) {
+                case "kind"  -> com.laststardust.relics.blessing.BlessingService.Action.REROLL_KIND;
+                case "value" -> com.laststardust.relics.blessing.BlessingService.Action.REROLL_VALUE;
+                case "bless" -> com.laststardust.relics.blessing.BlessingService.Action.BLESS;
+                default -> null;
+            };
+            if (action == null) return;
+
+            var res = com.laststardust.relics.blessing.BlessingService.apply(
+                player, slot, action, menu.work());
+            // 성공하면 apply 안에서 이미 현황을 보냈다(스핀 포함). 실패했을 때만 여기서 갱신한다 —
+            // 재료칸이 줄었을 수 있고, 이유는 이미 채팅으로 갔으므로 스핀은 돌리지 않는다.
+            if (!res.ok()) com.laststardust.relics.blessing.BlessGui.sync(player, "");
+        });
+    }
+
+    private static void handleBlessView(BlessViewPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> com.laststardust.relics.client.BlessScreens.update(payload.view()));
     }
 
     // ── 마을 관리 ──

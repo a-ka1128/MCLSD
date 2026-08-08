@@ -27,6 +27,7 @@ public class LSData extends SavedData {
 
     private final TownData town = new TownData();
     private final HeroData hero = new HeroData();
+    private final BlessingData blessing = new BlessingData();
     private final SiegeData siege = new SiegeData();
     private final BossDiffData bossDiff = new BossDiffData();
     private final TitleData titles = new TitleData();
@@ -48,6 +49,12 @@ public class LSData extends SavedData {
     // 가호·유물·각성 — 사람에 붙는 성장 상태 (이관 3단계).
     public HeroData hero() {
         return hero;
+    }
+
+    // 별의 축복 — 슬롯 4칸(상의·무기1·하의·무기2). 성급과 같은 자리에 둔다:
+    // 둘 다 «사람에 붙는 성장»이고, 슬롯 해금이 성급을 직접 읽는다.
+    public BlessingData blessing() {
+        return blessing;
     }
 
     // 공성 — 위협도·성벽·노드·최종장 (이관 4단계).
@@ -136,6 +143,7 @@ public class LSData extends SavedData {
         LSData data = new LSData();
         data.town.load(tag.getCompound("town"), registries);
         data.hero.load(tag.getCompound("hero"), registries);
+        data.blessing.load(tag.getCompound("blessing"), registries);
         data.siege.load(tag.getCompound("siege"), registries);
         data.bossDiff.load(tag.getCompound("bossDiff"), registries);
         data.titles.load(tag.getCompound("titles"), registries);
@@ -157,6 +165,7 @@ public class LSData extends SavedData {
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("town", town.save(registries));
         tag.put("hero", hero.save(registries));
+        tag.put("blessing", blessing.save(registries));
         tag.put("siege", siege.save(registries));
         tag.put("bossDiff", bossDiff.save(registries));
         tag.put("titles", titles.save(registries));

@@ -33,17 +33,20 @@ public final class TownService {
             int lv = town.level(t.key());
             TownCatalog.Level need = t.next(lv);
             if (need == null) {
-                tracks.add(new TownView.TrackView(t.key(), lv, t.max(), "", "", 0, "", 0, 0, false, false));
+                tracks.add(new TownView.TrackView(t.key(), lv, t.max(), "", "", 0, List.of(), false));
                 continue;
             }
-            int have = town.depositCount(t.key(), need);
-            boolean ok = have >= need.count() && town.treasury() >= need.ducat();
+            List<TownView.ReqView> reqs = new ArrayList<>();
+            for (TownCatalog.Req r : need.reqs()) {
+                reqs.add(new TownView.ReqView(r.id().toString(), r.isTag(),
+                    r.count(), town.depositCount(t.key(), r), r.isEssence()));
+            }
+            boolean ok = town.depositSatisfied(t.key(), need) && town.treasury() >= need.ducat();
             // 해석하지 않고 키를 넘긴다 — 번역은 클라의 언어로 해야 한다.
             tracks.add(new TownView.TrackView(
                 t.key(), lv, t.max(),
                 need.nameKey(), need.fxKey(),
-                need.ducat(), need.item().toString(), need.count(), have,
-                need.isEssence(), ok));
+                need.ducat(), reqs, ok));
         }
 
         List<TownView.Contributor> board = new ArrayList<>();
@@ -90,9 +93,14 @@ public final class TownService {
         p.sendSystemMessage(Component.translatable("lstown.msg.hearth_granted"));
     }
 
-    private static String itemName(TownCatalog.Level need) {
-        Item i = need.itemOrNull();
-        return i == null ? need.item().toString() : Component.translatable(i.getDescriptionId()).getString();
+    // 안내 메시지용 이름. 태그는 아이템 이름을 쓰면 「참나무 원목」처럼 정반대로 읽히므로
+    // 전용 키를 쓴다 (TownView.ReqView.displayName 과 같은 규칙).
+    private static String reqName(TownCatalog.Req req) {
+        if (req.isTag()) {
+            return Component.translatable("lstown.req.tag." + req.id().getPath()).getString();
+        }
+        Item i = req.itemOrNull();
+        return i == null ? req.id().toString() : Component.translatable(i.getDescriptionId()).getString();
     }
 
     // 완성 시도. 실패해도 아무것도 소모하지 않는다.
@@ -110,10 +118,10 @@ public final class TownService {
             player.sendSystemMessage(Component.translatable("lstown.msg.max"));
             return false;
         }
-        int have = town.depositCount(trackKey, need);
-        if (have < need.count()) {
+        TownCatalog.Req missing = town.firstMissing(trackKey, need);
+        if (missing != null) {
             player.sendSystemMessage(Component.translatable("lstown.msg.need_resource",
-                itemName(need), have, need.count()));
+                reqName(missing), town.depositCount(trackKey, missing), missing.count()));
             return false;
         }
         if (town.treasury() < need.ducat()) {
@@ -128,7 +136,7 @@ public final class TownService {
         town.consumeDeposit(trackKey, need);
         town.setLevel(trackKey, lv + 1);
         if (need.flag() != null) town.setFlag(need.flag(), true);
-        town.addContribution(player.getGameProfile().getName(), need.count());
+        town.addContribution(player.getGameProfile().getName(), need.totalCount());
         data.dirty();
 
         String levelName = Component.translatable(need.nameKey()).getString();

@@ -500,7 +500,9 @@ public final class RelicSkills {
             Player target = weakestAlly(sl, player, 16.0);
             if (target != null) {
                 float amount = JUDGE_HEAL * healScale(stack);
-                target.heal(amount);
+                // 별의 축복 「치유 증폭」의 «주는» 절반 — PanaceaStaff.heal 과 같은 이유.
+                com.laststardust.relics.blessing.BlessingEffects.healingBy(
+                    player instanceof ServerPlayer sp2 ? sp2 : null, () -> target.heal(amount));
                 com.laststardust.relics.ThreatManager.addHealThreat(sl, player, amount);
                 Vec3 to = target.position().add(0, target.getBbHeight() * 0.6, 0);
                 sl.sendParticles(ParticleTypes.HEART, to.x, to.y, to.z, 3, 0.3, 0.3, 0.3, 0.0);
@@ -1443,15 +1445,25 @@ public final class RelicSkills {
             return false;
         }
         long now = level.getGameTime();
+
+        // ── 별의 축복 「공명」 — 쿨다운 감소 ──
+        // 여기가 모든 스킬 시전이 지나는 유일한 길목이다. 스킬마다 상수를 고치면 8종 × 3~5개를
+        // 전부 손대야 하고, 다음 축복이 붙을 때 그걸 반복해야 한다.
+        // ※ 저장은 «줄어든» 쿨을 그대로 쓴다 — 남은 쿨 검사(아래 left)와 같은 값이어야
+        //   「쿨이 끝났는데 안 나간다」가 안 생긴다.
+        int cd = com.laststardust.relics.blessing.BlessingEffects.resonance(player, cooldownTicks);
+
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         long left = tag.getLong(key) - now;
         // 남은 쿨이 정상 범위(0 < left <= 쿨)일 때만 대기. 그보다 크면 월드 시간 되감김으로 생긴
         // 비정상 값이므로 무시하고 사용 허용(그대로 두면 스킬이 영영 안 나감).
-        if (left > 0 && left <= cooldownTicks) return false;
-        tag.putLong(key, now + cooldownTicks);
+        if (left > 0 && left <= cd) return false;
+        tag.putLong(key, now + cd);
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
         if (player instanceof ServerPlayer sp) {
             sp.displayClientMessage(Component.literal(String.format("§b✦ %s §f발동!", name)), true);
+            // ── 별의 축복 「여운」 — 시전 성공 직후 3초 창을 연다 ──
+            com.laststardust.relics.blessing.BlessingEffects.markSkillCast(sp);
         }
         return true;
     }

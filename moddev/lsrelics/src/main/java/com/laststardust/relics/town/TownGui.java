@@ -46,11 +46,9 @@ public final class TownGui {
             }
         }, buf -> {
             buf.writeUtf(trackKey);
-            // 요구 아이템도 함께 — 클라가 같은 판정을 해야 아이템이 들어갔다 튕기지 않는다.
+            // 요구 자원도 함께 — 클라가 같은 판정을 해야 아이템이 들어갔다 튕기지 않는다.
             var need = track.next(town.level(trackKey));
-            var item = need == null ? null : need.itemOrNull();
-            buf.writeUtf(item == null ? "" :
-                net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).toString());
+            TownMenu.writeReqs(buf, need == null ? java.util.List.of() : need.reqs());
         });
 
         // 메뉴는 아이템만 안다. 수치(필요량·Ducat·단계)는 따로 실어 보낸다.

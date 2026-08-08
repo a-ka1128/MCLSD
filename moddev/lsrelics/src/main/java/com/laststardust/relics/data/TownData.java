@@ -53,36 +53,53 @@ public class TownData {
         return deposits.computeIfAbsent(track, k -> new SimpleContainer(TownCatalog.DEPOSIT_SLOTS));
     }
 
-    // 보관함에 들어 있는 '이번 레벨에 필요한 아이템'의 개수.
+    // 보관함에 들어 있는 '요구 자원 하나'의 개수.
     // 다른 아이템이 섞여 있어도 세지 않는다 — 슬롯 자체가 필요한 것만 받도록 막지만,
-    // 레벨이 오르면 요구 아이템이 바뀌므로 남아 있던 이전 자원은 여기서 자연히 0으로 잡힌다.
-    public int depositCount(String track, TownCatalog.Level need) {
-        if (need == null) return 0;
-        var item = need.itemOrNull();
-        if (item == null) return 0;
+    // 레벨이 오르면 요구가 바뀌므로 남아 있던 이전 자원은 여기서 자연히 0으로 잡힌다.
+    // (그 자원은 사라지지 않는다. 보관함에 그대로 남아 있어서 도로 꺼낼 수 있다.)
+    public int depositCount(String track, TownCatalog.Req req) {
+        if (req == null) return 0;
         int n = 0;
         SimpleContainer c = deposit(track);
         for (int i = 0; i < c.getContainerSize(); i++) {
             ItemStack st = c.getItem(i);
-            if (!st.isEmpty() && st.is(item)) n += st.getCount();
+            if (req.matches(st)) n += st.getCount();
         }
         return n;
+    }
+
+    /** 이번 레벨의 요구가 <b>전부</b> 채워졌는가. 하나라도 모자라면 false. */
+    public boolean depositSatisfied(String track, TownCatalog.Level need) {
+        if (need == null) return false;
+        for (TownCatalog.Req r : need.reqs()) {
+            if (depositCount(track, r) < r.count()) return false;
+        }
+        return true;
+    }
+
+    /** 아직 모자란 요구 중 첫 번째. 전부 채워졌으면 null — 안내 메시지에 쓴다. */
+    public TownCatalog.Req firstMissing(String track, TownCatalog.Level need) {
+        if (need == null) return null;
+        for (TownCatalog.Req r : need.reqs()) {
+            if (depositCount(track, r) < r.count()) return r;
+        }
+        return null;
     }
 
     // 완성 시 요구 수량만큼만 소모한다. 남는 건 보관함에 그대로 둔다(플레이어가 도로 꺼낼 수 있게).
     public void consumeDeposit(String track, TownCatalog.Level need) {
         if (need == null) return;
-        var item = need.itemOrNull();
-        if (item == null) return;
-        int left = need.count();
         SimpleContainer c = deposit(track);
-        for (int i = 0; i < c.getContainerSize() && left > 0; i++) {
-            ItemStack st = c.getItem(i);
-            if (st.isEmpty() || !st.is(item)) continue;
-            int take = Math.min(st.getCount(), left);
-            st.shrink(take);
-            left -= take;
-            if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
+        for (TownCatalog.Req req : need.reqs()) {
+            int left = req.count();
+            for (int i = 0; i < c.getContainerSize() && left > 0; i++) {
+                ItemStack st = c.getItem(i);
+                if (!req.matches(st)) continue;
+                int take = Math.min(st.getCount(), left);
+                st.shrink(take);
+                left -= take;
+                if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
+            }
         }
         c.setChanged();
     }

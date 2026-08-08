@@ -18,6 +18,8 @@ public final class LSRelicsClient {
     public static void onRegisterScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
         event.register(com.laststardust.relics.town.TownMenu.TYPE.get(),
             com.laststardust.relics.client.TownTrackScreen::new);
+        event.register(com.laststardust.relics.blessing.BlessMenu.TYPE.get(),
+            com.laststardust.relics.client.BlessScreen::new);
     }
 
     // 키바인드 등록. 키 자체와 눌림 처리는 TownKeybind / RelicKeybinds 에 있고, 등록만 여기서 받는다
