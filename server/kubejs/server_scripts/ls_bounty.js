@@ -31,7 +31,9 @@ const BT_HUNT = [
   { target: 'minecraft:zombie', name: '좀비', need: 25, reward: 60 },
   { target: 'minecraft:skeleton', name: '스켈레톤', need: 20, reward: 60 },
   { target: 'minecraft:spider', name: '거미', need: 15, reward: 50 },
-  { target: 'minecraft:creeper', name: '크리퍼', need: 10, reward: 70 },
+  // ※ 크리퍼는 뺐다 (2026-08-08 유저 결정). 사냥 현상금은 일반 균열에서 돌게 만들었는데,
+  //   크리퍼를 좁은 투기장에 넣으면 자폭이 성역·전리품 상자를 부순다(mobGriefing ON —
+  //   공성 웨이브에서 크리퍼를 뺀 것과 같은 이유, ls_siege.js buildWave 주석 참고).
   { target: 'minecraft:husk', name: '허스크', need: 15, reward: 65 },
   { target: 'minecraft:stray', name: '스트레이', need: 12, reward: 65 },
   { target: 'minecraft:enderman', name: '엔더맨', need: 6, reward: 80 },

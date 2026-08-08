@@ -11,7 +11,12 @@ const KEY_GATES = {
 
 // ── 제작 레시피 (정수가 소모처를 얻는다 — 보스 킬 → 열쇠 → 던전 → 전리품 루프) ──
 ServerEvents.recipes(event => {
-  event.shapeless('kubejs:rift_key', ['kubejs:rift_essence', 'minecraft:gold_ingot', 'minecraft:gold_ingot', 'minecraft:amethyst_shard', 'minecraft:amethyst_shard'])
+  // ── 일반만 «별먼지» 로 만든다 (2026-08-08) ──
+  // 일반 균열은 사냥 현상금을 도는 자리라 매일 돌게 된다. 파편으로 값을 매기면
+  // 정예·황금(파편 순 −1)과 같은 무게가 되어 「연습용이 제일 비싼」 모양이 된다.
+  // 별먼지는 탐험 재화라 축이 다르고, **1개**로 잡아 축복 리롤(3~8개)과 경쟁하지 않게 한다.
+  // 2개만 돼도 「열쇠 하나 = 리롤 반 번」이 되어 아무도 안 쓴다.
+  event.shapeless('kubejs:rift_key', ['kubejs:stardust', 'minecraft:gold_ingot', 'minecraft:gold_ingot', 'minecraft:amethyst_shard', 'minecraft:amethyst_shard'])
   event.shapeless('kubejs:rift_key_elite', ['kubejs:rift_essence', 'kubejs:rift_essence', 'minecraft:diamond', 'minecraft:diamond', 'minecraft:amethyst_shard'])
   event.shapeless('kubejs:rift_key_gold', ['kubejs:rift_essence', 'kubejs:rift_essence', 'kubejs:rift_essence', 'minecraft:gold_block', 'minecraft:emerald_block'])
 })
