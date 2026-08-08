@@ -245,9 +245,21 @@ public class LSRelics {
                 output.accept(HEARTHSTONE.get());
             }).build());
 
+    // ── 전리품 수정자 (별먼지를 구조물 상자에) ──
+    // 상자 전리품표가 566개라 표를 덮어쓰는 방식은 못 쓴다. GLM 은 기존 표를 안 건드리고
+    // 결과에 얹는 유일한 방법이다. 등급 판정은 StardustLootModifier 안에서 한다.
+    public static final DeferredRegister<com.mojang.serialization.MapCodec<? extends net.neoforged.neoforge.common.loot.IGlobalLootModifier>>
+        LOOT_MODIFIERS = DeferredRegister.create(
+            net.neoforged.neoforge.registries.NeoForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, MODID);
+
+    static {
+        LOOT_MODIFIERS.register("stardust", () -> com.laststardust.relics.loot.StardustLootModifier.CODEC);
+    }
+
     public LSRelics(IEventBus modEventBus, ModContainer modContainer) {
         ITEMS.register(modEventBus);
         TABS.register(modEventBus);
         com.laststardust.relics.town.TownMenu.MENUS.register(modEventBus);
+        LOOT_MODIFIERS.register(modEventBus);
     }
 }
