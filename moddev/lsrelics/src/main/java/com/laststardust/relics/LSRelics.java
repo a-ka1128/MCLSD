@@ -75,6 +75,31 @@ public class LSRelics {
             .build();
     }
 
+    // 근접 무기 속성 + 패시브「강철의 각오」(네메시스)
+    //
+    // ── 이게 「못 해도 탱커」의 바닥이다 ──
+    // 네메시스는 패링을 맞춰야 값어치가 나오는 숙련형인데, 두 번째 탱커를 넣는 이유가
+    // 「아틀라스가 없을 때 대신 설 사람」이다. 그 대체재가 숙련을 요구하면 초보가 잡았을 때
+    // 전선이 그대로 무너진다. 그래서 **패링을 한 번도 못 해도 붙는** 방어를 상시로 준다.
+    //   방어력 +5 / 방어 강도 +3 — 이지스(+6/+4) 바로 아래. 앞에 서긴 서되 이지스보단 얇다.
+    // 둘 다 주손 한정이라 무기를 바꾸면 즉시 사라진다(이지스와 같은 규칙).
+    public static ItemAttributeModifiers nemesisAttrs(double dmg, double spd) {
+        return ItemAttributeModifiers.builder()
+            .add(Attributes.ATTACK_DAMAGE,
+                new AttributeModifier(ResourceLocation.withDefaultNamespace("base_attack_damage"), dmg, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ATTACK_SPEED,
+                new AttributeModifier(ResourceLocation.withDefaultNamespace("base_attack_speed"), spd, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ARMOR,
+                new AttributeModifier(ResourceLocation.fromNamespaceAndPath(MODID, "nemesis_armor"), 5.0, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ARMOR_TOUGHNESS,
+                new AttributeModifier(ResourceLocation.fromNamespaceAndPath(MODID, "nemesis_tough"), 3.0, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .build();
+    }
+
     // 활 패시브(바람의 발걸음): 이동속도 +20%
     public static ItemAttributeModifiers hunterAttrs() {
         return ItemAttributeModifiers.builder()
@@ -265,6 +290,21 @@ public class LSRelics {
             () -> new com.laststardust.relics.item.HarmoniaSash(
                 new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
+    // 아드라스테이아 — 대검(네메시스의 가호). **패링 탱커.**
+    //
+    // 8.0 / −2.8 = 초당 1.2회. **유물 중 한 방이 제일 무겁고 제일 느리다.**
+    // 이지스(4.673 / −2.4, 1.6회)를 기준으로, 대검이니 한 방을 키우고 속도를 내렸다.
+    // Better Combat `claymore` 3타 콤보(×0.75 → ×1.0 → ×1.25)가 위에 얹힌다.
+    //
+    // ⚠️ **`/dummy` 실측 전까지 전부 가정이다.** 계산상 5성 총합 88 로 이지스와 같은 하위
+    //    대역인데, 그 88 중 «패링 몫 7» 이 「5초에 한 번 성공한다」는 순수 가정 위에 있다.
+    //    총합의 8% 다 — 이 값을 근거로 다른 걸 조정하면 안 된다(`docs/CLASS-11.md` §3).
+    public static final DeferredItem<com.laststardust.relics.item.NemesisBlade> NEMESIS =
+        ITEMS.register("nemesis",
+            () -> new com.laststardust.relics.item.NemesisBlade(
+                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(2000)
+                    .attributes(nemesisAttrs(8.0, -2.8))));
+
     // 크리에이티브 탭 (테스트/EMI 노출)
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("relics",
         () -> CreativeModeTab.builder()
@@ -282,6 +322,7 @@ public class LSRelics {
                 output.accept(LANCER.get());
                 output.accept(HECATE.get());
                 output.accept(HARMONIA.get());
+                output.accept(NEMESIS.get());
                 output.accept(HEARTHSTONE.get());
             }).build());
 

@@ -146,6 +146,7 @@ public final class DummyManager {
         if (item == LSRelics.LANCER.get())   return "게볼그";
         if (item == LSRelics.HECATE.get())   return "헤스페로스";
         if (item == LSRelics.HARMONIA.get()) return "바르비톤";
+        if (item == LSRelics.NEMESIS.get())  return "아드라스테이아";
         if (item == LSRelics.PIONEER.get())  return "타이탄";
         if (item == LSRelics.GUARDIAN.get()) return "이지스";
         if (item == LSRelics.SAGE.get())     return "셀레스티아";

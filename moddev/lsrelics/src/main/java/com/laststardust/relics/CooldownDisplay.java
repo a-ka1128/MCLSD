@@ -64,6 +64,9 @@ public final class CooldownDisplay {
     private static final Object[][] HARMONIA_SKILLS = {
         {"cdAnthem", "선율", 200, "R"}, {"cdWoven", "걸음", 160, "V"}, {"cdKnot", "매듭", 500, "C"}, {"cdChord", "화음", 1800, "X"}
     };
+    private static final Object[][] NEMESIS_SKILLS = {
+        {"cdStance", "강철 발", 240, "R"}, {"cdRecall", "인계", 180, "V"}, {"cdScale", "역린", 440, "C"}, {"cdSunder", "일도양단", 1800, "X"}
+    };
 
     // ── 액션바 양보 ──
     // 액션바는 한 줄뿐이라 여러 시스템이 겹쳐 쓴다(탄약 표시·소생 알림·DPS 측정 바).
@@ -139,6 +142,7 @@ public final class CooldownDisplay {
             else if (item == LSRelics.LANCER.get()) skills = LANCER_SKILLS;
             else if (item == LSRelics.HECATE.get()) skills = HECATE_SKILLS;
             else if (item == LSRelics.HARMONIA.get()) skills = HARMONIA_SKILLS;
+            else if (item == LSRelics.NEMESIS.get()) skills = NEMESIS_SKILLS;
             else {
                 // 유물을 내려놓으면 기록도 지운다 — 다시 들었을 때 곧바로 다시 뜨게.
                 LAST_TEXT.remove(player.getUUID());

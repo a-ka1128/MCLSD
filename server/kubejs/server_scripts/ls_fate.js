@@ -145,9 +145,21 @@ const FATES = {
     // 헤카테와 같은 이유로 여기 붙일 속성이 없다 — 패시브가 «주변 아군»에게 가는 오라라
     // 자기 속성으로는 표현이 안 된다. 구현은 모드 쪽 HarmonyManager 에 있다.
     attrs: []
+  },
+  nemesis: {
+    name: '네메시스', icon: '⊗', color: 0x55668A, // 강철 — 받아넘김
+    desc: '방어력 +5 · 방어 강도 +3 · 기본 스타터킷과 함께 시작',
+    story: [
+      '받은 것을 그대로 되돌려주는 자의 가호.',
+      '피하지 않는다 — 받아넘긴다. 아드라스테이아의 날이 일격을 흘려내는 순간 그 힘은 고스란히 되돌아간다.',
+      '그가 물러서지 않는 한, 뒤에 선 이들은 한 걸음도 밀리지 않는다.'
+    ],
+    // 방어력·방어 강도는 «무기 속성»으로 붙는다(LSRelics.nemesisAttrs) — 여기 가호 패시브로
+    // 또 주면 두 번 붙는다. 헤카테·하르모니아와 같은 이유로 attrs 는 비워 둔다.
+    attrs: []
   }
 }
-const FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer', 'hecate', 'harmonia']
+const FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer', 'hecate', 'harmonia', 'nemesis']
 
 function ftGet(server, player) { return String(LS.fate(server, player.username) || '') }
 

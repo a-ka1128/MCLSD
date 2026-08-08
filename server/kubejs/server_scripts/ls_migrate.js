@@ -49,7 +49,7 @@ const MG_VOICE_IDS = [
 // 생존자 키 — `ls_rescue.js` 의 SURVIVORS 와 같은 순서다. 여기 목록을 따로 두는 이유는
 // 옛 키가 `rs_done_<키>` 라 **접두사 훑기로는 못 찾기 때문**이다(`rs_x`·`rs_y` 도 `rs_` 로 시작한다).
 const MG_RESCUE_KEYS = ['smith', 'herb', 'farmer', 'bard', 'archive', 'watch']
-const MG_FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer', 'hecate', 'harmonia']
+const MG_FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer', 'hecate', 'harmonia', 'nemesis']
 
 // ── 공성 키 (이관 4단계) ──
 // 3단계와 **플래그를 따로 둔다.** 지금 도는 월드는 이미 `ls_hero_migrated` 가 켜져 있어서,

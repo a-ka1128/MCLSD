@@ -31,6 +31,7 @@ MODULES = [
     "post_cuchulainn",
     "post_hecate",
     "post_harmonia",
+    "post_nemesis",
 ]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

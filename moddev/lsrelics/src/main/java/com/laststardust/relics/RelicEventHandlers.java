@@ -327,7 +327,8 @@ public final class RelicEventHandlers {
             || i == LSRelics.SAGE.get() || i == LSRelics.PIONEER.get()
             || i == LSRelics.GUNNER.get() || i == LSRelics.HEALER.get()
             || i == LSRelics.ASSASSIN.get() || i == LSRelics.LANCER.get()
-            || i == LSRelics.HECATE.get() || i == LSRelics.HARMONIA.get();
+            || i == LSRelics.HECATE.get() || i == LSRelics.HARMONIA.get()
+            || i == LSRelics.NEMESIS.get();
     }
 
     // ※ 예전에 있던 "대상 최대 체력 비례 평타 보너스"는 제거했다.

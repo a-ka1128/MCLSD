@@ -69,6 +69,7 @@ public final class RelicSkills {
     private static final int TEAL = 0x17A2A2;   // 헤카테 — 가호색 녹청 (FateCatalog 와 같은 값)
     private static final int ASH  = 0x6B7280;   // 헤카테 — 재
     private static final int ROSE = 0xE86A9A;   // 하르모니아 — 가호색 로즈
+    private static final int STEEL = 0x55668A;  // 네메시스 — 가호색 강철
 
     // ─────────────────────────────── 스킬: 별지기의 지팡이 "소멸" ───────────────────────────────
     public static void annihilate(Level level, Player player, ItemStack stack) {
@@ -2193,5 +2194,179 @@ public final class RelicSkills {
         SoundScheduler.at(level, c, SoundEvents.NOTE_BLOCK_CHIME.value(), 1.0f, 1.5f, 5);
         player.displayClientMessage(Component.literal(
             "§d✦ 만상의 화음 §7— 아군 §f" + n + "§7명이 하나로"), true);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  네메시스 — 아드라스테이아(대검). 패링 탱커.
+    //
+    //  한 문장으로: **맞는 것이 자원이다.**
+    //  우클릭「흘리기」로 기세를 쌓고(ParryManager), 그 기세가 주는 피해를 올린다.
+    //
+    //  ── 이지스와 겹치지 않는다 ──
+    //  이지스의 「수호 반격」은 «태세»다 — 켜두면 3초간 자동으로 −40% 와 반사가 붙는다.
+    //  이쪽은 «순간»이다. 창이 0.4초뿐이고 빗나가면 그대로 맞는다. 궁극도 갈린다:
+    //  이지스는 무적+도발(생존), 네메시스는 대형 일격+아군 경감(반격).
+    //
+    //  ※ 개인 DPS 계산값은 88 로 이지스와 같은 하위 대역이다. 탱커라 맞다.
+    //    다만 그 88 중 «패링 몫 7» 은 「5초에 한 번 성공한다」는 순수 가정 위에 있다.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ─────────────────────────────── 우클릭: 네메시스 "흘리기" ───────────────────────────────
+    // 창을 여는 것까지만 한다. 성공/실패는 «맞는 순간»에 갈리므로 ParryManager.onParry 가 맡는다.
+    // 쿨은 아이템 쪽(NemesisBlade.use)이 shotReady 로 건다 — 스킬 슬롯이 아니라 상시 조작이라
+    // ready() 의 성급 검사·쿨 표시를 태울 이유가 없다.
+    public static void deflect(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        boolean wide = com.laststardust.relics.ParryManager.active(stack, level,
+            com.laststardust.relics.ParryManager.K_SCALE, 100);
+        com.laststardust.relics.ParryManager.arm(stack, level,
+            com.laststardust.relics.ParryManager.K_PARRY,
+            wide ? com.laststardust.relics.ParryManager.WINDOW_WIDE
+                 : com.laststardust.relics.ParryManager.WINDOW);
+
+        // 창이 열린 «순간»이 보여야 타이밍을 배울 수 있다. 짧고 선명하게.
+        Vec3 look = player.getViewVector(1.0f);
+        Vec3 c = player.position().add(0, 1.1, 0).add(look.x * 0.6, 0, look.z * 0.6);
+        ring(level, c.x, c.y, c.z, 0.9, 14, ParticleTypes.CRIT, 0.0);
+        dustBurst(level, c, 0.5, 10, STEEL, 1.2f);
+        play(level, player, SoundEvents.ANVIL_LAND, 0.30f, 2.0f);
+    }
+
+    // ─────────────────────────────── 기본: 네메시스 "강철 발" (기본·1성) ───────────────────────────────
+    // R 키. 3초 뿌리내림 — 넉백 무효 + 받는 피해 −40% · **이동 불가** · 종료 시 반경 5칸 밀어내며 피해.
+    //
+    // ── 이게 「못 해도 탱커」의 두 번째 바닥이다 ──
+    // 패링은 타이밍을 요구하지만 이건 버튼 하나다. 초보가 잡아도 −40% 는 확실히 받는다.
+    // 대신 그 3초 동안 못 움직인다 — 공짜가 아니라 «자리를 거는» 선택이 되게.
+    public static void steelStance(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdStance", "강철 발", 240, 1)) return;
+        int ticks = 60;
+        com.laststardust.relics.ParryManager.arm(stack, level,
+            com.laststardust.relics.ParryManager.K_STANCE, ticks);
+        // 끝나는 «순간»에 밀어내기가 나오도록 만료를 따로 적어둔다 (ParryManager.onServerTick)
+        com.laststardust.relics.ParryManager.arm(stack, level, "stanceBurst", ticks);
+        // 이동 불가 = 최고 등급 둔화. 마크에 「고정」이 없어서 이렇게 근사한다(재의 결계와 같은 수법).
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, ticks, 6, false, true));
+
+        Vec3 c = player.position();
+        for (int i = 1; i <= 3; i++) {
+            shockRing(level, c.x, c.y + 0.1, c.z, 5.0 * i / 3.0, 40, ParticleTypes.CRIT, 0.02);
+        }
+        dustBurst(level, c.add(0, 0.8, 0), 1.6, 40, STEEL, 1.6f);
+        play(level, player, SoundEvents.ANVIL_LAND, 0.7f, 0.6f);
+        play(level, player, SoundEvents.NETHERITE_BLOCK_PLACE, 1.0f, 0.7f);
+        player.displayClientMessage(Component.literal("§7⊗ 강철 발 §8— 3초"), true);
+    }
+
+    /**
+     * 강철 발이 끝나는 순간의 밀어내기. {@code ParryManager} 의 틱이 만료를 보고 부른다.
+     *
+     * <p>여기서 바로 안 터뜨리는 이유: 「3초를 버틴 대가」라 <b>버티고 난 뒤</b>에 나와야 한다.
+     * 시전 순간에 터뜨리면 그냥 광역 넉백 스킬이고, 뿌리내리는 3초가 순수 손해가 된다.
+     */
+    public static void stanceBurst(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        Vec3 c = player.position();
+        double r = 5.0;
+        AABB box = new AABB(c.x - r, c.y - 3, c.z - r, c.x + r, c.y + 3, c.z + r);
+        var src = relicSource(level, player);
+        int hit = 0;
+        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
+                en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            if (e.distanceToSqr(c.x, c.y, c.z) > r * r) continue;
+            LsDamage.hit(e, src, dmg(stack, 9.0f), "강철 발");
+            Vec3 push = e.position().subtract(c).normalize().scale(0.9);
+            e.setDeltaMovement(push.x, 0.42, push.z);
+            e.hurtMarked = true;
+            hit++;
+        }
+        shockRing(level, c.x, c.y + 0.1, c.z, r, 56, ParticleTypes.EXPLOSION, 0.0);
+        dustBurst(level, c.add(0, 0.9, 0), 2.4, 60, STEEL, 1.8f);
+        play(level, player, SoundEvents.GENERIC_EXPLODE.value(), 0.7f, 1.3f);
+        if (hit > 0) play(level, player, SoundEvents.ANVIL_LAND, 0.9f, 0.8f);
+    }
+
+    // ─────────────────────────────── 이동: 네메시스 "참격 인계" (이동·2성) ───────────────────────────────
+    // V 키. 대검을 던지고 **그 대검을 잡으며 날아간다.** 지나간 자리의 적이 베인다.
+    //
+    // 게볼그 투창과 같은 수법으로 «진짜 검»이 날아간다(RecallManager). 다른 점은 돌아오지 않고,
+    // 검이 멈춘 자리로 사람이 간다는 것. 벽에 막히면 그 앞까지만 간다 — 이동기가 벽을 통과하면
+    // 그건 순간이동이지 도약이 아니다.
+    public static void bladeRecall(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdRecall", "참격 인계", 180, 2)) return;
+        Vec3 look = player.getViewVector(1.0f).normalize();
+        Vec3 hand = muzzle(player, look);
+        com.laststardust.relics.RecallManager.throwBlade(level, player, hand,
+            muzzleDir(player, look, hand), dmg(stack, 7.5f), 12.0);
+        dustBurst(level, hand, 0.6, 20, STEEL, 1.4f);
+        play(level, player, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.7f);
+    }
+
+    // ─────────────────────────────── 추가: 네메시스 "역린" (추가·3성) ───────────────────────────────
+    // C 키. 5초간 **패링 창이 2배**(0.4→0.8초)로 넓어지고, 패링 성공 시 반격이 4칸 광역으로 나간다.
+    //
+    // ※ 「잘하는 사람이 더 잘하게」인 스킬이라 후보 중 제일 위험했다. 그래도 넣은 이유는
+    //   **창이 넓어지는 5초가 곧 배우는 구간**이기 때문이다 — 0.8초는 초보도 맞출 수 있고,
+    //   그동안 타이밍의 감을 잡으면 평소의 0.4초로 넘어갈 수 있다.
+    public static void reverseScale(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdScale", "역린", 440, 3)) return;
+        com.laststardust.relics.ParryManager.arm(stack, level,
+            com.laststardust.relics.ParryManager.K_SCALE, 100);   // 5초
+        Vec3 c = player.position().add(0, 1.0, 0);
+        dome(level, player.getX(), player.getY(), player.getZ(), 2.2, 50, ParticleTypes.CRIT);
+        dustBurst(level, c, 1.4, 44, STEEL, 1.7f);
+        shockRing(level, player.getX(), player.getY() + 0.1, player.getZ(), 3.0, 36, ParticleTypes.ELECTRIC_SPARK, 0.2);
+        play(level, player, SoundEvents.BEACON_ACTIVATE, 0.9f, 0.7f);
+        play(level, player, SoundEvents.ANVIL_USE, 0.8f, 0.6f);
+        player.displayClientMessage(Component.literal("§7⊗ 역린 §8— 창 2배 · 5초"), true);
+    }
+
+    // ─────────────────────────────── 궁극: 네메시스 "일도양단" (궁극·4성) ───────────────────────────────
+    // X 키. 전방 12칸 직선 대형 일격 · 맞은 적 경직 + 방어력 절반 · **이후 5초간 주변 8칸 아군 −25%**.
+    //
+    // ── 왜 탱커 궁극이 «공격»인가 ──
+    // 이지스의 궁극이 이미 «생존»이다(5초 무적 + 도발 + 아군 보호막). 여기서 또 버티는 궁극을
+    // 주면 두 탱커가 같은 물건이 된다. 패링 탱커의 판타지는 「버티다가 되돌려준다」이므로
+    // 정점이 반격인 게 맞다.
+    //
+    // ※ 아군 경감이 8칸인 이유: 「전 파티」로 하면 하르모니아 「만상의 화음」(24칸)과 정면으로
+    //   겹친다. 8칸이면 «내 뒤에 서라»가 되어 멀리서 전체를 덮는 쪽과 축이 갈린다.
+    public static void sunderAll(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdSunder", "일도양단", 1800, 4)) return;
+
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getViewVector(1.0f);
+        double reach = beamReach(level, player, eye, look, 12.0);
+        Vec3 end = eye.add(look.scale(reach));
+
+        beamHurt(level, player, eye, look, 12.0, 2.2, dmg(stack, 26.0f), 0.0, false, "일도양단");
+
+        // 맞은 것들을 경직시키고 방어력을 절반으로 — 뒤이어 파티가 때릴 시간을 만든다.
+        int hit = 0;
+        AABB box = new AABB(eye, end).inflate(2.4);
+        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
+                en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            Vec3 rel = e.getBoundingBox().getCenter().subtract(eye);
+            double along = rel.dot(look);
+            if (along < 0 || along > reach + 1.0) continue;
+            if (rel.subtract(look.scale(along)).length() > 2.4) continue;
+            com.laststardust.relics.ParryManager.stagger(level, e);
+            // 「방어력 절반」은 기존 약점 노출 표식을 그대로 쓴다 — 같은 일을 두 번 구현하면
+            // 나중에 한쪽만 고치게 된다(헤카테의 밤이 같은 이유로 lsWeakUntil 을 쓴다).
+            e.getPersistentData().putLong("lsWeakUntil", level.getGameTime() + 100);
+            hit++;
+        }
+
+        // 아군 경감 창을 연다 (ParryManager.onSunderGuard 가 8칸 안을 감싼다)
+        com.laststardust.relics.ParryManager.markSunder(player, 100);
+
+        beamDust(level, eye, end, 0.35, STEEL, 2.0f);
+        beamParticles(level, eye, end, 0.5, ParticleTypes.SWEEP_ATTACK, 0.0);
+        level.sendParticles(ParticleTypes.FLASH, end.x, end.y, end.z, 1, 0, 0, 0, 0);
+        dustBurst(level, end, 2.0, 60, STEEL, 2.0f);
+        shockRing(level, player.getX(), player.getY() + 0.1, player.getZ(), 8.0, 60, ParticleTypes.CRIT, 0.02);
+        play(level, player, SoundEvents.GENERIC_EXPLODE.value(), 0.8f, 0.8f);
+        play(level, player, SoundEvents.ANVIL_LAND, 1.2f, 0.5f);
+        SoundScheduler.at(level, end, SoundEvents.BEACON_DEACTIVATE, 1.0f, 0.6f, 4);
+        player.displayClientMessage(Component.literal(
+            "§7⊗ 일도양단 §8— §f" + hit + "§8마리 · 아군 5초 −25%"), true);
     }
 }
