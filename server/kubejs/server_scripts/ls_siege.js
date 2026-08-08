@@ -49,6 +49,10 @@ const FIRST_SIEGE_ESS = 1         // 첫 공세 격퇴 시 각 참여자에게 �
 const MAX_THREAT = 15        // 위협도 상한
 const NODE_FLOOR = 2         // 노드 1개당 위협도 하한 (+2)
 const FINALE_NIGHTS = 3      // 최종장: 연속 방어 밤 수 (마지막 밤 = 최종 보스)
+// 최종장 개막에 요구하는 각성 성급. ls_ascend.js 의 AS_MAX 와 같은 값이지만 **여기 따로 둔다** —
+// 최상위 스코프에서 남의 파일 상수를 읽으면 로드 순서가 바뀌는 날 조용히 undefined 가 된다
+// (`tools/scan_globals.py` 가 경고하는 그 자리다). 요구치를 낮추고 싶으면 이 줄만 고친다.
+const FINALE_REQ_STAR = 5
 const FINAL_BOSS_ID = 'bosses_of_mass_destruction:lich' // 어둠의 심장 (나이트 리치)
 const NIGHT_T0 = 13200       // 보스 체력↔밤 진행 매핑: 시작(초저녁)
 const NIGHT_T1 = 22800       //                       끝(새벽 직전)
@@ -174,8 +178,44 @@ function setFinale(server, v) { LS.setFinale(server, v) }
 let FINAL_BOSS_REF = null
 let BOSS_LOST_SEC = 0
 
-function beginFinale(server) {
-  if (finaleStage(server) !== 0) return
+// ── 최종장 개막 자격: 비관전 접속자 «전원» 5성 (2026-08-08 유저 결정) ──
+// 관문 4개를 깨면 5성 «자격»과 최종장 «무장»이 동시에 열린다. 그래서 여태 아무 준비 없이
+// 그대로 들어갈 수 있었다 — 어둠의 심장은 진(眞) 형태까지 2페이즈라 4성으로는 사실상 못 잡는다.
+//
+// 관전자는 세지 않는다. 늦게 합류한 사람이 파티 전체를 막는 상황을 그 한 줄이 풀어준다
+// (관전으로 돌리면 그 밤은 빠진다). 판정 기준은 `activePlayers` 와 같다 — 두 곳이 갈리면
+// 「보스는 소환되는데 개막은 안 되는」 상태가 생긴다.
+function finaleNotReady(server) {
+  var out = []
+  try {
+    server.players.forEach(p => {
+      if (p.isSpectator()) return
+      // asStar 는 ls_ascend.js 소유(로드 순서 a < s 라 항상 먼저 온다). 없으면 «못 센다»로
+      // 보고 이름을 넣는다 — 못 세는 걸 통과로 처리하면 게이트가 조용히 사라진다.
+      if (typeof asStar !== 'function') { out.push(p.username); return }
+      if (asStar(server, p.username) < FINALE_REQ_STAR) out.push(p.username)
+    })
+  } catch (e) { lsWarn('ls_siege:finale-ready', e) }
+  return out
+}
+
+// ※ `loud` 는 «사람이 방금 뭔가 했을 때»만 true 다. 아래 틱 재시도는 조용히 돈다 —
+//    2초마다 같은 경고가 흐르면 아무도 안 읽고, 그러면 진짜 알림도 같이 묻힌다.
+function beginFinale(server, loud) {
+  if (finaleStage(server) !== 0) return false
+  if (!LS.finaleArmed(server)) return false
+  if (nodeCount(server) > 0) return false
+  // 무인 상태에서는 «전원 5성»이 공허하게 참이 된다(셀 사람이 0명). 열면 안 된다.
+  if (activePlayers(server) <= 0) return false
+  const notReady = finaleNotReady(server)
+  if (notReady.length > 0) {
+    if (loud) {
+      say(server, '§c✖ 아직 어둠의 심장을 맞이할 수 없다 — §7모두가 §e5성 각성§7을 마쳐야 한다.')
+      say(server, `§7   남은 사람: §e${notReady.join(', ')} §8(/ascend 로 확인 · 관전 상태면 세지 않는다)`)
+      playAll(server, 'minecraft:block.note_block.bass', 0.8, 0.6)
+    }
+    return false
+  }
   setFinale(server, 1)
   LS.setTrueSpawned(server, false) // 진 형태 초기화
   setThreat(server, MAX_THREAT)
@@ -185,6 +225,7 @@ function beginFinale(server) {
   playAll(server, 'minecraft:entity.wither.spawn', 1, 0.5)
   say(server, `§5☽ 최종장 개막 — §c${FINALE_NIGHTS}일 밤§7을 연속으로 버텨야 한다. 밤은 갈수록 길어진다...`)
   console.log('[LS-FINALE] begin')
+  return true
 }
 
 function spawnFinalBoss(server) {
@@ -938,6 +979,13 @@ ServerEvents.tick(event => {
       }
     }
   }
+  // ── 최종장 개막 재시도 (10초마다, 조용히) ──
+  // 노드 파괴는 **한 번뿐인 사건**이다. 마지막 노드를 부순 순간 누군가 4성이면 개막이 막히는데,
+  // 그 뒤로는 부술 노드가 없어서 그 자리가 다시 오지 않는다 — 즉 재시도가 없으면
+  // **최종장이 영영 안 열린다.** 조건이 갖춰지는 순간 열리도록 여기서 계속 두드린다.
+  // beginFinale 이 자기 조건을 전부 스스로 보므로 여기 조건을 복사하지 않는다.
+  if (LS_TICK % 200 === 0) beginFinale(server, false)
+
   // 상단 날짜/공성 표시 (2초마다)
   if (LS_TICK % 40 === 0) dayBossbar(server)
 
@@ -1243,14 +1291,28 @@ ServerEvents.commandRegistry(event => {
         playAll(s, 'minecraft:ui.toast.challenge_complete', 1, 0.8)
         playAll(s, 'minecraft:block.beacon.activate', 0.8, 1.2)
         // 마지막 노드 파괴 + 최종장 무장 상태 → 어둠의 발악 개막
-        if (names.length === 0 && LS.finaleArmed(s) && finaleStage(s) === 0) beginFinale(s)
+        // 조건은 beginFinale 안에서 전부 본다. 여기서 또 검사하면 두 곳이 갈린다.
+        // 5성 미달로 막히면 그 이유를 알려야 하므로 loud.
+        beginFinale(s, true)
         return 1
       }))))
 
   event.register(Commands.literal('finale')
     .executes(ctx => {
       const s = ctx.source.server; const f = finaleStage(s)
-      const txt = f === 0 ? (LS.finaleArmed(s) ? '대기 중 (마지막 노드 파괴 시 개막)' : '비활성 (/finale arm 으로 무장)')
+      // 「대기 중」이라고만 띄우면 5성 미달로 막힌 상태를 못 읽는다 — 노드를 다 부쉈는데
+      // 아무 일도 안 일어나는 상황에서 여기가 유일한 설명 창구다.
+      // ※ 접속자가 0 명이면 「전원 5성」이 공허하게 참이 된다(셀 사람이 없다). beginFinale 은
+      //    그래서 안 여는데, 표시까지 「곧 열린다」고 하면 **안 열리는 이유가 안 보인다.**
+      //    여기서 갈라 적는다 — 상태창이 코드보다 관대하면 어긋난 걸 아무도 못 본다.
+      const fLive = activePlayers(s)
+      const fNot = f === 0 && LS.finaleArmed(s) && nodeCount(s) === 0 && fLive > 0 ? finaleNotReady(s) : []
+      const txt = f === 0 ? (LS.finaleArmed(s)
+          ? (nodeCount(s) > 0 ? `대기 중 (남은 노드 ${nodeCount(s)}개 파괴 시 개막)`
+             : fLive <= 0 ? '§8무장됨 · 접속자 없음 — 판정 보류'
+             : fNot.length > 0 ? `§c개막 보류 — §e5성§c 미달: ${fNot.join(', ')}`
+             : '§a개막 조건 충족 — 곧 열린다')
+          : '비활성 (/finale arm 으로 무장)')
         : f === 100 ? '§6승리 — 세상을 되찾았다 ★'
         : f === 90 ? '§4어둠의 심장 전투 중 (하늘 = 보스 체력)'
         : f === FINALE_NIGHTS ? `§5보스 밤 대기 (오늘 밤 강림)` : `§5방어 밤 ${f}/${FINALE_NIGHTS - 1} 진행 중`
@@ -1261,9 +1323,19 @@ ServerEvents.commandRegistry(event => {
       LS.setFinaleArmed(ctx.source.server, true)
       ctx.source.sendSystemMessage(Text.of('§5최종장 무장됨 — 마지막 균열 노드가 파괴되면 자동 개막')); return 1
     }))
+    // ── 무장 해제 (2026-08-08) ──
+    // `arm` 만 있고 이게 없었다. 시험으로 한 번 무장하면 되돌릴 방법이 없어서,
+    // 노드가 0개인 월드에서는 **아무도 관문을 안 깼는데 5성이 되는 순간 최종장이 열린다.**
+    // 이 저장소가 이미 한 번 겪은 「주는 것만 있고 뺏는 것이 없다」와 같은 자리다(TODO D절 3번).
+    .then(Commands.literal('disarm').requires(s => s.hasPermission(2)).executes(ctx => {
+      LS.setFinaleArmed(ctx.source.server, false)
+      ctx.source.sendSystemMessage(Text.of('§7최종장 무장 해제 — 노드를 다 부숴도 열리지 않는다')); return 1
+    }))
     .then(Commands.literal('start').requires(s => s.hasPermission(2)).executes(ctx => {
       if (finaleStage(ctx.source.server) !== 0) { ctx.source.sendSystemMessage(Text.of('§c이미 최종장 진행/완료 상태')); return 0 }
-      beginFinale(ctx.source.server); return 1
+      // 관리자 명령도 5성 게이트를 그대로 탄다. 우회로를 하나 만들면 그게 실전에서 쓰인다 —
+      // 시험할 때는 `/ascend set <대상> 5` 로 조건을 만들면 된다(이미 있는 명령).
+      return beginFinale(ctx.source.server, true) ? 1 : 0
     }))
     .then(Commands.literal('abort').requires(s => s.hasPermission(2)).executes(ctx => {
       const s = ctx.source.server
