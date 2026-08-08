@@ -253,7 +253,7 @@ public class LSRelics {
             net.neoforged.neoforge.registries.NeoForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, MODID);
 
     static {
-        LOOT_MODIFIERS.register("stardust", () -> com.laststardust.relics.loot.StardustLootModifier.CODEC);
+        LOOT_MODIFIERS.register("chest_loot", () -> com.laststardust.relics.loot.ChestLootModifier.CODEC);
     }
 
     public LSRelics(IEventBus modEventBus, ModContainer modContainer) {
