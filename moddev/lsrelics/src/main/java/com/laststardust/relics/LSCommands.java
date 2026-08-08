@@ -586,7 +586,16 @@ public final class LSCommands {
         var data = com.laststardust.relics.data.LSData.get(src.getServer());
         data.blessing().clearAll(who);
         data.dirty();
-        src.sendSuccess(() -> Component.literal("§7" + who + " 의 축복을 전부 지웠다."), true);
+        // ── 클라에 알려야 한다 (2026-08-09) ──
+        // 툴팁은 서버 장부가 아니라 **클라 캐시**(BlessCache)를 읽는다. 여기서 sync 를 안 부르면
+        // 효과는 실제로 사라졌는데 무기 설명에는 그대로 남아서 「명령이 안 먹었다」로 보인다.
+        // 바로 위 blessSet 은 부르고 있었고 여기만 빠져 있었다.
+        ServerPlayer target = src.getServer().getPlayerList().getPlayerByName(who);
+        if (target != null) {
+            com.laststardust.relics.blessing.BlessGui.sync(target, "");
+        }
+        src.sendSuccess(() -> Component.literal("§7" + who + " 의 축복을 전부 지웠다."
+            + (target == null ? " §8(접속 중이 아니라 화면 갱신은 다음 접속에)" : "")), true);
         return 1;
     }
 
