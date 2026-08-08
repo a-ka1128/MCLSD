@@ -43,8 +43,26 @@ function msForced(server) { return msStore(server).getInt('ms_force') > 0 }
 // ※ 남은 판별은 원래 의도보다 **넓다.** MobCategory=monster 가 아니어도 공격력이 있으면
 //   적대로 본다 — 철골렘·늑대·벌·눈사람도 스케일링을 받는다. 여태 이렇게 돌아왔으니
 //   동작을 바꾸지 않고 그대로 두되, 좁힐지는 밸런스 판단이라 TODO 로 올린다.
+// ── 분류가 monster 인데 실제로는 «플레이어 편»인 엔티티 (접두사 검사) ──
+// 늘리기 전에 «정말 플레이어가 설치하거나 소환하는 것인가»를 확인할 것. 여기 들어가면 영영 안 세진다.
+const MS_NEVER_SCALE = ['krip_turrets:']
+
 function msIsHostile(e) {
   if (!e) return false
+  // ── 분류를 못 믿는 몹을 먼저 뺀다 (2026-08-07) ──
+  // 이 판정의 기준은 «MobCategory 가 monster 인가»인데, 그 분류를 정하는 건 모드 저자다.
+  // krip_turrets 의 포탑 8종은 **플레이어가 설치하는 자기 편**인데도 MONSTER 로 등록돼 있어서
+  // 여기를 그대로 통과했다. 그래서 관문을 깰수록 내 포탑이 같이 세졌다 —
+  // 실측(2026-08-07, /mobscale set 4): HP 10 → 22, 공격력 45 → 65.
+  // 「세상이 같이 험해진다」는 이 파일의 목적과 정반대로, 진행할수록 **내 방어가 공짜로 세지는**
+  // 통로가 나 있었다. 예외도 안 나고 /mobscale 출력에도 안 잡혀서 보이지 않았다.
+  //
+  // ※ 이 판정은 spawned 훅과 /mobscale fix 가 **둘 다** 부른다 — 그래서 여기 한 곳만 고치면 된다.
+  //   fix 쪽에 목록을 따로 두면 두 벌이 언젠가 갈리고, 갈린 자리는 조용하다.
+  var msId = String(e.type)
+  for (var msI = 0; msI < MS_NEVER_SCALE.length; msI++) {
+    if (msId.indexOf(MS_NEVER_SCALE[msI]) === 0) return false
+  }
   // ── 2026-07-31: MobCategory == monster 로 좁혔다 (유저 결정, DECISIONS 2절 C안) ──
   // 스크립트에서는 이 판정을 할 수 없다 — KubeJS 의 `e.getType()` 이 EntityType 이 아니라
   // id 문자열이라 `.getCategory()` 가 없다. 그래서 모드에 다리를 놓고 그쪽에 물었다.
@@ -149,7 +167,14 @@ ServerEvents.commandRegistry(event => {
       }
       ctx.source.sendSystemMessage(Text.of(
         `§7체력 §e×${cfg.hp[t]}§7 · 공격력 §e×${cfg.dmg[t]}§7 §8(공격력 상한: 원본+${cfg.dmgCapAdd})`))
-      ctx.source.sendSystemMessage(Text.of('§8보스 제외(ls_bossdiff가 담당) · 비적대 몹 제외'))
+      // 예전엔 「비적대 몹 제외」였는데 그건 사실이 아니었다. 판정 기준은 «MobCategory 가
+      // monster 인가»라서, 덤비는 늑대·북극곰은 안 세지고 반대로 분류만 monster 인 남의 모드
+      // 엔티티(포탑 등)는 세졌다. 실제 규칙을 그대로 적는다 — 문구가 코드보다 관대하면
+      // 어긋난 걸 아무도 못 본다.
+      ctx.source.sendSystemMessage(Text.of('§8보스 제외(ls_bossdiff가 담당) · 몬스터 분류만 적용 §7(늑대·철골렘 등 중립 몹은 안 세집니다)'))
+      if (MS_NEVER_SCALE.length > 0) {
+        ctx.source.sendSystemMessage(Text.of(`§8예외 제외: §7${MS_NEVER_SCALE.join(', ')} §8— 분류는 monster 지만 플레이어 편`))
+      }
       // 이미 살아 있는 몹은 절대 안 바뀐다 — 공성 도중에 티어를 바꿔도 그 웨이브엔 반영되지 않는다.
       ctx.source.sendSystemMessage(Text.of('§c※ 새로 스폰되는 몹부터 적용됩니다 — 이미 나와 있는 몹은 바뀌지 않습니다.'))
       ctx.source.sendSystemMessage(Text.of('§8/mobscale set <0-4> · auto'))

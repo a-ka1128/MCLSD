@@ -188,6 +188,12 @@ function beginFinale(server) {
 }
 
 function spawnFinalBoss(server) {
+  // ── 사람이 없으면 소환하지 않는다 (2026-08-07) ──
+  // 이건 되돌릴 수 없다: 하늘이 멈추고(setTimeLocked) 최종장이 90 으로 넘어간다.
+  // 무인 상태로 걸리면 아무도 없는 세계에서 시간이 멈춘 채 남고, 되돌릴 명령도 없다.
+  // 판정을 **함수 안**에 두는 이유는 호출부가 둘이기 때문이다 — 밤 시작(아래)과
+  // 보스 유실 재소환. 한쪽만 막으면 다른 쪽으로 새고, 그건 예외를 안 낸다.
+  if (activePlayers(server) <= 0) { console.log('[LS-FINALE] boss spawn deferred — 접속자 없음'); return false }
   const c = sancPos(server)
   try { server.runCommandSilent('enhancedcelestials setLunarEvent enhancedcelestials:blood_moon') } catch (err) { lsWarn('ls_siege:148', err) } // 마지막 밤 = 혈월
   server.runCommandSilent(`summon ${FINAL_BOSS_ID} ${c.x + 0.5} ${c.y + 12} ${c.z + 0.5} {Tags:["ls_final_boss"],PersistenceRequired:1b}`)
@@ -199,6 +205,7 @@ function spawnFinalBoss(server) {
   playAll(server, 'minecraft:entity.ender_dragon.growl', 1, 0.5)
   say(server, '§4♥ 어둠의 심장이 강림했다. §7하늘이 멈췄다 — §c심장이 약해질수록 새벽이 가까워진다.')
   console.log('[LS-FINALE] boss spawned')
+  return true
 }
 
 // 진(眞) 형태 — 1페이즈 격파 시 껍질을 벗고 강화형으로 재림 (더 강함 + 시간 재봉인)
@@ -336,12 +343,18 @@ const SIEGE_BOSS_TAG = 'ls_siege_boss'
 // «붉은 원을 피하는 것»이라 - 오래 서 있을 이유 - 를 주는 쪽이 맞다.
 const SIEGE_BOSS_HP_MUL = 2.5
 
-// 전투에 설 수 있는 인원 (관전자 제외)
-function partyCount(server) {
+// 지금 실제로 서 있는 사람 수 (관전자 제외). **바닥을 깔지 않는다 — 0 명은 0 이다.**
+function activePlayers(server) {
   var n = 0
-  try { server.players.forEach(p => { if (!p.isSpectator()) n++ }) } catch (e) { lsWarn('ls_siege:party', e) }
-  return Math.max(1, n)
+  try { server.players.forEach(p => { if (!p.isSpectator()) n++ }) } catch (e) { lsWarn('ls_siege:active', e) }
+  return n
 }
+
+// 전투에 설 수 있는 인원 (관전자 제외). 웨이브 크기 계산용이라 최소 1 로 바닥을 깐다 —
+// 0 명일 때 몹이 0 마리가 되면 «시작하자마자 클리어»가 되기 때문이다.
+// ※ 그 바닥 때문에 **이 함수로는 «아무도 없다»를 판정할 수 없다.** 0 이 1 로 보인다.
+//    되돌릴 수 없는 진행을 막는 자리에서는 반드시 activePlayers 를 쓴다.
+function partyCount(server) { return Math.max(1, activePlayers(server)) }
 
 // 한 웨이브 몹 목록. 마릿수는 위협도·인원이, 종류는 관문 진행도(prog)가 정한다.
 // prog 를 인자로 받는 이유: 이 함수는 /siege status 가 «가정하고» 부르기도 해서(인원 1명일 때 등)
@@ -502,17 +515,34 @@ function firstSiegeCleared(server) {
 function finishSiege(server, outcome) {
   LS.setWallLastStand(server, false)   // 불굴은 공성 1회당 한 번 — 여기서 되감는다
   wallBossbar(server, false) // 상단 보스바 숨김
-  server.runCommandSilent('kill @e[tag=ls_siege]')
   const wasFirst = isFirstSiege(server)
   const grand = LS.siegeGrand(server)
+  // ── endSiege 가 kill 보다 **먼저**여야 한다 (2026-08-07) ──
+  // `kill` 은 사망 핸들러(EntityEvents.death)를 **동기로** 부른다. 그때 siegeActive 가
+  // 아직 true 면 핸들러의 `!LS.siegeActive` 가드를 그대로 통과해서, 죽는 몹마다
+  // siegeRemaining 을 깎다가 0 이 되는 순간 onWaveCleared 를 부른다:
+  //   · 웨이브가 남아 있으면 → **끝나는 공성에 새 웨이브를 소환**한다(공성은 곧 꺼지므로 유령 몹이 남는다)
+  //   · 마지막 웨이브였으면 → finishSiege 가 재귀해 **dawn 이 win 으로 중첩 승격**되고 보상이 두 번 나간다
+  // 「새벽에 몹이 남은 채 끝나는 밤」은 이 서버의 평범한 밤이라 상시 발생했고, 예외는 안 났다.
+  // 순서만 바꾸면 가드가 제 일을 한다 — 판정을 한 곳에 두는 편이 조건을 하나 더 다는 것보다 낫다.
   LS.endSiege(server)   // 네 값을 한 번에 되돌린다 — 이 네 줄이 두 군데 있어 어긋날 자리였다
+  server.runCommandSilent('kill @e[tag=ls_siege]')
   const threat = getThreat(server)
   const accrued = LS.siegeReward(server)
   const fin = finaleStage(server)
-  if (outcome === 'win' || outcome === 'dawn') {
-    if (fin >= 1 && fin < FINALE_NIGHTS) LS.setFinaleNightOk(server, true) // 최종장: 이 밤 방어 성공
+  // ── 성벽이 무너진 채 새벽 = 버텨낸 게 아니다 (2026-08-07) ──
+  // WALL_BASE_HP 3000 과 수리비(완전 수리 = 300 Ducat + 원목 75 + 철괴 30 + 조약돌 150)로
+  // 판돈을 만들어 놓고 정작 **결과에는 안 연결돼 있었다** — 성벽을 잃든 말든 dawn 은 똑같이
+  // "성역은 밤을 버텨냈습니다"였다. 웨이브를 전부 지운 'win' 은 그대로 승리로 둔다(다 잡았으면
+  // 이긴 것이다). 강등되는 건 «못 잡았고 성벽도 잃은» 경우뿐이다.
+  var result = outcome
+  if (result === 'dawn' && wallBroken(server)) result = 'lose'
+  // 되돌릴 수 없는 진행(유물 해금·최종장 밤)은 사람이 있었을 때만 소비된다. 아래 두 곳에서 쓴다.
+  const present = activePlayers(server)
+  if (result === 'win' || result === 'dawn') {
+    if (fin >= 1 && fin < FINALE_NIGHTS && present > 0) LS.setFinaleNightOk(server, true) // 최종장: 이 밤 방어 성공
   }
-  if (outcome === 'win') {
+  if (result === 'win') {
     var reward = accrued + 10 + threat * 2
     if (grand) reward *= 2
     if (townLvl(server, 'workshop') >= 2) reward = Math.round(reward * 1.2) // 공방 Lv2: 방어 보상 +20%
@@ -541,7 +571,7 @@ function finishSiege(server, outcome) {
       playAll(server, 'minecraft:block.amethyst_block.chime', 0.9, 0.7)
     }
     console.log(`[LS-SIEGE] WIN reward=${reward} grand=${grand}`)
-  } else if (outcome === 'dawn') {
+  } else if (result === 'dawn') {
     // accrued 는 const 라 재할당하지 않는다 — 'win' 분기가 reward 를 따로 두는 것과 같은 구조.
     // (예전엔 여기서 accrued 를 직접 덮어써 Rhino 에서 런타임 오류가 났다. dawn 은 흔한 경로라 매번 터졌다.)
     var dawnReward = Math.round(accrued * REWARD_MULT)
@@ -551,6 +581,18 @@ function finishSiege(server, outcome) {
     playAll(server, 'minecraft:block.beacon.activate', 0.8, 1)
     say(server, `§e☀ 동이 텄습니다 — 성역은 밤을 버텨냈습니다. §7공동 금고 +${dawnReward}`)
     console.log(`[LS-SIEGE] DAWN reward=${dawnReward} (accrued=${accrued})`)
+  } else if (result === 'lose') {
+    // 성벽을 잃은 채 맞은 새벽. 자발적 포기(give_up)와 달리 **끝까지 서 있기는 했으므로**
+    // 금고를 추가로 깎지는 않는다 — 수리비가 이미 페널티이고, 두 번 물리면 «졌는데 재기까지
+    // 막히는» 밤이 된다. 대신 그 밤에 쌓인 보상(accrued)은 못 가져간다. 잃은 판돈이 성벽의 값이다.
+    setThreat(server, threat + 1)
+    server.runCommandSilent('title @a title {"text":"성벽을 잃었다","color":"dark_red","bold":true}')
+    server.runCommandSilent('title @a subtitle {"text":"동은 텄지만 성역은 짓밟혔습니다","color":"red"}')
+    playAll(server, 'minecraft:event.raid.horn', 1, 0.5)
+    playAll(server, 'minecraft:block.bell.resonate', 1, 0.5)
+    say(server, `§4▨ 성벽이 무너진 채 아침을 맞았다. §c위협도↑(${getThreat(server)}) §7· 이 밤의 보상 §c${accrued}§7 를 잃었다.`)
+    say(server, '§7   §e/wall repair §7로 성벽을 되세우기 전까지 방어선이 없습니다.')
+    console.log(`[LS-SIEGE] LOSE (wall broken) forfeited=${accrued}`)
   } else { // give_up
     setThreat(server, threat + 1)
     addTreasury(server, -5)
@@ -561,18 +603,22 @@ function finishSiege(server, outcome) {
     console.log(`[LS-SIEGE] GIVE_UP`)
   }
   // 희망 장부에 결과를 적는다 (ls_hope.js). 승리는 빚을 하나 갚고, 패배는 하나 더 쌓는다.
-  try { if (typeof hoOnSiege === 'function') hoOnSiege(server, outcome) }
+  try { if (typeof hoOnSiege === 'function') hoOnSiege(server, result) }
   catch (e) { lsWarn('ls_siege:hope-record', e) }
-  // 첫 공세는 "버텨내기만" 하면 된다(격퇴/아침) — 유물 해금이 여기 걸려 있어 밀리면 안 되기 때문
-  if (wasFirst && (outcome === 'win' || outcome === 'dawn')) {
+  // 첫 공세는 "버텨내기만" 하면 된다 — 유물 해금이 여기 걸려 있어 밀리면 안 되기 때문이다.
+  // 그래서 성벽을 잃은 밤('lose')도 해금은 통과시킨다: 밤을 넘겼으면 유물은 깨어난다.
+  // 막는 건 자발적 포기뿐. 단 **아무도 없는 밤엔 소비하지 않는다** — firstSiegeCleared 는
+  // 접속자에게 정수를 나눠주고 플래그를 세우므로, 무인 상태로 지나가면 정수를 받은 사람은
+  // 없는데 해금만 끝나 버린다. 다음 공세가 3일 뒤라 되돌릴 방법도 없다.
+  if (wasFirst && result !== 'give_up' && present > 0) {
     firstSiegeCleared(server)
   }
 }
 
 function cancelSiege(server) {
   wallBossbar(server, false)
-  server.runCommandSilent('kill @e[tag=ls_siege]')
   LS.endSiege(server)   // 네 값을 한 번에 되돌린다 — 이 네 줄이 두 군데 있어 어긋날 자리였다
+  server.runCommandSilent('kill @e[tag=ls_siege]')   // finishSiege 와 같은 이유로 endSiege 뒤에 온다
   say(server, '§7공성이 취소되었습니다. (페널티 없음)')
   console.log('[LS-SIEGE] cancel')
 }
@@ -825,14 +871,21 @@ ServerEvents.tick(event => {
   const fin = finaleStage(server)
 
   // 밤 시작
+  //
+  // ── 최종장 두 갈래에만 인원 조건을 단다 (2026-08-07) ──
+  // 최종장의 밤 진행과 보스 소환은 되돌릴 수 없어서, 아무도 없는 사이에 지나가면
+  // 「가장 긴 밤」을 아무도 겪지 못한 채 서사가 끝난다. 그래서 사람이 없으면 그 밤은
+  // 그냥 오지 않는다 — 다음 밤에 같은 자리에서 다시 시작한다.
+  // **일반 공성(마지막 갈래)은 일부러 막지 않는다.** 그쪽을 막으면 「접속을 안 하면
+  // 공성이 안 온다」가 되어 위협도만 쌓이는 다른 문제로 옮겨 갈 뿐이다.
   if (night && !wasNight) {
-    if (fin >= 1 && fin < FINALE_NIGHTS && !active && sancIsSet(server)) {
+    if (fin >= 1 && fin < FINALE_NIGHTS && !active && sancIsSet(server) && activePlayers(server) > 0) {
       LS.setFinaleNightOk(server, false)
       say(server, `§5☽ 최종장 ${fin}번째 밤이 내린다...`)
       startSiege(server, true, true) // 강제 대공세급
-    } else if (fin === FINALE_NIGHTS && sancIsSet(server)) {
+    } else if (fin === FINALE_NIGHTS && sancIsSet(server) && activePlayers(server) > 0) {
       say(server, '§4☽ 가장 긴 밤이 시작된다.')
-      spawnFinalBoss(server)
+      spawnFinalBoss(server)   // 안에도 같은 가드가 있다 — 저쪽이 본판이고 여기는 예고를 안 띄우기 위한 것
     } else if (fin === 0 && !active && sancIsSet(server) && getThreat(server) > 0 && isSiegeDay(worldDay(server))) {
       startSiege(server, true)
     }
@@ -999,7 +1052,9 @@ ServerEvents.tick(event => {
       if (LS_TICK % 300 === 0) playAll(server, 'minecraft:entity.ravager.step', 0.9, 0.5)
     } else {
       BOSS_LOST_SEC++
-      if (BOSS_LOST_SEC >= 12) { BOSS_LOST_SEC = 0; say(server, '§5흩어졌던 어둠이 다시 뭉친다...'); spawnFinalBoss(server) }
+      // 접속자가 없으면 세지 않는다. 아무도 없으면 청크가 내려가 보스가 «없는» 것으로 보이는데,
+      // 그때 재소환을 돌리면 빈 서버에 보스를 계속 다시 세우고 알림만 흘러간다.
+      if (BOSS_LOST_SEC >= 12 && activePlayers(server) > 0) { BOSS_LOST_SEC = 0; say(server, '§5흩어졌던 어둠이 다시 뭉친다...'); spawnFinalBoss(server) }
     }
   }
   // 승리 후 여명 가속
