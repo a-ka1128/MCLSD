@@ -6,15 +6,15 @@
 			"entities": [
 				{
 					"entity": "minecraft:zombie",
-					"count": 8
+					"count": 6
 				},
 				{
 					"entity": "minecraft:spider",
-					"count": 5
+					"count": 4
 				},
 				{
 					"entity": "minecraft:skeleton",
-					"count": 4
+					"count": 3
 				}
 			],
 			"modifiers": [],
@@ -34,7 +34,7 @@
 			"entities": [
 				{
 					"entity": "minecraft:husk",
-					"count": 6
+					"count": 7
 				},
 				{
 					"entity": "minecraft:stray",
@@ -67,16 +67,16 @@
 		{
 			"entities": [
 				{
-					"entity": "minecraft:phantom",
-					"count": 4
+					"entity": "minecraft:zombie",
+					"count": 5
 				},
 				{
-					"entity": "minecraft:enderman",
+					"entity": "minecraft:spider",
 					"count": 3
 				},
 				{
-					"entity": "minecraft:zombie",
-					"count": 4
+					"entity": "minecraft:skeleton",
+					"count": 3
 				}
 			],
 			"modifiers": [

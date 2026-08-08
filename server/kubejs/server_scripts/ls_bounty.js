@@ -35,9 +35,10 @@ const BT_HUNT = [
   //   크리퍼를 좁은 투기장에 넣으면 자폭이 성역·전리품 상자를 부순다(mobGriefing ON —
   //   공성 웨이브에서 크리퍼를 뺀 것과 같은 이유, ls_siege.js buildWave 주석 참고).
   { target: 'minecraft:husk', name: '허스크', need: 15, reward: 65 },
-  { target: 'minecraft:stray', name: '스트레이', need: 12, reward: 65 },
-  { target: 'minecraft:enderman', name: '엔더맨', need: 6, reward: 80 },
-  { target: 'minecraft:phantom', name: '팬텀', need: 8, reward: 70 }
+  { target: 'minecraft:stray', name: '스트레이', need: 12, reward: 65 }
+  // ※ 엔더맨·팬텀도 뺐다 (2026-08-08 유저 결정). 사냥 현상금은 일반 균열에서 도는데,
+  //   순간이동(엔더맨)과 비행(팬텀)은 투기장 밖으로 새면 웨이브가 안 끝날 수 있다.
+  //   「될 수도 있다」에 기대는 것보다 목록에서 빼는 편이 확실하다.
 ]
 const BT_SUPPLY = [
   { target: 'minecraft:iron_ingot', name: '철괴', need: 24, reward: 55 },

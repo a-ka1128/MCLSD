@@ -35,8 +35,17 @@ function townLvl(server, t) { return LS.townLevel(server, t) }
 const SPAWN_GAP = 8          // 성벽이 «닿는 끝»에서 이만큼 밖에 스폰한다
 const SANCTUARY_RADIUS = 64
 const MAX_WAVES = 5          // 일반 공성 최대 웨이브
-const SIEGE_EVERY = 3        // 공성 주기(일) — 커스텀 낮밤 기준 실시간 약 1시간에 1회
-const GRAND_EVERY = 12       // 대공세 주기(일) — SIEGE_EVERY의 배수라 반드시 공성일에 겹친다
+// ── 공성 리듬 (2026-08-08 유저 결정: 4일 주기 · 일반 2 → 대공세 1 반복) ──
+// 하루가 20분이므로 4일 = 실시간 약 1시간 20분에 한 번.
+//   공성일: 4, 8, 12, 16, 20, 24 …
+//   대공세: 12, 24 …  → 매 «세 번째» 공성이 대공세다 (일반·일반·대공세).
+// GRAND_EVERY 는 반드시 SIEGE_EVERY 의 배수여야 한다. 아니면 대공세일이 공성일과 안 겹쳐
+// **대공세가 영영 안 온다** — 예고 문구만 뜨고 아무 일도 안 일어난다.
+//   3 → 12 = 4번째마다(예전) · 4 → 12 = 3번째마다(지금) · 5 로 바꾸려면 GRAND_EVERY 도 15 나 20 으로.
+const SIEGE_EVERY = 4
+const GRAND_EVERY = 12
+// ※ SIEGE_EVERY 는 승리 시 위협도 감소량으로도 쓰인다(`finishSiege`) — 「한 번 이기면 그동안
+//   쌓인 만큼을 되돌린다」가 성립하려면 주기와 같은 값이어야 하므로, 여기만 고치면 같이 따라간다.
 const REWARD_MULT = 1.5      // 보상 배율 — Ducat이 거래에도 쓰이므로 유입 상향
 const GRAND_ESS = 2          // 대공세 격퇴 시 별의 파편
 const HIGH_THREAT_ESS = 7    // 이 위협도 이상에서 일반 공성을 격퇴하면 정수를 준다
