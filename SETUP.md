@@ -20,8 +20,11 @@
 ## Phase 2 — 모드 담기
 1. 인스턴스 → **Mods → Download mods** (Prism 안에서 Modrinth+CurseForge 브라우저 열림).
 2. `MODS.md`의 모드를 전부 추가. **의존성 프롬프트는 수락** — Balm·GeckoLib·Placebo 등은 Prism이 자동 추가.
-3. ⚠️ 항목: 경제 모드는 **하나만**; **FTB XMod Compat** 추가; Puffish는 **Puffish Attributes** + 스킬트리 팩도 같이.
-4. **한 번 실행**해서(싱글플레이 테스트 월드) 정상 부팅 + EMI(레시피 뷰어)·모드 콘텐츠 확인. 빨간 에러는 다음
+3. ⚠️ 항목: 경제 모드는 **하나만**; Puffish는 **Puffish Attributes** + 스킬트리 팩도 같이.
+   (FTB 계열 5개와 SDM 상점 4개는 **2026-08-06 에 제거됐다** — 넣지 말 것. 이유는 `MODS.md`.)
+4. **리소스팩**을 인스턴스의 `resourcepacks/` 에 넣고 **옵션에서 켠다** — 넣기만 하면 목록에만 뜬다.
+   `client/resourcepacks/LS-Korean.zip`(무기 이름 한글화)은 이 저장소에 들어 있다. 나머지는 `MODS.md` 표 참고.
+5. **한 번 실행**해서(싱글플레이 테스트 월드) 정상 부팅 + EMI(레시피 뷰어)·모드 콘텐츠 확인. 빨간 에러는 다음
    단계 전에 해결.
 
 ## Phase 3 — 친구 배포용 패키징 (.mrpack)
