@@ -198,6 +198,8 @@ function rsFail(server) {
   const s = SURVIVORS[LS.rescueIdx(server)]
   try { LS.endRescue(server) } catch (e) { lsWarn('ls_rescue:fail-end', e) }
   server.runCommandSilent('kill @e[tag=ls_captor]')
+  // 자막을 먼저 정한다 — 안 정하면 직전에 남아 있던 자막이 그대로 따라붙는다.
+  server.runCommandSilent(`title @a subtitle {"text":"${s.name}을(를) 지키지 못했다","color":"red"}`)
   server.runCommandSilent('title @a title {"text":"구출 실패...","color":"dark_red"}')
   rsPlay(server, 'minecraft:entity.villager.death', 1, 0.7)
   rsSay(server, `§4✖ ${s.name}을(를) 지키지 못했다... §7하지만 신호가 다시 잡힌다 — 다른 은신처로 옮겨진 모양이다. §8(/rescue scout 로 재시도)`)

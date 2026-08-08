@@ -419,22 +419,44 @@ function spawnWave(server, waveNo) {
       + `PersistenceRequired:1b,Glowing:1b,CustomNameVisible:1b,`
       + `CustomName:'{"text":"균열의 선봉","color":"dark_red","bold":true}'}`)
     sbSpawned = 1
-    server.runCommandSilent('title @a subtitle {"text":"그리고 선봉이 온다","color":"dark_red"}')
     playAll(server, 'minecraft:entity.ravager.roar', 1, 0.7)
+    // 화면 알림은 여기서 안 보낸다 — 자막 칸이 하나뿐이라 아래 물결 알림이 덮어쓴다.
+    // (그래서 「그리고 선봉이 온다」는 여태 한 번도 안 나왔다.) 아래에서 같이 조립한다.
   }
 
   LS.setSiegeRemaining(server, n + sbSpawned)
   LS.setSiegeWaveNo(server, waveNo)
+  // ── 화면 알림은 여기서 «한 번만» 보낸다 (2026-08-08 유저 발견) ──
+  // `title @a subtitle` 은 **혼자서는 화면에 안 뜬다.** 자막 칸에 글자만 넣어두고,
+  // 다음번 `title @a title` 이 표시될 때 딸려 나온다. 그래서 자막만 보내면 둘이 같이 깨진다:
+  //   ① 지금 안 보인다   ② 나중에 엉뚱한 화면에 붙는다
+  // 실제 증상: 「N번째 물결이 몰려온다!」가 공성이 끝난 뒤 §a성역 방어 성공!§r 밑에 따라붙었다.
+  // 게다가 자막 칸은 하나뿐이라 선봉 예고와 물결 예고가 서로를 덮어썼다.
+  // → 문구를 먼저 조립하고 **자막 → 타이틀 순서로** 보낸다. 표시를 트리거하는 건 타이틀 쪽이다.
+  //   물결 2 부터는 타이틀을 빈 문자열로 둔다 — 「자막만 번쩍」이 원래 의도이고,
+  //   `ls_enrage.js` 의 격노 알림이 쓰는 것과 같은 방식이다.
+  var swTitle = '{"text":""}'
+  var swSub = `${waveNo}번째 물결이 몰려온다!`
+  var swColor = 'gold'
+  if (waveNo === 1) {
+    swTitle = grand ? '{"text":"\\u2620 대공세","color":"dark_red","bold":true}'
+                    : '{"text":"\\u2694 성역 공성!","color":"red","bold":true}'
+    swSub = grand ? '어둠의 총력이 성역을 노립니다 — 전원 방어하세요!'
+                  : '어둠이 성역으로 몰려옵니다 — 막아주세요!'
+    swColor = grand ? 'red' : 'gold'
+  }
+  // 선봉은 마지막 물결에만 나온다. 별도 자막으로 띄우면 위를 덮으므로 같은 줄에 붙인다.
+  if (sbSpawned > 0) { swSub += ' · 그리고 선봉이 온다'; swColor = 'red' }
+  server.runCommandSilent('title @a times 5 40 10')
+  server.runCommandSilent(`title @a subtitle {"text":"${swSub}","color":"${swColor}"}`)
+  server.runCommandSilent(`title @a title ${swTitle}`)
+
   if (waveNo === 1) {
     if (grand) {
-      server.runCommandSilent('title @a title {"text":"\\u2620 대공세","color":"dark_red","bold":true}')
-      server.runCommandSilent('title @a subtitle {"text":"어둠의 총력이 성역을 노립니다 — 전원 방어하세요!","color":"red"}')
       playAll(server, 'minecraft:event.raid.horn', 1, 0.6)
       playAll(server, 'minecraft:entity.wither.spawn', 0.8, 0.7)
       say(server, `§4☠ 대공세 시작! §7위협도 ${threat} · 웨이브 ${LS.siegeWaves(server) + 1}개 · 첫 물결 ${n}기 §c(보상 2배)`)
     } else {
-      server.runCommandSilent('title @a title {"text":"\\u2694 성역 공성!","color":"red","bold":true}')
-      server.runCommandSilent('title @a subtitle {"text":"어둠이 성역으로 몰려옵니다 — 막아주세요!","color":"gold"}')
       playAll(server, 'minecraft:event.raid.horn', 1, 0.8)
       playAll(server, 'minecraft:entity.ender_dragon.growl', 0.6, 0.6)
       say(server, `§c⚔ 공성 시작! §7위협도 ${threat} · 웨이브 ${LS.siegeWaves(server) + 1}개 · 첫 물결 ${n}기`)
@@ -446,7 +468,6 @@ function spawnWave(server, waveNo) {
       if (TIER_NEWS[tier]) say(server, TIER_NEWS[tier])
     }
   } else {
-    server.runCommandSilent(`title @a subtitle {"text":"${waveNo}번째 물결이 몰려온다!","color":"gold"}`)
     playAll(server, 'minecraft:event.raid.horn', 0.7, 1.0)
     say(server, `§6▶ ${waveNo}번째 물결! §7적 ${n}기`)
   }
@@ -555,6 +576,11 @@ function finishSiege(server, outcome) {
     // 공성이 3일에 한 번이므로 승리 한 번이 3일치 상승분을 되돌린다
     setThreat(server, threat - SIEGE_EVERY)
     if (!wallBroken(server)) wallSetHp(server, wallHp(server) + 300) // 승리 시 성벽 소폭 보수(최대치의 10%)
+    // ── 자막을 «먼저» 정하고 타이틀을 띄운다 ──
+    // 안 정하면 직전에 남아 있던 자막이 그대로 따라붙는다. 실제로 마지막 물결의
+    // 「N번째 물결이 몰려온다!」가 여기 §a성역 방어 성공!§r 밑에 붙어 있었다.
+    // 이 규칙은 아래 세 분기에도 똑같이 적용된다 — 표시를 트리거하는 건 타이틀 쪽이다.
+    server.runCommandSilent(`title @a subtitle {"text":"${grand ? '어둠의 총력을 밀어냈습니다' : '어둠을 전부 밀어냈습니다'}","color":"gray"}`)
     server.runCommandSilent(`title @a title {"text":"${grand ? '대공세 격퇴!' : '성역 방어 성공!'}","color":"green","bold":true}`)
     playAll(server, 'minecraft:ui.toast.challenge_complete', 1, 1)
     playAll(server, 'minecraft:entity.player.levelup', 0.7, 1.2)
@@ -576,8 +602,8 @@ function finishSiege(server, outcome) {
     // (예전엔 여기서 accrued 를 직접 덮어써 Rhino 에서 런타임 오류가 났다. dawn 은 흔한 경로라 매번 터졌다.)
     var dawnReward = Math.round(accrued * REWARD_MULT)
     addTreasury(server, dawnReward)
-    server.runCommandSilent('title @a title {"text":"동이 텄습니다","color":"yellow"}')
     server.runCommandSilent('title @a subtitle {"text":"어둠이 물러갑니다 — 성역은 버텨냈습니다","color":"gold"}')
+    server.runCommandSilent('title @a title {"text":"동이 텄습니다","color":"yellow"}')
     playAll(server, 'minecraft:block.beacon.activate', 0.8, 1)
     say(server, `§e☀ 동이 텄습니다 — 성역은 밤을 버텨냈습니다. §7공동 금고 +${dawnReward}`)
     console.log(`[LS-SIEGE] DAWN reward=${dawnReward} (accrued=${accrued})`)
@@ -586,8 +612,8 @@ function finishSiege(server, outcome) {
     // 금고를 추가로 깎지는 않는다 — 수리비가 이미 페널티이고, 두 번 물리면 «졌는데 재기까지
     // 막히는» 밤이 된다. 대신 그 밤에 쌓인 보상(accrued)은 못 가져간다. 잃은 판돈이 성벽의 값이다.
     setThreat(server, threat + 1)
-    server.runCommandSilent('title @a title {"text":"성벽을 잃었다","color":"dark_red","bold":true}')
     server.runCommandSilent('title @a subtitle {"text":"동은 텄지만 성역은 짓밟혔습니다","color":"red"}')
+    server.runCommandSilent('title @a title {"text":"성벽을 잃었다","color":"dark_red","bold":true}')
     playAll(server, 'minecraft:event.raid.horn', 1, 0.5)
     playAll(server, 'minecraft:block.bell.resonate', 1, 0.5)
     say(server, `§4▨ 성벽이 무너진 채 아침을 맞았다. §c위협도↑(${getThreat(server)}) §7· 이 밤의 보상 §c${accrued}§7 를 잃었다.`)
@@ -596,6 +622,7 @@ function finishSiege(server, outcome) {
   } else { // give_up
     setThreat(server, threat + 1)
     addTreasury(server, -5)
+    server.runCommandSilent('title @a subtitle {"text":"이번 밤은 여기까지입니다","color":"gray"}')
     server.runCommandSilent('title @a title {"text":"성역이 밀렸다...","color":"dark_red"}')
     playAll(server, 'minecraft:entity.ravager.roar', 1, 0.7)
     playAll(server, 'minecraft:block.bell.resonate', 1, 0.5)
@@ -981,7 +1008,12 @@ ServerEvents.tick(event => {
         LS.setWallWarn(server, stage)
         if (stage === 3) say(server, `§6▨ 성벽이 공격받고 있다! ${wallBar(server)}`)
         if (stage === 2) { say(server, `§c▨ 성벽에 금이 간다! ${wallBar(server)} §c— 성벽 밖의 적을 처치해 주세요!`); playAll(server, 'minecraft:block.bell.use', 1, 0.6) }
-        if (stage === 1) { server.runCommandSilent('title @a title {"text":"▨ 성벽 위기","color":"red","bold":true}'); playAll(server, 'minecraft:entity.wither.hurt', 1, 0.5) }
+        // 자막 먼저 — 안 정하면 물결 알림의 자막이 「성벽 위기」 밑에 그대로 따라붙는다.
+        if (stage === 1) {
+          server.runCommandSilent(`title @a subtitle {"text":"내구도 ${wallHp(server)} — 무너지기 직전입니다","color":"red"}`)
+          server.runCommandSilent('title @a title {"text":"▨ 성벽 위기","color":"red","bold":true}')
+          playAll(server, 'minecraft:entity.wither.hurt', 1, 0.5)
+        }
       }
       // 방벽 Lv4「불굴의 성벽」— 무너지기 직전 HP 1 로 버티며 15초를 번다.
       // 그 15초가 "밖의 적을 정리하고 보수할 마지막 기회"다. 한 번의 공성에 한 번만 발동한다.
