@@ -32,7 +32,7 @@
 function townLvl(server, t) { return LS.townLevel(server, t) }
 
 // ── 튜닝 상수 ──
-const SPAWN_RING = 32        // 성역 중심에서 스폰 거리
+const SPAWN_GAP = 8          // 성벽이 «닿는 끝»에서 이만큼 밖에 스폰한다
 const SANCTUARY_RADIUS = 64
 const MAX_WAVES = 5          // 일반 공성 최대 웨이브
 const SIEGE_EVERY = 3        // 공성 주기(일) — 커스텀 낮밤 기준 실시간 약 1시간에 1회
@@ -140,6 +140,24 @@ const WALL_REPAIR_MATS = [
 ]
 const WALL_DEFAULT_R = 24     // 성벽 반경 기본값 (실제 성벽에 맞춰 /wall radius 로 조정)
 function wallR(server) { const v = LS.wallRadius(server); return v > 0 ? v : WALL_DEFAULT_R }
+
+// ── 성벽 모양 (ls_config.js) ──
+// 'square' 면 거리를 체비쇼프(max(|dx|,|dz|))로 잰다 — 중심에서 한 변 2R 인 정사각.
+// 설정이 없거나 이상하면 원형으로 떨어진다(예전 동작).
+function wallIsSquare(server) {
+  try { return typeof LS_CONFIG !== 'undefined' && LS_CONFIG.wall && LS_CONFIG.wall.shape === 'square' }
+  catch (e) { lsWarn('ls_siege:wall-shape', e); return false }
+}
+// 성벽이 중심에서 «실제로 닿는 가장 먼 거리». 원형은 R, 정사각은 모서리라 R×√2.
+function wallReach(server) { return wallIsSquare(server) ? wallR(server) * Math.SQRT2 : wallR(server) }
+
+// ── 스폰 거리는 상수가 아니라 성벽에서 계산한다 ──
+// 예전엔 `SPAWN_RING = 32` 이 박혀 있었고 그건 기본 반경 24 + 8 이었다. 즉 두 상수를
+// **손으로 맞춰야** 했고, 한쪽만 바꾸면 조용히 어긋났다. 정사각을 넣으면서 그게 실제 버그가 된다:
+// 반경 24 정사각의 모서리는 33.9 라 스폰링 32 보다 바깥이고, 대각선 부근(스폰 각도의 약 8%)에서
+// **몹이 성벽 안에 스폰된다.** 게다가 공성 방향이 매번 랜덤이라 어떤 밤엔 되고 어떤 밤엔 뚫린다.
+// 여기서 계산하면 반경을 바꾸든 모양을 바꾸든 어긋날 자리가 없다.
+function spawnRing(server) { return Math.ceil(wallReach(server)) + SPAWN_GAP }
 // 방벽 레벨당 최대 내구도 +100 (기본 150 → 4레벨 550).
 // 방벽 트랙의 가장 직관적인 보상이라 눈에 띄게 올린다.
 function wallMax(server) { return WALL_BASE_HP + townLvl(server, 'ramparts') * 1000 }
@@ -428,6 +446,7 @@ function spawnWave(server, waveNo) {
   const threat = effThreat(server)
   const grand = LS.siegeGrand(server)
   const c = sancPos(server)
+  const sw_ring = spawnRing(server)   // 성벽 모양·반경에서 계산된다 (상수 아님)
   // 인원은 웨이브가 나올 때마다 다시 센다 — 도중에 들어오거나 나가는 사람이 반영된다
   const party = partyCount(server)
   const wave = buildWave(threat, grand, party, LS.progress(server))
@@ -437,8 +456,8 @@ function spawnWave(server, waveNo) {
   for (let i = 0; i < n; i++) {
     var spread = n > 1 ? (i / (n - 1)) * 70 - 35 : 0
     var ang = (baseDeg + spread) * Math.PI / 180
-    var x = Math.floor(c.x + Math.cos(ang) * SPAWN_RING) + 0.5
-    var z = Math.floor(c.z + Math.sin(ang) * SPAWN_RING) + 0.5
+    var x = Math.floor(c.x + Math.cos(ang) * sw_ring) + 0.5
+    var z = Math.floor(c.z + Math.sin(ang) * sw_ring) + 0.5
     var sy = surfaceY(server, x, z, c.y)
     server.runCommandSilent(`summon ${wave[i]} ${x} ${sy} ${z} {Tags:["ls_siege"],PersistenceRequired:1b,Glowing:1b}`)
   }
@@ -452,8 +471,8 @@ function spawnWave(server, waveNo) {
   var sbSpawned = 0
   if (LS.siegeWaves(server) === 0) {
     var sbAng = baseDeg * Math.PI / 180
-    var sbX = Math.floor(c.x + Math.cos(sbAng) * SPAWN_RING) + 0.5
-    var sbZ = Math.floor(c.z + Math.sin(sbAng) * SPAWN_RING) + 0.5
+    var sbX = Math.floor(c.x + Math.cos(sbAng) * sw_ring) + 0.5
+    var sbZ = Math.floor(c.z + Math.sin(sbAng) * sw_ring) + 0.5
     var sbY = surfaceY(server, sbX, sbZ, c.y)
     server.runCommandSilent(
       `summon ${SIEGE_BOSS_ID} ${sbX} ${sbY} ${sbZ} {Tags:["ls_siege","ls_siege_boss"],`
@@ -1009,7 +1028,10 @@ ServerEvents.tick(event => {
         if (!e || !e.tags || !(`${e.tags}`).includes('ls_siege') || !e.isAlive()) return
         const sfDx = e.x - wc.x, sfDz = e.z - wc.z   // 고유 접두사 (Rhino 재선언 함정)
         const d2 = sfDx * sfDx + sfDz * sfDz
-        if (d2 < R * R) {
+        // 정사각은 체비쇼프 거리로 «안»을 판정한다 — 원형의 √(dx²+dz²) 자리에 max(|dx|,|dz|).
+        const sfSq = wallIsSquare(server)
+        const sfIn = sfSq ? (Math.max(Math.abs(sfDx), Math.abs(sfDz)) < R) : (d2 < R * R)
+        if (sfIn) {
           // 성벽 안으로 침입 시도 → 밖으로 밀려남 (성벽을 두드리는 연출)
           banging++
           // 실제 공격력을 더한다 — 예전엔 마릿수만 세고 min(banging,6) 으로 잘라서,
@@ -1019,8 +1041,19 @@ ServerEvents.tick(event => {
             var atk = e.getAttribute && e.getAttribute('minecraft:generic.attack_damage')
             bangDmg += atk ? atk.getValue() : 3
           } catch (eA) { bangDmg += 3 }
-          var d = Math.max(1, Math.sqrt(d2))
-          var ox = wc.x + (sfDx / d) * (R + 2), oz = wc.z + (sfDz / d) * (R + 2)
+          // ── 밀어낼 자리 ──
+          // 원형: 중심에서 바깥으로 방사. 정사각: **가장 가까운 벽면**으로 민다.
+          // 정사각에서 방사로 밀면 대각선 몹이 모서리 밖 먼 곳까지 튕겨 나가 «벽을 두드리는»
+          // 연출이 깨진다. 지배적인 축만 R+2 로 옮기고 나머지 축은 그대로 둔다.
+          var ox, oz
+          if (sfSq) {
+            var sfAx = Math.abs(sfDx), sfAz = Math.abs(sfDz)
+            if (sfAx >= sfAz) { ox = wc.x + (sfDx < 0 ? -(R + 2) : (R + 2)); oz = wc.z + sfDz }
+            else { ox = wc.x + sfDx; oz = wc.z + (sfDz < 0 ? -(R + 2) : (R + 2)) }
+          } else {
+            var d = Math.max(1, Math.sqrt(d2))
+            ox = wc.x + (sfDx / d) * (R + 2); oz = wc.z + (sfDz / d) * (R + 2)
+          }
           var oy = surfaceY(server, ox, oz, Math.floor(e.y))
           try { server.runCommandSilent(`tp ${e.getUuid()} ${ox.toFixed(1)} ${oy} ${oz.toFixed(1)}`) } catch (e2) { lsWarn('ls_siege:680', e2) }
           server.runCommandSilent(`particle minecraft:block minecraft:stone ${ox.toFixed(1)} ${oy + 1} ${oz.toFixed(1)} 0.4 0.6 0.4 0.1 12`)
@@ -1173,7 +1206,14 @@ ServerEvents.commandRegistry(event => {
   event.register(Commands.literal('wall')
     .executes(ctx => {
       const s = ctx.source.server
-      ctx.source.sendSystemMessage(Text.of(`§6▨ 성벽 내구도 ${wallBar(s)} §8(반경 ${wallR(s)} · 최대 ${wallMax(s)} = 기본 ${WALL_BASE_HP} + 방벽Lv×1000)`))
+      ctx.source.sendSystemMessage(Text.of(`§6▨ 성벽 내구도 ${wallBar(s)} §8(최대 ${wallMax(s)} = 기본 ${WALL_BASE_HP} + 방벽Lv×1000)`))
+      // 모양·스폰 거리를 같이 띄운다. 스폰 거리는 이제 계산값이라, 안 보이면 「왜 이 밤만
+      // 몹이 멀리서 오지」를 못 읽는다. 건축 명령도 같이 준다 — 판정과 실물이 어긋나면 그게 제일 아프다.
+      const wSq = wallIsSquare(s), wRad = wallR(s)
+      ctx.source.sendSystemMessage(Text.of(
+        `§8   모양 §7${wSq ? '정사각(한 변 ' + (wRad * 2) + ')' : '원형'}§8 · 반경 §7${wRad}§8 · 스폰 거리 §7${spawnRing(s)}§8칸`))
+      ctx.source.sendSystemMessage(Text.of(
+        `§8   건축: §7${wSq ? `//pos1 ~-${wRad} ~ ~-${wRad} · //pos2 ~${wRad} ~5 ~${wRad} · //walls <블록>` : `//hcyl <블록> ${wRad} 5`} §8(성역 중심에서)`))
       if (wallBroken(s)) ctx.source.sendSystemMessage(Text.of('§c   붕괴됨 — 공성 몹이 그대로 들어온다. §7/wall repair <n> §8(필요량은 /wall cost <n>)'))
       return 1
     })
