@@ -51,6 +51,7 @@ py -c "import json,glob; [print(f, [e.get('name') for e in json.load(open(f,enco
 | **오리온 (활 4종)** | `hunter.json` `hunter_pulling_0~2` | **Corrupted Bow** | 〃 | ⚠️ **ARR · 허락 문구 없음 (§8)** |
 | 헤카테 (낫) | `hecate.json` | **Blood Scythe** | Blood Scythe by Linaryx | **MIT** |
 | 하르모니아 (리라) | `harmonia.json` | **lyre** | Bard Craft (NeoForge 1.21.1) | **MIT** |
+| 네메시스 (대검) | `nemesis.json` | **Grand Claymore** | nongko's Fantasy Weapons v1.20B | 비상업 허락 (§8) |
 
 **받은 원본 (07-23 · 세션 기록에 남은 실제 URL)**
 
@@ -296,6 +297,59 @@ Blood Scythe 는 86% 가 무채색 검정이라 아무리 돌려도 검정이다
 
 → `north↔west` · `south↔east` 를 맞바꿔 고쳤다. **그 전에 이 도구로 본 모든 미리보기는
 면 텍스처가 서로 바뀐 그림이다.**
+
+---
+
+## 10. 네메시스(대검) 모델 확보 (2026-08-09)
+
+11번째 가호([CLASS-11.md](CLASS-11.md))용 대검. **`Grand Claymore` — nongko's Fantasy Weapons.**
+에레보스·크라토스·쿠훌린과 **같은 팩**이라 아트 스타일이 맞고, §8 의 허락이 그대로 적용된다.
+
+### 밖에서 먼저 찾았고, 막다른 길이었다
+
+| 경로 | 결과 |
+|---|---|
+| Modrinth 대검 리소스팩 **8종** | **전부 `LicenseRef-All-Rights-Reserved`** |
+| Modrinth MIT 검 팩 | 전부 PvP 용 «작은» 검 — 대검이 없다 |
+| Epic Knights (이미 설치됨) | **ARR** · 게다가 `layer0` **평면 스프라이트** |
+| Simply Swords (이미 설치됨) | Timefall Development License · 평면 스프라이트 |
+
+**교훈: 새 모델이 필요하면 밖을 뒤지기 전에 «이미 허락받은 팩»부터 열어볼 것.**
+nongko 팩에 대검이 열 종 넘게 있었는데, 그걸 확인하는 데 검색을 여섯 번 돌리고 나서였다.
+후보였던 것들: `black_iron_greatsword` · `ancient_greatslab` · `vengeance_blade` ·
+`phantomguard_greatsword` · `claymore` · `demonslayers_greatsword` 등.
+
+**Grand Claymore 를 고른 이유** — 패링 탱커라 **가드로 받아 흘리는 그림**이 필요한데,
+후보 중 십자 가드가 그걸 설명할 만큼 큰 게 이것뿐이었다. Black Iron 은 실루엣이 더 무겁지만
+가드가 작아 「내려찍는」 무기로 보인다.
+
+### 손본 것
+
+| | |
+|---|---|
+| 네임스페이스 | `item/grand_claymore` → `lsrelics:item/nemesis` (face 의 `texture` 는 원본이 이미 `#0`) |
+| `light_emission` | 150 element 전부에 `12` (§9 설치 주의 2) |
+| **display 변환** | **원본 그대로 뒀다.** CIT 팩 저자가 맞춰둔 검증된 값이다 — 헤카테 때 남의 모델에 남의 변환을 씌워 손에서 각도가 엉킨 전례가 있다(§9-A ①) |
+| z-파이팅 | `tools/fix_zfight.py` 검사 결과 **0쌍** — 손댈 것이 없었다 |
+
+### 재채색 — `tools/recolor_nemesis.py`
+
+**헤카테와 방법이 다르다.** `recolor_hecate.py` 는 모델의 면 UV 로 픽셀 주인을 갈랐다.
+Blood Scythe 는 자루와 날이 같은 올리브색이라 색만 보고는 못 나눴기 때문이다.
+
+Grand Claymore 는 반대다 — **색이 16개뿐이고 이미 세 덩어리로 갈려 있다.** 디버그 텍스처로
+렌더해 부위와 일치하는 것을 확인하고 색으로 갈랐다. 코드도 짧고 모델을 고쳐도 안 깨진다.
+
+| 부위 | 판정 | 픽셀 | 색 |
+|---|---|---:|---|
+| 칼날 | 명도 ≥50% | 617 | **흰색** `#8E97AB`~`#FCFCFF` |
+| 가드·폼멜 | 색상 15~75° · 채도 >15% | 411 | **금색** `#7A6A22`~`#EEE74F` |
+| 그립 | 나머지 | 322 | **남색** `#1B213A`~`#495987` |
+
+※ 그립 램프만 위쪽을 `#495987` 에서 끊었다. 흰·금과 같은 폭으로 펴면 **손잡이가 하늘색으로
+  떠버린다** — 좁고 어두운 부위라 정규화가 과하게 먹는다.
+
+원본은 `tools/assets/nemesis_original.png` 에 두고, 스크립트가 항상 거기서 읽는다.
 
 ---
 
