@@ -26,6 +26,11 @@ import sys
 import zipfile
 from pathlib import Path
 
+# Simply Swords 는 항목이 300 이 넘어 표를 따로 뒀다. 여기 같이 두면 «규칙» 과 «번역» 이
+# 섞여서 도구를 못 읽는다. 저 파일은 무엇으로 옮기는지만, 이 파일은 어떻게 찍는지만 담는다.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lang_simplyswords import TABLE as SS_TABLE  # noqa: E402
+
 # 콘솔이 cp949 라 한글·기호를 그대로 찍으면 UnicodeEncodeError 로 죽는다.
 # 파일은 어차피 UTF-8 로 쓰지만, 「못 옮긴 것」 보고가 콘솔에서 터지면 그게 제일 필요한 순간에 안 보인다.
 sys.stdout.reconfigure(encoding='utf-8')
@@ -205,6 +210,9 @@ SKIP_KEYS = {
 
 # 무기로 볼 어휘. 실존 무기명이 많아 길지만, 넓게 잡고 SKIP 으로 걸러내는 편이
 # 좁게 잡아 조용히 빠뜨리는 것보다 낫다.
+# 서식 문자. `%d%%` 를 `%d` + `%%` 로 나눠 잡도록 `%%` 를 먼저 둔다.
+FMT = re.compile(r'%%|%\d*[dsf]')
+
 WEAPON_RE = re.compile(
     r'sword|axe|blade|spear|halberd|glaive|katana|dagger|bow\b|hammer|mace|scythe|rapier|'
     r'club|lance|pike|flail|whip|staff|cutlass|claymore|sabre|saber|trident|warglaive|knife|'
@@ -225,6 +233,8 @@ def translate(mod, key, en):
     full = f'{mod}:{key}'
     if full in OVERRIDES:
         return OVERRIDES[full]
+    if mod == 'simplyswords' and key in SS_TABLE:
+        return SS_TABLE[key]
     # 재료 + 종류 조합
     for mat_en, mat_ko in MATS.items():
         if en.startswith(mat_en + ' '):
@@ -265,13 +275,17 @@ def main():
                     continue
                 if mod == 'simplyswords' or WEAPON_RE.search(k + ' ' + str(v)):
                     todo.setdefault(mod, {})[k] = v
-            # Simply Swords 는 무기 툴팁도 같이 옮긴다 (OVERRIDES 에 있는 것만)
+            # Simply Swords 는 이름 밖의 것도 옮긴다 — 무기 툴팁·상태효과·도전과제.
+            # 이름만 한글이고 바로 밑줄이 영어면 툴팁이 반쪽이 된다.
+            # 위 루프는 `item.<mod>.<name>` 만 보므로 점이 셋 이상인 툴팁 키가 안 걸린다.
             if mod == 'simplyswords':
                 for k, v in en.items():
-                    if f'{mod}:{k}' in OVERRIDES and not (k in ko and ko[k] != v):
+                    if k in ko and ko[k] != v:
+                        continue
+                    if f'{mod}:{k}' in OVERRIDES or k in SS_TABLE:
                         todo.setdefault(mod, {})[k] = v
 
-    out, missed, used = {}, [], set()
+    out, missed, used, bad = {}, [], set(), []
     for mod, kv in todo.items():
         for k, v in kv.items():
             t = translate(mod, k, v)
@@ -280,6 +294,12 @@ def main():
             else:
                 out.setdefault(mod, {})[k] = t
                 used.add(f'{mod}:{k}')
+                # ── 서식 문자 검증 ──
+                # `%d` `%s` 를 빠뜨리면 숫자가 아예 안 나오고, 개수·순서가 어긋나면
+                # 엉뚱한 값이 박힌다. 둘 다 «화면에는 멀쩡한 한국어» 로 보여서
+                # 눈으로는 못 잡는다. 그래서 여기서 센다.
+                if FMT.findall(v) != FMT.findall(t):
+                    bad.append((mod, k, FMT.findall(v), FMT.findall(t)))
 
     # ── 팩 쓰기 (통째로 다시 만든다 — 손으로 고친 게 남으면 다음 실행과 갈린다) ──
     assets = PACK / 'assets'
@@ -311,6 +331,12 @@ def main():
         print(f'\n※ 안 쓰인 OVERRIDES {len(dead)} — 키가 바뀌었거나 이미 번역된 것:')
         for d in dead:
             print(f'   {d}')
+    if bad:
+        print(f'\n※ 서식 문자가 어긋난 항목 {len(bad)} — 반드시 고칠 것:')
+        for mod, k, a, b in bad:
+            print(f'   {mod}:{k}\n      원문 {a} → 번역 {b}')
+        return 3
+
     if missed:
         # 조용히 빠뜨리면 「다 됐다」로 읽힌다. 남은 건 반드시 보여준다.
         print(f'\n※ 못 옮긴 것 {len(missed)} — OVERRIDES 나 SKIP_KEYS 에 넣을 것:')
