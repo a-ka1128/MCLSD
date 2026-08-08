@@ -365,7 +365,14 @@ function vcWatch(server) {
   // ③ 위협도 — 밴드가 올라갈 때만 (내려갈 땐 조용히)
   const band = vcThreatBand(LS.threat(server))
   const bandPrev = LS.voiceSeenBand(server)
-  if (band !== bandPrev) {
+  // ── 아무도 없으면 «봤다»로 넘기지 않는다 (2026-08-08) ──
+  // `vSpeak` 은 접속자가 0 명이면 false 를 돌려준다(287행). 그런데 여기는 표식을 말하기
+  // **전**에 세우고 롤백도 안 해서, 무인 밤에 밴드가 올라가면 그 대사는 그냥 사라졌다.
+  // 위협도는 `onNewDay` 가 접속자와 무관하게 매일 올리므로 실제로 자주 일어난다.
+  // 바로 위 ②(first_siege)는 실패하면 예약을 되감는데, 여기와 아래 ④ 만 그게 빠져 있었다.
+  // ※ 쿨다운 때문에 못 뱉는 것은 «정상»이라 그때는 그대로 기록한다 — 그것까지 막으면
+  //   밴드가 영영 안 넘어가고 매 초 재시도만 남는다. 막아야 하는 건 «들을 사람이 없는» 경우뿐이다.
+  if (band !== bandPrev && server.players.length > 0) {
     LS.setVoiceSeenBand(server, band)
     if (band > bandPrev) {
       if (band >= 3) vSpeak(server, 'threat_crit')
@@ -377,7 +384,7 @@ function vcWatch(server) {
   if (LS.wallInit(server)) {
     var vcWallSt = LS.wallHpRaw(server) <= 0 ? 2 : 1
     var vcWallPrev = LS.voiceSeenWall(server)
-    if (vcWallSt !== vcWallPrev) {
+    if (vcWallSt !== vcWallPrev && server.players.length > 0) {   // ③ 과 같은 이유 — 무인 밤에 전이를 소비하지 않는다
       LS.setVoiceSeenWall(server, vcWallSt)
       if (vcWallSt === 2 && vcWallPrev === 1) vSpeak(server, 'wall_break')
     }

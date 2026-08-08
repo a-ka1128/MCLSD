@@ -162,6 +162,43 @@
 | Better Combat | https://modrinth.com/mod/better-combat | ⚙️ **playerAnimator + Cloth Config**; 타격감 |
 | Apotheosis | https://www.curseforge.com/minecraft/mc-mods/apotheosis | ⚙️ **Placebo + Apothic Attributes**; 장비 접사·티어 |
 | Puffish Skills | https://www.curseforge.com/minecraft/mc-mods/puffish-skills | ⚙️ + **Puffish Attributes** + 스킬트리 팩(Default Skill Trees / RPG Series) |
+| Krip Turrets **v2.4.0** | https://www.curseforge.com/minecraft/mc-mods/krip-turret | 설치형 자동 포탑 8종. **클라에도 필요**(side=BOTH). ⚠️ 커스텀 시스템과 연동 안 됨 — 아래 |
+
+> **⚠️ Krip Turrets 는 «깔려만 있다» (2026-08-08 등재)**
+>
+> **이 줄이 여태 빠져 있었다.** 서버에는 jar 가 있는데 이 문서에 없었고, `SETUP.md` 2번은
+> 「`MODS.md` 의 모드를 전부 추가」를 클라 구성 절차로 못박고 있다 — 즉 **절차대로 설치한
+> 새 참가자는 서버에 못 들어왔다.** 코드로는 못 고치는 종류의 구멍이라 여기 적는다.
+>
+> **커스텀 시스템과 연결돼 있지 않다.** 공성 웨이브(`buildWave`)에 포탑이 없고, 공성 몹도
+> 포탑을 표적으로 «지정»받지 않는다(붙는 건 바닐라 골렘 상속 덕분이지 우리 코드가 아니다).
+> 연동(B안)은 2026-08-08 에 **안 하기로 했다** — 아래 실측 때문이다.
+>
+> | 항목 | 실측값 (티어 0 · 무보정) |
+> |---|---|
+> | 산탄 `turret_4` | **292 DPS** · 발당 3,600~4,500 |
+> | 저격 `turret_1` | **146 DPS** · 발당 3,600~4,500 |
+> | 기본 `turret_3` | 3.3 DPS |
+> | 체력 | 8종 전부 **10** (화살계 피해는 완전 무효) |
+>
+> 발당 4천은 관통이 없어서 전부 버려진다 — 실효 화력은 DPS 가 아니라 **「N초에 1킬 확정」**이다.
+> 참고로 방벽 Lv3 자동 방어가 28 DPS 인데 그건 누적 3,350 Ducat + 균열 정수 6 을 태워야 나온다.
+> 포탑 재료는 구리·철나깃·레드스톤·유리판·조약돌이다. **우라늄은 포탑과 무관**하다(다른 레시피 2개뿐).
+>
+> **다만 성역을 못 지킨다.** 8칸·18칸에서는 쏘는데 **24칸에서는 한 발도 안 쏜다**
+> (`follow_range` 를 36 으로 올려도 그대로다). 공성 스폰링은 32, 성벽 밀어내기는 26 이라
+> **성역 안에 세운 포탑은 공성 몹을 아예 볼 수 없다.** 쓰려면 성벽 선(24) 위에 세워야 하고,
+> 그러면 HP 10 짜리가 몹 한가운데 서게 된다.
+>
+> **알아둘 부작용 둘**
+> - 엔티티 8종이 `MobCategory.MONSTER` 로 등록돼 있다 → `ls_mobscale` 이 «몬스터»로 보고
+>   플레이어 소유 포탑을 같이 강화하고 있었다(티어4: HP 10→22, 공격력 45→65).
+>   `MS_NEVER_SCALE` 로 제외했다(`ls_mobscale.js`).
+> - **바닐라 `#minecraft:illager` 태그를 오염시킨다** — `turret_1`~`turret_8` + `plane_airbox`
+>   **9종**이 들어간다(`data/minecraft/tags/entity_type/illager.json`). 이 태그를 보는 다른
+>   모드·데이터팩이 포탑을 약탈자로 취급할 수 있다. 아직 실제 문제는 안 봤지만, 이상한 상호작용이
+>   나오면 **여기부터 의심할 것.** 지우려면 `kubejs/data/minecraft/tags/entity_type/illager.json`
+>   에 NeoForge `"remove"` 로 9종.
 
 ## Layer 6 — 마을 자동화 / 내실 (라이트 Create)
 | 모드 | 링크 | 비고 |
