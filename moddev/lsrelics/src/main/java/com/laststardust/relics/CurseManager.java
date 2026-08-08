@@ -30,7 +30,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 public final class CurseManager {
     private CurseManager() {}
 
-    // ── 수치 (docs/RELICS.md 헤카테 절) ──
+    // ── 수치 (docs/CLASS-9-10.md §1) ──
     public static final float PER_STACK   = 0.03f;  // 중첩당 받는 피해 +3%
     public static final int   MAX_STACKS  = 5;
     public static final int   BOSS_STACKS = 8;      // 보스에겐 상한이 높다 — 헤카테의 정체성

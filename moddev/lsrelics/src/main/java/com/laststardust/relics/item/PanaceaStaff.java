@@ -131,8 +131,10 @@ public class PanaceaStaff extends Item implements RelicActions {
             shielded = true;
         }
 
-        // 시전자 → 대상으로 이어지는 빛줄기
-        Vec3 from = caster.getEyePosition();
+        // 시전자 → 대상으로 이어지는 빛줄기.
+        // 눈에서 그으면 1인칭에서 줄기가 조준선을 따라 화면 정중앙을 덮는다 — 힐러는 초당
+        // 여러 번 이걸 쏘므로 앞이 계속 하얘졌다. 손 위치에서 그어 가운데를 비운다.
+        Vec3 from = RelicSkills.muzzle(caster, caster.getViewVector(1.0f));
         Vec3 to = ally.position().add(0, ally.getBbHeight() * 0.6, 0);
         Vec3 seg = to.subtract(from);
         int steps = Math.max(4, (int) (seg.length() * 2));
@@ -153,12 +155,11 @@ public class PanaceaStaff extends Item implements RelicActions {
 
     // ── 신성 탄환 ──
     private static void attack(ServerLevel level, ServerPlayer player, ItemStack stack) {
-        Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
-        BoltManager.fire(level, player, eye.add(look.scale(0.5)), look,
+        Vec3 hand = RelicSkills.muzzle(player, look);
+        BoltManager.fire(level, player, hand, RelicSkills.muzzleDir(player, look, hand),
             RelicSkills.dmg(stack, BOLT_DMG), 26, HOLY);
-        level.sendParticles(ParticleTypes.END_ROD,
-            eye.x + look.x * 0.7, eye.y + look.y * 0.7, eye.z + look.z * 0.7, 4, 0.04, 0.04, 0.04, 0.02);
+        level.sendParticles(ParticleTypes.END_ROD, hand.x, hand.y, hand.z, 4, 0.04, 0.04, 0.04, 0.02);
         level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.PLAYERS, 0.8f, 1.9f);
     }
 

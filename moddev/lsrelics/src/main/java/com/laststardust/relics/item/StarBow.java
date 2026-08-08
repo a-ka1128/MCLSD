@@ -109,8 +109,11 @@ public class StarBow extends BowItem implements RelicActions {
     private void fire(ServerLevel sl, Player player, ItemStack stack) {
         Vec3 look = player.getViewVector(1.0f);
         Arrow arrow = com.laststardust.relics.LsArrows.create(sl, player, stack);
-        arrow.setPos(player.getX(), player.getEyeY() - 0.1, player.getZ());
-        arrow.shoot(look.x, look.y, look.z, ARROW_SPEED, ARROW_INACCURACY);
+        // 눈높이 정중앙이 아니라 손에서 나간다 — 초당 여러 발이라 조준선 위에 겹치면 앞이 안 보인다
+        Vec3 hand = RelicSkills.muzzle(player, look);
+        arrow.setPos(hand.x, hand.y, hand.z);
+        Vec3 aim = RelicSkills.muzzleDir(player, look, hand);
+        arrow.shoot(aim.x, aim.y, aim.z, ARROW_SPEED, ARROW_INACCURACY);
         arrow.setBaseDamage(ARROW_DMG * RelicSkills.power(stack)); // 평타도 각성·전역 배율을 받는다
         if (sl.getRandom().nextFloat() < CRIT_CHANCE) arrow.setCritArrow(true); // 확률 크리
         arrow.pickup = AbstractArrow.Pickup.DISALLOWED; // 별빛 화살(무한, 회수 불가)

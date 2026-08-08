@@ -44,10 +44,10 @@ const RELICS = {
   lancer: { id: 'lsrelics:lancer', name: '§c게볼그', title: 'lancer_relic', kind: '창 (좌클릭 찌르기·베기 · 우클릭 투창(차징) · 더블쉬프트 질풍 돌진 · 쉬프트+우클릭 꿰뚫기 · 쉬프트+좌클릭 백 개의 창)',
     lore: '운명을 꿰뚫는 단 하나의 창 — 던져도 네 손으로 돌아오나니, 겨눈 표적은 결코 달아나지 못한다.',
     echo: '던지면 돌아온다. 나는 그러지 못했다.' },
-  hecate: { id: 'lsrelics:hecate', name: '§3헤스페로스', title: 'hecate_relic', kind: '낫 (좌클릭 베기 — 맞을 때마다 저주 · R 재의 채찍 · V 재의 결계 · C 연좌 · X 헤카테의 밤)',
+  hecate: { id: 'lsrelics:hecate', name: '§3헤스페로스', title: 'hecate_relic', kind: '낫 (좌클릭 베기 — 맞을 때마다 저주 · R 재의 채찍 · V 재의 결계 · C 연좌 · X 헤카테의 밤 — 저주 최대 + 지대)',
     lore: '어둠이 세상을 삼킨 밤, 홀로 횃불을 들어 길을 밝힌 자의 낫 — 네가 새긴 저주는 동료 모두의 칼끝에서 타오른다.',
     echo: '내가 벤 것은 하나도 없다. 다만 벨 수 있게 만들었을 뿐이다.' },
-  harmonia: { id: 'lsrelics:harmonia', name: '§d케스토스', title: 'harmonia_relic', kind: '엮는 띠 (좌클릭 평타 — 약하다 · R 고양의 선율 · V 엮인 걸음 · C 결속의 매듭 · X 만상의 화음)',
+  harmonia: { id: 'lsrelics:harmonia', name: '§d바르비톤', title: 'harmonia_relic', kind: '저음 리라 (좌클릭 음률 — 원거리 연사 · R 고양의 선율 — 아군 버프/적 피해 · V 엮인 걸음 · C 결속의 매듭 · X 만상의 화음)',
     lore: '흩어진 것들을 하나로 엮는 띠 — 상처를 덮는 대신 사이를 잇는다. 이 띠가 닿는 곳에서 누구도 흐트러지지 않는다.',
     echo: '나 혼자로는 아무것도 못 했다. 그래서 우리를 묶었다.' }
 }

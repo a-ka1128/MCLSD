@@ -9,6 +9,17 @@
 
 ---
 
+## 0-A. 📌 운영 전제 — 이 서버는 비상업이다
+
+> **친구들끼리 하는 비공개 서버다. 수익 없음 · 후원 없음 · 공개 배포 없음.**
+> (2026-08-09 운영자 확인)
+
+아래 라이선스 판단은 **전부 이 전제 위에 서 있다.** 그래서 nongko 2팩의 「비상업이면 자유롭게」
+조건이 그대로 충족되고, §8 의 Blades of War 2 건도 현실적 위험이 낮은 상태로 유지된다.
+
+**이 전제가 깨지는 순간(후원 받기·서버 공개·모드 jar 배포·수익화) §8 을 다시 열 것.**
+그때는 nongko 쪽은 「문의 필요」로, Blades of War 2 쪽은 「허락 없음」으로 성격이 바뀐다.
+
 ## 0. 왜 이 조사를 다시 하면 안 되나
 
 무료 배포라도 **조건이 붙는다.** 아래 nongko 팩은 *비상업 무료 · 상업 이용은 작성자 문의*다.
@@ -27,14 +38,31 @@ py -c "import json,glob; [print(f, [e.get('name') for e in json.load(open(f,enco
 
 ## 2. ✅ 확인된 출처
 
-| 유물 | 모델 | 원본 이름 | 출처 | 조건 |
-|---|---|---|---|---|
-| 에레보스 (단검) | `assassin.json` | **Gloomsteel Knife** | nongko's 3D Weapons | 비상업 무료 |
-| 크라토스 (도끼) | `pioneer.json` | **Gilded Phoenix Greataxe** | nongko's 3D Weapons | 비상업 무료 |
-| 헤카테 (낫) | `hecate.json` | Lukah scythe | Scythes Vanilla Pack | **MIT** (§6 에서 확정) |
-| 하르모니아 (띠) | `harmonia.json` | 〃 (**재채색 자리맡기**) | 〃 | **MIT** |
+> **2026-08-09 2차 조사로 전부 확정됐다.** 아래 표에 「추정」이나 「불명」은 더 이상 없다.
+> 결정적 증거는 파일 내부가 아니라 **Claude Code 세션 기록**이었다 — §7 참조.
 
-- **nongko's 3D Weapons (Fantasy 3D Weapons CIT)** · 66종 · 128x
+| 유물 | 모델 | 원본 이름 | 출처 팩 | 라이선스 |
+|---|---|---|---|---|
+| 에레보스 (단검) | `assassin.json` | **Gloomsteel Knife** | nongko's Fantasy Weapons v1.20B | 비상업 허락 (§8) |
+| 크라토스 (도끼) | `pioneer.json` | **Gilded Phoenix Greataxe** | 〃 | 〃 |
+| 쿠훌린 (창) | `lancer.json` | **Crimson Lance** | 〃 | 〃 |
+| 우라니아 (지팡이) | `sage.json` | **Divine Staff** | nongko's Bows to Magic Staves CIT v1.7 | 〃 |
+| **아틀라스 (방패)** | `guardian.json` | **Royal Shield** | **Zerotekz's Blades of War 2 v1.9** | ⚠️ **ARR · 허락 문구 없음 (§8)** |
+| **오리온 (활 4종)** | `hunter.json` `hunter_pulling_0~2` | **Corrupted Bow** | 〃 | ⚠️ **ARR · 허락 문구 없음 (§8)** |
+| 헤카테 (낫) | `hecate.json` | **Blood Scythe** | Blood Scythe by Linaryx | **MIT** |
+| 하르모니아 (리라) | `harmonia.json` | **lyre** | Bard Craft (NeoForge 1.21.1) | **MIT** |
+
+**받은 원본 (07-23 · 세션 기록에 남은 실제 URL)**
+
+| 로컬 파일 | 다운로드 주소 |
+|---|---|
+| `fw_optifine.zip` | `cdn.modrinth.com/data/4XVKh1GK/versions/mVwbBD6H/nongko's_Fantasy_Weapons_v1.20B.zip` |
+| `staves.zip` | `cdn.modrinth.com/data/dthNENyP/versions/iluLuMmG/nongko's_Bows_To_Staves_v1.7.zip` |
+| `bow2.zip` | `cdn.modrinth.com/data/ZBlqsg00/versions/bjSXhkWv/Blades-of-War-2_v1.9.zip` |
+
+`tactical-3d-tools.zip`(crystal_longbow)도 받았지만 **채택되지 않은 후보**다.
+
+- **nongko's Fantasy Weapons (Fantasy 3D Weapons CIT)** · 66종 · 128x
   - https://www.curseforge.com/minecraft/texture-packs/nongko-3d-weapons
   - 무기 목록: https://nongkos-3d-weapons-guide.webflow.io/ · https://mc3dweapons.com/
   - ⚠️ **조건: "비상업 프로젝트면 자유롭게 사용, 상업 이용은 디스코드로 문의."**
@@ -45,23 +73,28 @@ py -c "import json,glob; [print(f, [e.get('name') for e in json.load(open(f,enco
   - 색은 채도 있는 픽셀만 색상환을 돌렸다 — 헤카테 녹청 `#17A2A2`, 하르모니아 로즈 `#E86A9A`.
     검은 금속부는 채도가 낮아 그대로 남는다
   - `display` 에 1인칭 변환이 없어 게볼그 값을 참고해 채웠다. 원본대로 두면 손에서 각도가 엉킨다
-  - ⚠️ **하르모니아는 자리 맡기다.** 「케스토스(엮는 띠)」인데 낫을 재채색해 쓰고 있다.
-    제대로 된 모델이 생기면 `models/item/harmonia.json` 과 `textures/item/harmonia.png`
-    **두 파일만** 덮으면 된다 — 아이템 ID·스킬·등록·밸런스는 하나도 안 바뀐다
+  - ✅ **2026-08-09 로 둘 다 교체됐다.** 낫은 Blood Scythe, 하르모니아는 Bard Craft 의 리라.
+    Scythes Vanilla 팩(lukah_scythe)은 더 이상 쓰지 않는다 — 아래 §9 참조
 
-## 3. ❓ 끝내 못 찾은 것 (검색 소진)
+## 3. ~~끝내 못 찾은 것~~ — **전부 찾았다 (2026-08-09)**
 
-| 유물 | 모델 | 내부 단서 | 해상도 |
-|---|---|---|---|
-| 아틀라스 (방패) | `guardian.json` | `plank_shield4` · `Layer 4 Copy` … | 128x |
-| 오리온 (활 4종) | `hunter.json` `hunter_pulling_0~2` | `corrupted (6)`, `corrupted (5)` … | 128x |
-| 우라니아 (지팡이) | `sage.json` | 텍스처 키 `staff_divine_staff` · 큐브 `Box1~Box18` | 64x |
+> 이 절에는 방패·활·지팡이가 「출처 불명, 이미지 역검색 외엔 방법 없음」으로 적혀 있었다.
+> **틀렸다.** 세션 기록에 다운로드 URL 이 그대로 남아 있었다(§7). 지금은 §2 표에 확정으로 들어가 있다.
+>
+> 절을 지우지 않고 남기는 이유 — **「파일 내부 단서가 바닥나면 끝」이라는 판단이 성급했다**는 기록이
+> 다음 조사에 더 쓸모 있다. 실제 순서는 *파일 내부 → 브라우저 기록 → **세션 기록*** 이었고,
+> 마지막 하나가 전부를 풀었다.
 
-- 128x 두 종은 nongko 팩과 해상도·반입 시각이 같지만 **그 팩엔 방패·활이 없다.** 다른 출처다.
-- `corrupted (6)` 의 괄호 숫자는 **다운로드 파일명 패턴**(`corrupted (6).bbmodel`)이다.
-  같은 이름을 여러 번 받았다는 뜻이라 **다운로드 폴더·브라우저 기록에 흔적이 남아 있을 수 있다.**
-- `Box1~Box18` 은 외부 3D 툴에서 변환된 흔적. `Layer N Copy` 는 이미지 레이어 → 3D 변환 흔적.
-- **남은 방법은 이미지 역검색뿐이다**(텍스트 검색으로는 안 나온다).
+당시 확보했던 내부 단서와 실제 정답의 대조 (단서 자체는 맞았다):
+
+| 유물 | 내부 단서 | 실제 |
+|---|---|---|
+| 아틀라스 | `plank_shield4` · `Layer 4 Copy` | **Royal Shield** (Blades of War 2) |
+| 오리온 | `corrupted (6)`, `corrupted (5)` … | **Corrupted Bow** (Blades of War 2) |
+| 우라니아 | 텍스처 키 `staff_divine_staff` | **Divine Staff** (Bows to Magic Staves) |
+
+`corrupted (6)` 의 괄호 숫자를 「다운로드 파일명」으로 읽은 건 맞았지만, 실제로는 **팩 안에서
+`corrupted_bow` 를 꺼내 쓰면서 블록벤치가 붙인 사본 번호**였다.
 
 ## 4. 🔧 자작으로 보이는 것
 
@@ -128,6 +161,141 @@ py -c "import json,glob; [print(f, [e.get('name') for e in json.load(open(f,enco
   저작자 표시는 **팩 이름(Scythes Vanilla Pack)** 으로 하는 게 맞다.
 
 따라서 §2 의 낫·띠 두 줄은 **MIT 확정**이다. 재배포·수정에 문제가 없다.
+
+## 7. 🔑 결정적 증거는 세션 기록에 있었다 (다음에도 여기부터 볼 것)
+
+**에셋을 받은 게 사람이 아니라 Claude 였다.** 그래서 다운로드 명령이 대화 기록에 그대로 남아 있다.
+브라우저 기록(§6)이 잘려 있어도 이쪽은 살아 있다 — **출처 조사는 여기부터 시작하는 게 맞다.**
+
+- 위치: `%USERPROFILE%\.claude\projects\D--Study-Server\*.jsonl`
+  (모드 작업은 `D:\Study\Server` 에서 했다. `D--Study-MC-*` 가 아니다 — 헷갈리기 쉽다)
+- 07-23 전후 세션 6개에서 `cdn.modrinth.com/...zip` 형태의 실제 URL 이 나왔다.
+
+찾는 순서:
+
+1. 모델 내부 이름을 뽑는다 (§1) → `royal_shield`, `corrupted_bow`, `divine_staff` …
+2. 그 이름으로 `*.jsonl` 을 grep → 같은 줄에 있는 **로컬 zip 파일명**(`bow2.zip`, `staves.zip`,
+   `fw_optifine.zip`)을 얻는다
+3. 그 zip 파일명으로 다시 grep → **다운로드 URL** 이 나온다
+4. `api.modrinth.com/v2/project/<id>` 로 **라이선스를 직접 조회**한다 (페이지 표기보다 정확)
+
+## 8. ⚠️ 라이선스 실태 — Modrinth 기준 셋 다 ARR
+
+`api.modrinth.com` 조회 결과(2026-08-09):
+
+| 팩 | `license.id` |
+|---|---|
+| Fantasy 3D Weapons CIT (nongko) | `LicenseRef-All-Rights-Reserved` |
+| Bows to Magic Staves CIT (nongko) | `LicenseRef-All-Rights-Reserved` |
+| Zerotekz's Blades of War 2 | `LicenseRef-All-Rights-Reserved` |
+
+**nongko 2팩 — 실질적으로 문제없다.** 작성자가 자기 가이드 사이트에 *"비상업 프로젝트면 자유롭게
+사용, 상업 이용은 디스코드로 문의"* 라고 명시해 뒀다. Modrinth 메타데이터가 ARR 인 것과 별개로
+**작성자 본인의 허락이 있다.** 사설 서버는 해당 없음. 후원·유료화가 붙으면 그때 문의.
+
+**⚠️ Blades of War 2 (방패 1 + 활 4) — 허락 문구가 없다.**
+
+- 프로젝트 페이지에 사용·재배포·수정에 대한 언급이 **하나도 없고**, "필요하면 디스코드로 오라"만 있다.
+- 우리는 이걸 **리소스팩이 아니라 모드 jar 안에 넣어 재배포하는 형태**로 쓰고 있다.
+- **현재는 비상업 비공개 운영이라(§0-A) 현실적 위험이 낮다.** 다만 **jar 배포·서버 공개·수익화 시
+  성격이 달라진다** — 허락 문구가 아예 없다는 건 「비상업이면 OK」조차 명시돼 있지 않다는 뜻이다.
+- 정리하려면: ① 작성자 디스코드(https://discord.gg/CdawEAH4va)에 문의 — 가장 확실 ·
+  ② 그 5개 파일만 다른 출처로 교체 · ③ 현 상태 유지하고 비공개 운영을 지킨다.
+- **이건 판단이 아니라 상태 보고다.** 결정은 운영자 몫이고, 결정하면 그 근거를 여기 적어둘 것.
+
+## 9. 🎨 헤카테·하르모니아 모델 교체 (2026-08-09)
+
+둘 다 자리맡기(낫 재채색)였다. **정식 모델로 갈아끼웠고, 둘 다 MIT 다.**
+
+| 유물 | 새 모델 | 출처 | 요소 |
+|---|---|---|---|
+| 헤카테 | Blood Scythe | [blood-scythe](https://modrinth.com/resourcepack/blood-scythe) · MIT | 26 (이전 50) |
+| 하르모니아 | lyre | [bard-craft](https://modrinth.com/mod/bard-craft) · MIT · NeoForge 1.21.1 | 23 (이전 50) |
+
+### 팔레트 — 감이 아니라 기존 텍스처에서 뽑았다
+
+기존 유물 텍스처 9장을 세어 보니 실제 구성이 이랬다:
+**금색 43.8% · 남색 22.2% · 흰색 18.3%** (주황/구리 11%는 방패·총 국지색이라 제외).
+대표값은 금색 `#EEE74F`/`#E4D042`, 남색 `#495987`/`#889CCA`, 흰색 `#FCFCFF`/`#D6DDEC`.
+
+**색상환 회전은 여기선 안 통했다.** 낫 자리맡기에 쓴 그 방식은 원본이 유채색일 때만 먹히는데
+Blood Scythe 는 86% 가 무채색 검정이라 아무리 돌려도 검정이다. 그래서 **명도 램프 대응**으로 갔다:
+
+- 채도 높은 픽셀(붉은 강조) → 금색 램프
+- 무채색 상위 밝기 → 흰색 램프
+- 무채색 중간 → 금색 · 가장 어두운 곳만 → 남색 (「남색은 가장 적게, 가장 어둡게」 지시 반영)
+
+여기서 한 번 틀렸다 — 처음엔 「V≥0.5 면 밝은 픽셀」이라는 **절대 기준**을 썼더니 흰색이 0% 나왔다.
+원본 무채색이 V 0.00~0.26 에 전부 몰려 있어서(중앙값 0.18) 그 기준으론 아무것도 안 걸린다.
+**실제 분포를 재서 상대 기준으로 갈라야 한다.** 최종 비율은 금색 54.8% · 흰색 31.1% · 남색 14.0%.
+
+### 설치할 때 그냥 복사하면 안 되는 것 셋
+
+1. **textures 네임스페이스** — 원본이 `bard_craft:item/harp_texture`, `item/netherite_sword` 를
+   가리킨다. `lsrelics:item/<이름>` 으로 바꾸고 face 의 `texture` 도 `#0` 으로 통일해야 한다.
+2. **`light_emission: 12`** — 유물은 전부 은은하게 빛난다. 새 모델엔 그 값이 없어서 넣어줬다.
+3. **`firstperson_*` 변환** — Blood Scythe 에는 아예 없다. 그대로 두면 손에서 각도가 엉킨다.
+   기존 `hecate.json` 의 검증된 값을 물려받았다. (하르모니아 리라는 자체 값이 있어 그대로 뒀다.)
+
+### 잃은 것
+
+**낫에 붙어 있던 사슬 10큐브(`chain_0`~`chain_weight`)가 사라졌다.** 이전 세션이 lukah_scythe 에
+직접 붙인 것이라 형태가 다른 Blood Scythe 에는 그대로 안 맞는다. 유저 결정으로 버렸다.
+다시 원하면 좌표를 새로 잡아야 한다.
+
+### 9-A. 교체 직후 손본 것 (2026-08-09, 유저 지시)
+
+#### ① 헤카테 — 세 부위 색분리 (`tools/recolor_hecate.py`)
+
+색만 보고 바꾸면 안 된다. **텍스처가 UV 아틀라스라 「자루의 금색」과 「날의 금색」이 같은 픽셀
+값**이어서 둘이 같이 물든다. 그래서 모델의 면 UV 를 읽어 픽셀마다 주인을 먼저 정한 뒤
+부위별로 다른 램프에 얹었다.
+
+| 부위 | element | 픽셀 | 색 |
+|---|---|---:|---|
+| 자루 | 0·1 (장대 두 토막) | 304 | **어두운 남색** |
+| 날의 호 | 2·3·4·8·9·10·14~18·22~25 (굽은 날 본체 + 앞뒤 칼끝 + 옆 장식띠) | 437 | **금색** |
+| 나머지 | 5·6·7·11·12·13·19·20·21 (소켓·브래킷 + 뒤쪽 짧은 돌기) | 244 | **흰색** |
+
+**셋이 공유하는 픽셀이 하나도 없다** — 그래서 이 방식이 깨끗하게 먹힌다. 우연이 아니라
+원저자가 부위별로 UV 를 갈라 배치해 둔 덕이다.
+
+단색으로 칠하지 않고 **부위 «안에서» 명도를 정규화해 램프에 얹는다.** 안 그러면 원래 있던
+밝고 어두운 띠가 사라져 민무늬 막대가 된다. 부위마다 따로 정규화하는 게 중요하다 —
+텍스처 전체 범위로 펴면 좁은 부위의 대비가 눌린다.
+
+※ 2단계로 갔다. 처음엔 「자루=남색 / 날=흰색+금색(원래 금색은 유지)」였는데, 유저가 보고
+**「날의 호만 금색, 나머지 아래는 흰색」**으로 다시 잡았다. 지금 값이 후자다.
+
+⚠️ **element 14~18 은 두께 0인 평면**(`from.x == to.x`)이고, 그 퇴화면 넷의 UV 가 전부
+`[0,0,0,x]` — 텍스처 **0번 열**을 가리킨다. 블록벤치가 안 쓰는 면에 남긴 쓰레기 값인데,
+0번 열은 자루가 쓰는 자리라 「자루와 날이 9픽셀을 공유한다」는 **가짜 충돌**이 잡힌다.
+그걸 자루로 넘기면 날 뒷날이 통째로 남색이 됐다. → 넓이 0인 면은 소유권 계산에서 뺀다.
+
+#### ② 하르모니아 리라 — 바닥 겹침 (모델 수정)
+
+유저가 아래쪽을 짚어줬다. 겹침 21쌍 중 **대부분은 정상적인 결구**(모서리 조각이 베이스·기둥에
+파고든 것 — 안쪽 면이라 안 보인다)였고, 진짜 문제는 **면이 정확히 같은 평면에 놓인 곳**이었다.
+
+| 고친 것 | 왜 |
+|---|---|
+| el12·el22 (바닥 45° 모서리) `x 7~9` → `7.01~8.99` | 베이스·기둥과 **x=7·x=9 옆면을 공유**해 z-파이팅. 8쌍이 이거 하나로 풀린다 |
+| 현 11개 `from.y 1` → `0.9` | 현 아랫면이 베이스 윗면과 같은 평면이었다. 0.1 파묻어 아랫면을 숨긴다 |
+| el13 south · el19 north · el14 south · el20 north 의 UV | **바깥을 보는 면인데 현(흰색) 텍셀을 물고 있었다.** 기둥 바깥에 회색 얼룩으로 보였다. 같은 element 의 안쪽 면 UV(크기 동일·금색)로 교체 |
+
+0.01칸 = 1/1600 블록이라 눈에 안 보인다. 「겹치지 않게 떼어놓기」보다 **바깥 실루엣을 정하는
+쪽(베이스·기둥)을 남기고 채우는 쪽(모서리 조각)을 안으로 넣는 것**이 맞다.
+
+#### ③ ⚠️ 미리보기 도구가 거짓말을 하고 있었다 — `tools/render_model.py`
+
+**면 매핑이 마크와 어긋나 있었다.** `corners()` 의 비트는 (1=x, 2=z, 4=y) 인데 `FACES` 의
+`'north'` 가 `(0,2,6,4)` — **x 가 고정된 면**이었다. 마크에서 north 는 −Z 면이다.
+여섯 면이 다 있는 보통 상자에서는 «다른 면의 UV 가 서로 바뀌어» 붙을 뿐이라 형태가 맞아
+눈치채기 어려웠는데, **두께 0인 평면**에서 정체가 드러났다: 인게임엔 없는 얼룩덜룩한 띠가
+헤카테 날 뒤쪽에 크게 그려졌고(위 ①의 그 쓰레기 UV), 리라 바닥에도 흰 반점이 깔렸다.
+
+→ `north↔west` · `south↔east` 를 맞바꿔 고쳤다. **그 전에 이 도구로 본 모든 미리보기는
+면 텍스처가 서로 바뀐 그림이다.**
 
 ---
 

@@ -7,8 +7,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-// 케스토스 — 엮는 띠(하르모니아의 가호). 버프·지휘.
-//   · 좌클릭 = 평타 (약하다 — 이 유물은 때리는 물건이 아니다)
+// 바르비톤 — 저음 리라(하르모니아의 가호). **원거리 지원 딜러.**
+//   · 좌클릭 = 음률 (홀드 연사 — 로즈빛 음표 투사체)
 //   · R = 고양의 선율 (기본, 1성)   · V = 엮인 걸음 (이동, 2성)
 //   · C = 결속의 매듭 (추가, 3성)   · X = 만상의 화음 (궁극, 4성)
 //   · 패시브(1성) = 공명 — 주변 8칸 아군 이동속도 +10% · 아군 처치 시 공격력 중첩 (HarmonyManager)
@@ -18,13 +18,28 @@ import net.minecraft.world.item.ItemStack;
 // 이쪽이 «강화» 절반을 갖는다. 둘이 같은 파티에 있어도 역할이 안 먹힌다
 // (docs/CLASS-9-10.md §2 설계 의도 1).
 //
-// ── /dummy 로는 0 이 나온다 ──
-// 피해를 주는 스킬이 하나도 없다. 그게 정상이다 — 값어치가 전부 남의 숫자로 나가기 때문이다.
-// 실측은 「하르모니아가 있을 때 파티 총합」으로 재야 하고, 그건 8종 단독 측정과 다른 방법이다.
+// ── 근접 → 원거리 지원 딜러 (2026-08-09, 유저 결정) ──
+// 원래는 근접이었고 피해를 주는 스킬이 하나도 없었다. 설계 의도는 맞았지만 실제로는
+// **버프를 거는 사람이 근접 사거리까지 걸어 들어가야 하는** 모양이었다.
+//   → 좌클릭을 투사체로 바꾸고(`RelicSkills.chordShot`) 근접 공격력 속성을 뗐다.
+//   → 스킬 넷에도 피해를 얹었다(docs/CLASS-9-10.md §2-B).
+// 총합 목표는 **78** — 원거리 셋(97~99)보다 20% 낮다. 딜러 대역까지 올리면 화력과 파티 버프를
+// 한 명이 다 갖게 되어 안 뽑을 이유가 없는 픽이 된다.
 public class HarmoniaSash extends Item implements RelicActions {
 
     public HarmoniaSash(Properties properties) {
         super(properties);
+    }
+
+    // ── 좌클릭 = 음률(원거리 평타) ──
+    @Override
+    public boolean firesOnLeftClick() {
+        return true;
+    }
+
+    @Override
+    public void leftAttack(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        RelicSkills.chordShot(level, player, stack);
     }
 
     // ── R = 고양의 선율 (기본·1성) ──

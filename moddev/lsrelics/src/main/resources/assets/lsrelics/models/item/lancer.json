@@ -1,5 +1,5 @@
 {
-  "credit": "LIKELY (unconfirmed): internal cube name crimson_lance, 128x, matches nongko's 3D Weapons (Fantasy 3D Weapons CIT) - free for noncommercial use, contact author for commercial. curseforge.com/minecraft/texture-packs/nongko-3d-weapons",
+  "credit": "CONFIRMED: Crimson Lance from nongko's Fantasy Weapons v1.20B (Fantasy 3D Weapons CIT, modrinth 4XVKh1GK). Author grants noncommercial use, commercial by request; Modrinth metadata says All Rights Reserved",
   "textures": {
     "1": "lsrelics:item/lancer",
     "particle": "lsrelics:item/lancer",

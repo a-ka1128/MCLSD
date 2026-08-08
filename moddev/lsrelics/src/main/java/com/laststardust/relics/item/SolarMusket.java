@@ -431,15 +431,16 @@ public class SolarMusket extends Item implements RelicActions {
         }
 
         // ── 발사 ──
-        Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
-        BulletManager.fire(level, player, eye.add(look.scale(0.6)), look,
+        // 총구는 눈이 아니라 손이다 — 연사(초당 6발)에서 눈앞 화염·연기가 조준을 통째로 가렸다.
+        // muzzleDir 이 조준선 위 한 점으로 수렴시키므로 스코프 저격 정확도는 그대로다.
+        Vec3 muzzle = RelicSkills.muzzle(player, look);
+        BulletManager.fire(level, player, muzzle, RelicSkills.muzzleDir(player, look, muzzle),
             RelicSkills.dmg(stack, rifle ? RIFLE_DMG : (scoped ? SCOPE_DMG : BULLET_DMG)),
             scoped ? SCOPE_BULLET_LIFE : BULLET_LIFE, scoped,
             rifle ? "연사" : (scoped ? "스코프" : "평타"));
 
         // 총구 화염 + 반동감 있는 사운드 (스코프는 더 묵직하게)
-        Vec3 muzzle = eye.add(look.scale(1.0));
         int n = scoped ? 10 : 6;
         level.sendParticles(ParticleTypes.FLAME, muzzle.x, muzzle.y, muzzle.z, n, 0.05, 0.05, 0.05, 0.02);
         level.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, n + 2, 0.08, 0.08, 0.08, 0.01);

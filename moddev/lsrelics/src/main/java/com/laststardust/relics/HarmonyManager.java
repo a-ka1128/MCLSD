@@ -39,21 +39,28 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 public final class HarmonyManager {
     private HarmonyManager() {}
 
-    // ── 수치 (docs/CLASS-9-10.md §2) ──
+    // ── 수치 (docs/CLASS-9-10.md §2·§2-B) ──
+    //
+    // ⚠️ 2026-08-09 에 «자기 피해»가 붙으면서 «남에게 주는 버프»를 한 차례 깎았다.
+    //    이 직업은 원래 화력이 0에 가까운 대신 버프가 컸는데, 원거리 지원 딜러(총합 78)가 되면서
+    //    양쪽을 다 가지면 안 뽑을 이유가 없는 픽이 된다. 딜이 +44% 늘어난 만큼 버프를 −20% 했다.
+    //    **이동속도 계열은 안 깎았다** — 그건 파티 화력에 안 잡히고, 「같이 움직이게 만든다」는
+    //    이 직업의 정체성 그 자체라 여기서 빼면 남는 게 숫자뿐이다.
     public static final double AURA_RANGE   = 8.0;
-    public static final float  AURA_SPEED   = 0.10f;   // 주변 아군 이동속도 +10%
-    public static final float  KILL_ATK     = 0.05f;   // 처치 시 공격력 +5%
-    public static final int    KILL_MAX     = 3;
+    public static final float  AURA_SPEED   = 0.10f;   // 주변 아군 이동속도 +10% (유지 — 이속)
+    public static final float  KILL_ATK     = 0.04f;   // 처치 시 공격력 +4% (5→4)
+    public static final int    KILL_MAX     = 3;       // 최대 +12% (15→12)
     public static final int    KILL_TICKS   = 160;     // 8초
-    public static final float  ANTHEM_ASPD  = 0.25f;   // R — 공격속도 +25%
+    public static final float  ANTHEM_ASPD  = 0.20f;   // R — 공격속도 +20% (25→20)
     public static final int    ANTHEM_TICKS = 80;      // 4초
     public static final double KNOT_RANGE   = 6.0;
-    public static final float  KNOT_DR      = 0.15f;   // C — 받는 피해 −15%
-    public static final float  KNOT_CDR     = 0.02f;   // C — 초당 남은 쿨의 2% 를 당긴다
+    public static final float  KNOT_DR      = 0.12f;   // C — 받는 피해 −12% (15→12)
+    public static final float  KNOT_CDR     = 0.02f;   // C — 초당 남은 쿨의 2% 를 당긴다 (유지)
     public static final int    KNOT_TICKS   = 240;     // 12초
-    public static final double CHORD_RANGE  = 24.0;
-    public static final float  CHORD_ATK    = 0.30f;   // X — 공격력 +30%
-    public static final float  CHORD_SPEED  = 0.25f;   // X — 이동속도 +25%
+    public static final double CHORD_RANGE  = 24.0;    // X — 버프가 닿는 거리
+    public static final double CHORD_ZONE   = 10.0;    // X — 적을 때리는 지대 반경 (버프보다 좁다)
+    public static final float  CHORD_ATK    = 0.20f;   // X — 공격력 +20% (30→25→20)
+    public static final float  CHORD_SPEED  = 0.20f;   // X — 이동속도 +20% (유지 — 이속)
     public static final int    CHORD_TICKS  = 200;     // 10초
     public static final int    CHORD_IMMUNE = 60;      // X — 디버프 재부여 면역 3초
 
@@ -251,7 +258,8 @@ public final class HarmonyManager {
     }
 
     /** 서버가 내려갈 때 비운다 — 싱글에서 월드를 바꿔 열면 이전 상태가 남는다. */
-    public static void reset() {
+    @SubscribeEvent
+    public static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
         ANTHEM.clear(); CHORD.clear(); IMMUNE.clear(); KILLS.clear(); KNOTS.clear();
     }
 }

@@ -107,17 +107,16 @@ public final class RelicSkills {
     // 실제로 날아가는 투사체(BoltManager). 히트스캔 빔은 경로 전체를 그려 시야를 가려서 교체.
     public static void magicBolt(ServerLevel level, Player player, ItemStack stack) {
         if (!shotReady(level, stack, 8)) return; // 초당 2.5발
-        Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
+        Vec3 hand = muzzle(player, look);
         if (player instanceof ServerPlayer sp) {
             // 5.32 -> 2.87 (2026-07-27). 스킬별 계측에서 별지기의 평타가 67% 였다.
             // 마법사는 평타보다 스킬이 우선인 직업이라 그 비율이 뒤집혀 있었다.
             // 평타 40% / 스킬 60% 가 되도록 내린다 (스킬 쪽은 중력 붕괴·초신성을 올린다).
-            BoltManager.fire(level, sp, eye.add(look.scale(0.5)), look, dmg(stack, 2.99f), 22); // x1.041
+            BoltManager.fire(level, sp, hand, muzzleDir(player, look, hand), dmg(stack, 2.99f), 22); // x1.041
         }
-        // 총구 섬광만 짧게
-        level.sendParticles(ParticleTypes.END_ROD,
-            eye.x + look.x * 0.7, eye.y + look.y * 0.7, eye.z + look.z * 0.7, 5, 0.05, 0.05, 0.05, 0.02);
+        // 총구 섬광만 짧게 — 손 위치에서 (눈앞에 띄우면 매 발 화면을 가린다)
+        level.sendParticles(ParticleTypes.END_ROD, hand.x, hand.y, hand.z, 5, 0.05, 0.05, 0.05, 0.02);
         level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.PLAYERS, 1.0f, 1.7f);
         level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.5f, 2.0f);
     }
@@ -127,7 +126,6 @@ public final class RelicSkills {
     public static void meteorShot(Level level, Player player, ItemStack stack) {
         if (!(level instanceof ServerLevel sl)) return;
         if (!ready(sl, player, stack, "cdMeteor", "유성 사격", 200, 3)) return;
-        Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
 
         int n = 3;
@@ -144,8 +142,10 @@ public final class RelicSkills {
             double offRad = Math.toRadians((i - (n - 1) / 2.0) * spreadDeg);
             Vec3 dir = rotateYaw(look, offRad);
             Arrow arrow = com.laststardust.relics.LsArrows.create(sl, player, stack);
-            arrow.setPos(eye.x, eye.y - 0.1, eye.z);
-            arrow.shoot(dir.x, dir.y, dir.z, 3.2f, 0.4f);
+            Vec3 hand = muzzle(player, dir);
+            arrow.setPos(hand.x, hand.y, hand.z);
+            Vec3 aim = muzzleDir(player, dir, hand);
+            arrow.shoot(aim.x, aim.y, aim.z, 3.2f, 0.4f);
             arrow.setBaseDamage(2.54); // 1.32 -> ... -> 2.91 -> 2.54 (x0.874)
             if (sl.getRandom().nextFloat() < 0.6f) arrow.setCritArrow(true); // 화살 크리
             arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
@@ -173,8 +173,9 @@ public final class RelicSkills {
             sl.sendParticles(ParticleTypes.END_ROD, arrow.getX(), arrow.getY(), arrow.getZ(), 6, 0.05, 0.05, 0.05, 0.02);
             sl.addFreshEntity(arrow);
         }
-        sl.sendParticles(ParticleTypes.FLASH, eye.x, eye.y, eye.z, 1, 0, 0, 0, 0);
-        dustBurst(sl, eye, 0.5, 25, GOLD, 1.2f);
+        Vec3 flash = muzzle(player, look);
+        sl.sendParticles(ParticleTypes.FLASH, flash.x, flash.y, flash.z, 1, 0, 0, 0, 0);
+        dustBurst(sl, flash, 0.5, 25, GOLD, 1.2f);
         play(level, player, SoundEvents.ARROW_SHOOT, 1.3f, 0.8f);
         play(level, player, SoundEvents.FIREWORK_ROCKET_LAUNCH, 0.9f, 1.3f);
     }
@@ -188,8 +189,9 @@ public final class RelicSkills {
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         tag.putLong("hasteUntil", now + 80); // 4초
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
-        sl.sendParticles(ParticleTypes.FIREWORK, player.getX(), player.getEyeY(), player.getZ(), 30, 0.4, 0.4, 0.4, 0.12);
-        dustBurst(sl, player.getEyePosition(), 0.6, 25, GOLD, 1.2f);
+        // 자기 몸 주위 — 눈높이에 띄우면 4초 버프 하나에 화면이 잠깐 하얘진다
+        sl.sendParticles(ParticleTypes.FIREWORK, player.getX(), player.getY() + 0.9, player.getZ(), 30, 0.5, 0.5, 0.5, 0.12);
+        dustBurst(sl, player.position().add(0, 0.9, 0), 0.7, 25, GOLD, 1.2f);
         ring(sl, player.getX(), player.getY() + 0.1, player.getZ(), 1.0, 20, ParticleTypes.ELECTRIC_SPARK, 0.2);
         play(level, player, SoundEvents.FIREWORK_ROCKET_LAUNCH, 1.0f, 1.7f);
         play(level, player, SoundEvents.AMETHYST_BLOCK_CHIME, 1.2f, 1.9f);
@@ -1415,6 +1417,41 @@ public final class RelicSkills {
         return base * power(stack) + (float) (weaponAttack(stack) * WEAPON_SCALE);
     }
 
+    // ─────────────────────────────── 총구 위치 ───────────────────────────────
+    //
+    // 투사체가 나가는 «손» 자리. 화살·마법탄·총알·힐 줄기가 전부 이걸 쓴다.
+    //
+    // ── 왜 눈에서 쏘면 안 되나 ──
+    // 원래는 전부 `eye + look*0.5` 였다. 1인칭에서 그 점은 **조준선 한복판**이라, 발사 연출과
+    // 비행 파티클이 화면 정중앙에 겹쳐 앞이 안 보였다. 초당 2~3발 나가는 무기(별빛 탄·태양탄)
+    // 에서 특히 심했고, 힐 줄기는 아군 쪽으로 굵게 그어져 시야를 통째로 덮었다.
+    // 눈보다 낮고 주손 쪽으로 비킨 자리로 옮긴다 — 손에서 나가는 것처럼 보이면서 가운데가 뚫린다.
+    private static final double MUZZLE_DROP    = 0.30;   // 눈 아래
+    private static final double MUZZLE_SIDE    = 0.22;   // 주손 쪽
+    private static final double MUZZLE_FORWARD = 0.60;
+
+    public static Vec3 muzzle(Player player, Vec3 look) {
+        Vec3 side = new Vec3(-look.z, 0, look.x);
+        if (side.lengthSqr() < 1.0e-6) side = new Vec3(1, 0, 0);   // 바로 위/아래를 볼 때
+        double hand = player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? 1 : -1;
+        return player.getEyePosition()
+            .add(look.scale(MUZZLE_FORWARD))
+            .add(side.normalize().scale(MUZZLE_SIDE * hand))
+            .add(0, -MUZZLE_DROP, 0);
+    }
+
+    // ── 옆으로 비킨 만큼은 «수렴»으로 갚는다 ──
+    // 총구를 그냥 평행 이동시키면 쏜 것이 조준선에서 항상 0.22칸 옆으로 간다. 거리에 상관없이
+    // 일정한 빗나감이라 몹 폭(0.6칸) 안이긴 하지만, 스코프 저격처럼 정확도가 정체성인 무기에서는
+    // 눈과 손의 어긋남이 그대로 미스가 된다. 조준선 위의 한 점을 향하게 해서 그 오차를 없앤다.
+    // 고정 거리로 수렴시킨다 — 매 발 레이캐스트를 돌릴 만한 값어치가 없다(3칸에서 0.19칸,
+    // 40칸에서 0.15칸으로 어차피 히트박스 안이다).
+    private static final double MUZZLE_CONVERGE = 24.0;
+
+    public static Vec3 muzzleDir(Player player, Vec3 look, Vec3 from) {
+        return player.getEyePosition().add(look.scale(MUZZLE_CONVERGE)).subtract(from).normalize();
+    }
+
     // 다단히트·지속피해용. 무기 공격력 항을 빼고 각성 배율만 적용한다.
     // 장판이 5초간 매 초, 화살비가 3초간 90발씩 때리는데 매 타격마다 무기 보너스를 더하면
     // 그 항이 타격 수만큼 곱해져 단발 스킬의 몇 배가 되어버린다. (접두사·젬으로 공격력이 붙으면 더 심해짐)
@@ -1806,6 +1843,12 @@ public final class RelicSkills {
     // 친구끼리 하는 서버에서 그런 함정은 재미가 아니라 그냥 실수다. 복사는 순수하게 이득이다.
     //
     // 대상에게 저주가 없으면 쿨을 돌려준다 — 헛방으로 16초를 날리면 억울하다.
+    //
+    // ── 피해를 붙였다 (2026-08-09) ──
+    // 원래 이 스킬은 피해가 0이었다. 「남의 딜을 올리는 직업」이라는 설계는 맞았지만, 넷 중 셋이
+    // 숫자를 하나도 안 띄우니 **쓰고 나서 뭘 했는지 화면에 안 남았다.** 값은 재의 채찍(7.4)보다
+    // 낮게 잡는다 — 대상 7.0, 옮겨붙는 쪽은 그 절반. 이 스킬의 주인공은 여전히 중첩이지
+    // 피해가 아니고, 저주 걸린 적을 먼저 만들어야 나간다는 조건값도 그대로다.
     public static void guiltByAssociation(Level level, Player player, ItemStack stack) {
         if (!(level instanceof ServerLevel sl)) return;
         if (!ready(sl, player, stack, "cdGuilt", "연좌", 320, 3)) return;
@@ -1847,6 +1890,7 @@ public final class RelicSkills {
             // 상한은 대상마다 다르다(보스 8 / 잡몹 5) — set() 안에서 걸린다
             com.laststardust.relics.CurseManager.set(e,
                 Math.max(com.laststardust.relics.CurseManager.stacks(e), src));
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 3.5f), "연좌");
             beamDust(sl, c, e.getBoundingBox().getCenter(), 0.4, TEAL, 1.3f);
             sl.sendParticles(ParticleTypes.SOUL, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
                 10, 0.3, 0.3, 0.3, 0.02);
@@ -1855,6 +1899,7 @@ public final class RelicSkills {
 
         // 원본의 지속시간도 새로 채운다 — 퍼뜨리는 동안 원본이 꺼지면 이상하다
         com.laststardust.relics.CurseManager.set(target, src);
+        LsDamage.hit(target, relicSource(sl, player), dmg(stack, 7.0f), "연좌");
         dustBurst(sl, c, 1.5, 40, TEAL, 1.5f);
         shockRing(sl, c.x, c.y, c.z, 6.0, 48, ParticleTypes.SCULK_SOUL, 0.03);
         play(level, player, SoundEvents.CHAIN_BREAK, 1.0f, 0.6f);
@@ -1866,10 +1911,17 @@ public final class RelicSkills {
     }
 
     // ─────────────────────────────── 궁극: 헤카테 "헤카테의 밤" (궁극·4성) ───────────────────────────────
-    // X 키. 반경 12칸 12초 — 저주 즉시 최대 · 회복 차단 · 받는 피해 +10% · 적 공격력 −20%. 쿨 60초.
+    // X 키. 반경 12칸 12초 — 저주 즉시 최대 · 회복 차단 · 받는 피해 +10% · 적 공격력 −15%
+    //        + 그 12초 동안 지대가 남아 초당 피해. 쿨 60초.
     //
     // 한 문장으로: **우리는 더 아프게 때리고, 적은 덜 아프게 때린다.**
     // 다른 여덟 유물의 궁극이 전부 «자기 화력»인데 이것만 «판을 바꾼다».
+    //
+    // ── 장판을 얹고 약화를 20%→15% 로 내렸다 (2026-08-09) ──
+    // 궁극을 눌렀는데 화면에 숫자가 하나도 안 뜨는 게 문제였다. 지대(DamageZoneManager)가
+    // 12초 동안 초당 피해를 넣어 «지금 이게 일하고 있다»를 보여준다. 그 대신 약화를 5%p
+    // 돌려준다 — 판을 흔드는 총량은 그대로 두고 성격만 절반 옮긴 것이다.
+    // 지대 피해는 저주(+15~24%)와 약점 노출(+10%)을 스스로 타므로 표기값보다 실제로 더 들어간다.
     //
     // ※ 「방어구 무시 20%」안이 있었는데 뺐다. 마크 잡몹은 방어도가 0~2 라 그 20% 가 실제로는
     //   +0.3% 였고, 중장갑 보스에게만 +13% 로 튀었다 — 진폭 40배짜리 죽은 줄이었다.
@@ -1889,7 +1941,7 @@ public final class RelicSkills {
             com.laststardust.relics.CurseManager.set(e,
                 com.laststardust.relics.CurseManager.cap(e));      // 즉시 최대 (보스는 8)
             com.laststardust.relics.CurseManager.blockHeal(e, ticks);
-            com.laststardust.relics.CurseManager.weaken(e, 0.20f, ticks);
+            com.laststardust.relics.CurseManager.weaken(e, 0.15f, ticks);
             // 받는 피해 +10% 는 기존 「약점 노출」 표식을 그대로 쓴다 — 같은 일을 두 번 구현하면
             // 나중에 한쪽만 고치게 된다 (WeaknessHandler).
             e.getPersistentData().putLong("lsWeakUntil", level.getGameTime() + ticks);
@@ -1897,6 +1949,12 @@ public final class RelicSkills {
                 14, 0.4, 0.4, 0.4, 0.03);
             touched++;
         }
+
+        // 남는 지대 — 지금 안 걸린 적도, 나중에 걸어 들어오는 적도 탄다.
+        // 즉발 판정만 있으면 「궁극을 쓴 다음 몰려온 무리」에겐 아무 일도 안 일어난다.
+        com.laststardust.relics.DamageZoneManager.start(level, player, c, r,
+            dmgTick(stack, 2.2f), ticks, "hecate_night", "헤카테의 밤",
+            TEAL, ParticleTypes.SOUL_FIRE_FLAME);
 
         // ── 연출: 달빛이 꺼지고 잿빛 원이 퍼진다 ──
         for (int i = 1; i <= 4; i++) {
@@ -1913,19 +1971,71 @@ public final class RelicSkills {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    //  하르모니아 — 케스토스(엮는 띠). 버프·지휘.
+    //  하르모니아 — 바르비톤(저음 리라). 버프·지휘.
     //
     //  **회복이 하나도 없다.** 히기에이아가 서포트의 «회복» 절반을 갖고 이쪽이 «강화» 절반을
     //  갖는다 — 여기에 힐이나 보호막을 넣으면 두 직업이 같은 자리를 놓고 싸운다
-    //  (docs/CLASS-9-10.md §2 설계 의도 1).
+    //  (docs/CLASS-9-10.md §2 설계 의도 1). 그 규칙은 아래 어느 것도 안 건드린다.
     //
-    //  피해를 주는 스킬이 하나도 없어서 /dummy 로는 **0 이 나온다.** 그게 정상이다 —
-    //  이 유물의 값어치는 전부 남의 숫자로 나간다. 실측은 「하르모니아가 있을 때 파티 총합」으로
-    //  재야 하고, 그건 8종 단독 측정과 다른 방법이다.
+    //  ── 원거리 지원 딜러가 됐다 (2026-08-09, 유저 결정 · docs/CLASS-9-10.md §2-B) ──
+    //  처음엔 근접이었고 스킬 넷이 전부 아군 강화라 /dummy 로 **0 이 나왔다.** 설계로는 맞았지만
+    //  실제로는 두 가지가 걸렸다: 버프를 거는 사람이 근접 사거리까지 들어가야 했고, 궁극을 눌러도
+    //  내 화면엔 아무 숫자도 안 떴다.
+    //    → 좌클릭을 음률(투사체)로 · 스킬 넷 중 셋에 피해를 얹음 · 늘어난 만큼 버프를 −20%
+    //  이제 /dummy 로 재도 숫자가 나온다(목표 총합 78). 다만 이 유물의 값어치 절반은 여전히
+    //  남의 숫자로 나가므로, **단독 측정값만으로 다른 유물과 비교하면 안 된다.**
     // ═══════════════════════════════════════════════════════════════════════════
 
+    // ─────────────────────────────── 좌클릭 평타: 하르모니아 "음률" ───────────────────────────────
+    //
+    // 로즈빛 음표가 날아간다(BoltManager). 초당 3.33발 · 발당 `3.8` — 합쳐서 약 68 DPS.
+    //
+    // ── 왜 원거리가 됐나 (2026-08-09, 유저 결정) ──
+    // 원래는 근접이었다. 「때리는 물건이 아니다」라 공격력을 유물 중 제일 낮게 준 건데,
+    // 그러면 **버프를 거는 사람이 근접 사거리까지 걸어 들어가야 한다.** 서포터가 제일 서면 안
+    // 되는 자리이고, 실제로 파티에서 그렇게 굴러가지도 않는다.
+    //
+    // ── 왜 「지원 딜러」이지 「딜러」가 아닌가 ──
+    // 총합 목표를 78 로 잡았다. 원거리 셋(시리우스 97.9 · 솔라리스 97.0 · 셀레스티아 99.1)보다
+    // 20% 낮은 자리다. 딜러 대역까지 올리면 **딜러 화력 + 파티 공격력 +20% + 공속 +20% +
+    // 받는 피해 −12% + 쿨 단축** 을 한 명이 다 갖게 되어 안 뽑을 이유가 없는 픽이 된다.
+    // 그 자리를 피하려면 버프를 크게 깎아야 하는데, 그러면 이 직업이 왜 있는지가 사라진다.
+    //
+    // ── 발당 값 대신 발 수를 늘렸다 ──
+    // 셀레스티아(초당 2.5발 · 발당 16.1)보다 잘게 자주 나간다. 「선율」이라는 이름에 한 방씩
+    // 무겁게 꽂히는 것보다 음표가 이어지는 쪽이 맞고, 지원 직업이 딜러보다 한 방이 센 것도
+    // 그림이 이상하다. 총합은 같은 자리에 둔다.
+    private static final org.joml.Vector3f ROSE_BOLT = new org.joml.Vector3f(0.91f, 0.42f, 0.60f);
+
+    // 음이 이어지도록 발마다 음정을 바꾼다 — 같은 소리를 초당 3.3번 들으면 금방 질린다.
+    // 장5음계(펜타토닉)라 아무 순서로 나와도 불협이 안 난다.
+    private static final float[] PENTATONIC = { 1.000f, 1.122f, 1.260f, 1.498f, 1.682f, 2.000f };
+
+    public static void chordShot(ServerLevel level, Player player, ItemStack stack) {
+        if (!shotReady(level, stack, 6)) return;   // 초당 3.33발
+        Vec3 look = player.getViewVector(1.0f);
+        Vec3 hand = muzzle(player, look);
+        if (player instanceof ServerPlayer sp) {
+            BoltManager.fire(level, sp, hand, muzzleDir(player, look, hand),
+                dmg(stack, 3.8f), 24, ROSE_BOLT);
+        }
+        level.sendParticles(ParticleTypes.NOTE, hand.x, hand.y, hand.z, 2, 0.04, 0.04, 0.04, 1.0);
+        float pitch = PENTATONIC[(int) ((level.getGameTime() / 6) % PENTATONIC.length)];
+        level.playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_HARP.value(),
+            SoundSource.PLAYERS, 0.7f, pitch);
+    }
+
     // ─────────────────────────────── 기본: 하르모니아 "고양의 선율" (기본·1성) ───────────────────────────────
-    // R 키. 전방 10칸 아군에게 공격속도 +25% 4초 + 넉백 저항. 쿨 10초.
+    // R 키. 전방 10칸 부채꼴 — **아군에겐 버프, 적에겐 피해와 둔화.** 쿨 10초.
+    //   아군: 공격속도 +25% 4초 + 넉백 저항
+    //   적  : 피해 + 둔화 II 3초
+    //
+    // ── 한 번 휘두르는데 대상에 따라 다른 일이 일어난다 (2026-08-09) ──
+    // 원래는 아군만 봤다. 그러면 전투 중에 «뒤를 돌아 아군을 조준하는» 이상한 자세가 나오고,
+    // 앞에 적이 몰려 있을 때 R 은 아무 일도 안 하는 키가 된다. 같은 부채꼴이 양쪽을 다 훑으면
+    // 앞을 보고 눌러도 뒤를 보고 눌러도 뭔가는 일어난다 — 지휘자가 손짓 한 번으로 아군을
+    // 북돋고 적을 흐트러뜨리는 그림이기도 하다.
+    // 피해값은 헤카테의 재의 채찍(7.4)보다 낮게 잡는다(5.5). 이쪽은 버프가 본체다.
     public static void anthem(Level level, Player player, ItemStack stack) {
         if (!(level instanceof ServerLevel sl)) return;
         if (!ready(sl, player, stack, "cdAnthem", "고양의 선율", 200, 1)) return;
@@ -1948,12 +2058,35 @@ public final class RelicSkills {
             n++;
         }
 
+        // ── 같은 부채꼴, 반대편 ──
+        // 판정을 아군 쪽과 똑같이 맞춘다(10칸 · dot 0.5). 「아군은 걸리는데 그 옆의 적은 안
+        // 걸리는」 어긋남이 생기면 어디를 보고 눌러야 할지 알 수 없게 된다.
+        int hit = 0;
+        AABB box = new AABB(origin.x - 10, origin.y - 3, origin.z - 10,
+                            origin.x + 10, origin.y + 3, origin.z + 10);
+        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, box,
+                en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            Vec3 to = new Vec3(e.getX() - origin.x, 0, e.getZ() - origin.z);
+            double d = to.length();
+            if (d > 10.0) continue;
+            if (d > 0.01 && to.normalize().dot(flat) < 0.5) continue;
+
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 5.5f), "고양의 선율");
+            // 구속 — 「엮는 띠」라 발을 묶는 게 이 유물의 말투에 맞는다
+            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1, false, true));
+            sl.sendParticles(ParticleTypes.CRIT, e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(),
+                8, 0.3, 0.3, 0.3, 0.05);
+            hit++;
+        }
+
         beamDust(sl, origin.add(0, 1.2, 0), origin.add(flat.scale(10.0)).add(0, 1.2, 0), 0.5, ROSE, 1.4f);
         shockRing(sl, origin.x, origin.y + 0.1, origin.z, 4.0, 32, ParticleTypes.NOTE, 1.0);
         play(level, player, SoundEvents.NOTE_BLOCK_CHIME.value(), 1.0f, 1.4f);
         play(level, player, SoundEvents.BEACON_POWER_SELECT, 0.6f, 1.6f);
+        if (hit > 0) play(level, player, SoundEvents.NOTE_BLOCK_BASS.value(), 0.8f, 0.6f);
         if (player instanceof ServerPlayer sp) {
-            sp.displayClientMessage(Component.literal("§d고양의 선율 §7— 아군 §f" + n + "§7명"), true);
+            sp.displayClientMessage(Component.literal(
+                "§d고양의 선율 §7— 아군 §f" + n + "§7명 · 적 §f" + hit + "§7마리"), true);
         }
     }
 
@@ -1986,10 +2119,17 @@ public final class RelicSkills {
     }
 
     // ─────────────────────────────── 추가: 하르모니아 "결속의 매듭" (추가·3성) ───────────────────────────────
-    // C 키. 발밑에 매듭 12초 — 반경 6칸 아군 받는 피해 −15% + 스킬 쿨이 초당 2%씩 당겨진다. 쿨 25초.
+    // C 키. 발밑에 매듭 12초 — 반경 6칸 아군 받는 피해 −15% + 스킬 쿨이 초당 2%씩 당겨진다.
+    //       같은 자리에 **적을 태우는 지대**가 겹쳐 깔린다. 쿨 25초.
     //
     // 「여기 서 있어라」를 만드는 스킬이다. 공성 수비처럼 자리를 지켜야 하는 구간에서
     // 파티가 뭉칠 이유가 되고, 그게 이 직업이 «지휘»인 이유다.
+    //
+    // ── 지대 피해를 얹었다 (2026-08-09) ──
+    // 아군 효과와 적 효과가 «같은 원» 이라는 게 중요하다. 파티가 서 있을 자리와 적이 밟으면
+    // 안 되는 자리가 하나로 겹쳐서, 매듭을 어디에 까느냐가 그대로 전투 위치 선정이 된다.
+    // 버프 지대(HarmonyManager)와 피해 지대(DamageZoneManager)는 구현이 나뉘어 있지만
+    // 반경·지속이 같은 상수를 쓰므로 눈에는 하나로 보인다.
     public static void bindingKnot(Level level, Player player, ItemStack stack) {
         if (!(level instanceof ServerLevel sl)) return;
         if (!ready(sl, player, stack, "cdKnot", "결속의 매듭", 500, 3)) return;
@@ -1997,6 +2137,10 @@ public final class RelicSkills {
 
         Vec3 c = player.position();
         com.laststardust.relics.HarmonyManager.knot(sp, sl, c);
+        com.laststardust.relics.DamageZoneManager.start(sl, sp, c,
+            com.laststardust.relics.HarmonyManager.KNOT_RANGE,
+            dmgTick(stack, 2.0f), com.laststardust.relics.HarmonyManager.KNOT_TICKS,
+            "harmony_knot", "결속의 매듭", ROSE, ParticleTypes.ENCHANTED_HIT);
 
         for (int i = 1; i <= 3; i++) {
             shockRing(sl, c.x, c.y + 0.1, c.z, 6.0 * i / 3.0, 44, ParticleTypes.NOTE, 1.0);
@@ -2008,17 +2152,29 @@ public final class RelicSkills {
     }
 
     // ─────────────────────────────── 궁극: 하르모니아 "만상의 화음" (궁극·4성) ───────────────────────────────
-    // X 키. 24칸 내 전 아군 10초 — 공격력 +30% · 이동속도 +25% · 디버프 해제 + 3초 재부여 면역. 쿨 90초.
+    // X 키. 24칸 내 전 아군 10초 — 공격력 +25% · 이동속도 +20% · 디버프 해제 + 3초 재부여 면역.
+    //       시전 자리에는 반경 10칸 지대가 10초간 남아 적을 때린다. 쿨 90초.
     //
     // 해제만 하고 면역이 없으면 다음 틱에 그대로 다시 걸려 절반이 헛것이 된다 — 공성처럼
     // 디버프가 계속 날아오는 자리에서 특히 그렇다. 그래서 둘이 한 묶음이다(HarmonyManager).
+    //
+    // ── 버프를 깎고 지대를 얹었다 (2026-08-09) ──
+    // 공격력 30→25% · 이속 25→20%. 궁극 하나가 «내 화면엔 아무 일도 안 일어나는» 물건이던 것을
+    // 고치면서, 늘어난 몫만큼 버프에서 뺐다. 총량은 대체로 제자리다.
+    //
+    // ※ 버프는 24칸까지 가는데 지대는 10칸이다. 일부러 다르다 — 버프는 흩어진 파티를 다 담아야
+    //   하지만, 반경 24칸짜리 장판은 「보이지도 않는 곳의 적이 녹는」 물건이 된다.
     public static void grandChord(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdChord", "만상의 화음", 1800, 4)) return;
 
         Vec3 c = player.position();
+        com.laststardust.relics.DamageZoneManager.start(level, player, c,
+            com.laststardust.relics.HarmonyManager.CHORD_ZONE,
+            dmgTick(stack, 2.6f), com.laststardust.relics.HarmonyManager.CHORD_TICKS,
+            "harmony_chord", "만상의 화음", ROSE, ParticleTypes.ENCHANTED_HIT);
         int n = 0;
         for (ServerPlayer a : level.players()) {
-            if (!a.isAlive() || a.distanceToSqr(c.x, c.y, c.z) > CHORD_R * CHORD_R) continue;
+            if (!a.isAlive() || a.distanceToSqr(c.x, c.y, c.z) > com.laststardust.relics.HarmonyManager.CHORD_RANGE * com.laststardust.relics.HarmonyManager.CHORD_RANGE) continue;
             com.laststardust.relics.HarmonyManager.chord(a);
             level.sendParticles(ParticleTypes.NOTE, a.getX(), a.getY() + a.getBbHeight() + 0.5, a.getZ(),
                 18, 0.4, 0.3, 0.4, 1.0);
@@ -2028,7 +2184,7 @@ public final class RelicSkills {
         }
 
         for (int i = 1; i <= 5; i++) {
-            shockRing(level, c.x, c.y + 0.1, c.z, CHORD_R * i / 5.0, 70, ParticleTypes.NOTE, 1.0);
+            shockRing(level, c.x, c.y + 0.1, c.z, com.laststardust.relics.HarmonyManager.CHORD_RANGE * i / 5.0, 70, ParticleTypes.NOTE, 1.0);
         }
         dustBurst(level, c.add(0, 1.4, 0), 4.0, 100, ROSE, 1.9f);
         level.sendParticles(ParticleTypes.FLASH, c.x, c.y + 1.5, c.z, 1, 0, 0, 0, 0);
@@ -2038,6 +2194,4 @@ public final class RelicSkills {
         player.displayClientMessage(Component.literal(
             "§d✦ 만상의 화음 §7— 아군 §f" + n + "§7명이 하나로"), true);
     }
-
-    private static final double CHORD_R = 24.0;
 }

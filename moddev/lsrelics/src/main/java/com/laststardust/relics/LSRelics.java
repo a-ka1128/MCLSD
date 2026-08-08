@@ -242,16 +242,22 @@ public class LSRelics {
                 new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
                     .attributes(weapon(4.2, -2.4))));
 
-    // 케스토스 — 엮는 띠(하르모니아의 가호). 버프·지휘.
+    // 바르비톤 — 저음 리라(하르모니아의 가호). **원거리 지원 딜러.**
     //
-    // ⚠️ **공격력이 유물 중 제일 낮다.** 때리는 물건이 아니다 — 스킬 넷이 전부 아군 강화이고
-    //    피해를 주는 스킬이 하나도 없다. 평타는 「아무것도 못 하지는 않게」 하는 최소치다.
-    //    /dummy 단독 측정은 사실상 평타값만 나오며, 그걸 다른 유물과 비교하면 안 된다.
+    // ── 근접 공격력 속성이 없다 (2026-08-09, 유저 결정) ──
+    // 원래는 근접이었고 `weapon(2.5, -2.2)` — 유물 중 제일 낮은 값이었다. 「때리는 물건이
+    // 아니다」가 설계였는데, 실제로 굴려 보니 **버프를 거는 사람이 근접 사거리까지 걸어
+    // 들어가야 하는** 모양이 됐다. 서포터가 제일 서면 안 되는 자리다.
+    //   → 좌클릭을 음률(투사체)로 바꾸고 근접 속성을 뗐다. 셀레스티아·파나케이아·솔라리스와
+    //     같은 모양이다 — 그 셋도 근접 공격력이 없고 평타 수치는 각 아이템/스킬 쪽에 있다
+    //     (`RelicSkills.chordShot`).
+    //
+    // ※ 여기서 속성을 떼면 `RelicEventHandlers.onRelicAttributes` 의 각성 평타 보정이 자동으로
+    //   비껴간다(`base <= 0` 이면 즉시 return — 활·지팡이와 같은 경로). 따로 막을 게 없다.
     public static final DeferredItem<com.laststardust.relics.item.HarmoniaSash> HARMONIA =
         ITEMS.register("harmonia",
             () -> new com.laststardust.relics.item.HarmoniaSash(
-                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-                    .attributes(weapon(2.5, -2.2))));
+                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
     // 크리에이티브 탭 (테스트/EMI 노출)
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("relics",
