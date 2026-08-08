@@ -1,4 +1,5 @@
 {
+  "credit": "IN-HOUSE: 16x generated item, trivial",
   "parent": "minecraft:item/generated",
   "textures": {
     "layer0": "lsrelics:item/hearthstone"

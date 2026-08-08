@@ -267,3 +267,47 @@ def post(webhook, cls, thread_id="", base_dir=".", header=True, mode="embed",
         _save_posted(posted)
 
     print("게시 완료:", cls.get("name", "?"), f"({len(fresh)}개)")
+
+
+def post_text(webhook, blocks, thread_id="", key=None, replace=True, label=""):
+    """순수 텍스트 메시지 여러 개를 올린다. 교체 규칙은 post() 와 같다.
+
+    post() 는 「클래스 하나 = 헤더 + 스킬 임베드」 모양에 맞춰져 있어서, 목록형 글
+    (가호 소개처럼 여러 클래스를 한 장에 담는 것)에는 안 맞는다. 그렇다고 post_intro 쪽에서
+    _send/_delete 를 직접 부르면 **옛 글 교체 규칙이 두 곳에 생긴다** — 그건 이 파일이
+    존재하는 이유와 정반대다. 그래서 전송 계층은 여기 그대로 두고 입구만 하나 더 낸다.
+
+    blocks   메시지로 보낼 문자열 목록. 하나가 한 메시지가 된다.
+    key      posted_ids.json 에 쓸 이름. 없으면 교체를 못 한다.
+    """
+    if not webhook:
+        print("WEBHOOK 을 먼저 채워주세요. (채널 설정 → 연동 → 웹훅)")
+        return
+
+    posted = _load_posted()
+    old = posted.get(key, []) if key else []
+
+    # 새로 올리기 전에 지운다 — 순서가 반대면 실패 시 아무것도 안 남는 순간이 생긴다.
+    if replace and key:
+        if old:
+            gone = sum(1 for mid in old if _delete(webhook, thread_id, mid))
+            print(f"  · 옛 글 {gone}/{len(old)}개 제거")
+        else:
+            print("  · 기록된 옛 글이 없습니다. 이번에 올리는 것부터 추적합니다.")
+            print("    (이 기능 이전에 올린 글이 채널에 있으면 직접 지워주세요)")
+
+    fresh = []
+    for i, text in enumerate(blocks):
+        if not text:
+            continue
+        mid = _send(webhook, thread_id, {"content": text})
+        if mid:
+            fresh.append(mid)
+        if i < len(blocks) - 1:
+            time.sleep(0.7)
+
+    if key:
+        posted[key] = fresh
+        _save_posted(posted)
+
+    print("게시 완료:", label or key or "?", f"({len(fresh)}개)")

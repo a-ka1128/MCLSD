@@ -227,6 +227,32 @@ public class LSRelics {
         () -> new GaeBolg(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
             .attributes(weapon(4.666, -2.5))));
 
+    // 헤스페로스 — 낫(헤카테의 가호). 중거리 약화·지원.
+    //
+    // ⚠️ **공격력을 일부러 낮게 잡았다.** 다른 유물의 «자기 화력» 목표는 96~100 인데 헤카테는
+    //    85~88 이다. 저주 중첩(중첩당 파티 전원의 피해 +3%)이 /dummy 단독 측정에 안 잡히기
+    //    때문이다 — 파나케이아를 더미 87.8 에서 그대로 둔 것과 같은 처리
+    //    (`DECISIONS.md` 「파나케이아를 유지한 이유」).
+    //
+    // 초기값은 게볼그(창, 4.666 / −2.5)를 기준으로 잡았다. 낫도 긴 자루 무기라 무브셋이 가깝고,
+    // 거기서 총량을 ~0.9 배 한 자리다. **`/dummy` 실측 전까지는 전부 가정이다.**
+    public static final DeferredItem<com.laststardust.relics.item.HecateScythe> HECATE =
+        ITEMS.register("hecate",
+            () -> new com.laststardust.relics.item.HecateScythe(
+                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
+                    .attributes(weapon(4.2, -2.4))));
+
+    // 케스토스 — 엮는 띠(하르모니아의 가호). 버프·지휘.
+    //
+    // ⚠️ **공격력이 유물 중 제일 낮다.** 때리는 물건이 아니다 — 스킬 넷이 전부 아군 강화이고
+    //    피해를 주는 스킬이 하나도 없다. 평타는 「아무것도 못 하지는 않게」 하는 최소치다.
+    //    /dummy 단독 측정은 사실상 평타값만 나오며, 그걸 다른 유물과 비교하면 안 된다.
+    public static final DeferredItem<com.laststardust.relics.item.HarmoniaSash> HARMONIA =
+        ITEMS.register("harmonia",
+            () -> new com.laststardust.relics.item.HarmoniaSash(
+                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
+                    .attributes(weapon(2.5, -2.2))));
+
     // 크리에이티브 탭 (테스트/EMI 노출)
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("relics",
         () -> CreativeModeTab.builder()
@@ -242,6 +268,8 @@ public class LSRelics {
                 output.accept(HEALER.get());
                 output.accept(ASSASSIN.get());
                 output.accept(LANCER.get());
+                output.accept(HECATE.get());
+                output.accept(HARMONIA.get());
                 output.accept(HEARTHSTONE.get());
             }).build());
 

@@ -118,9 +118,36 @@ const FATES = {
       '이윽고 하늘을 백 개의 창으로 가득 메워, 내리꽂히는 창비로 전장을 끝낸다.'
     ],
     attrs: [['minecraft:generic.attack_knockback', 1.5, 'add_value']]
+  },
+  hecate: {
+    // ※ 아이콘은 반드시 BMP 기호를 쓴다. 이모지(🔥 등)는 마크 기본 폰트에 글리프가 없어
+    //   화면에 «네모»로 뜬다. 나머지 여덟도 전부 이 범위(▣ ➶ ✧ ⚔ ☀ ✚ † ⚑)다.
+    name: '헤카테', icon: '☽', color: 0x17A2A2, // 녹청 — 초승달(헤카테는 달의 여신이기도 하다)
+    desc: '평타가 저주를 새긴다 · 기본 스타터킷과 함께 시작',
+    story: [
+      '꺼져가는 불씨를 든 채 삼거리에 선 자의 가호.',
+      '낫이 허공을 가르면 적의 그림자에 저주가 새겨지고, 그 낙인은 동료 모두의 칼끝에서 함께 타오른다.',
+      '이윽고 밤을 불러 적의 회복을 끊고 힘을 앗아, 전장의 저울을 통째로 기울인다.'
+    ],
+    // 패시브가 «속성»이 아니라 저주 중첩이라 여기 붙일 게 없다.
+    // 실제 구현은 모드 쪽(RelicEventHandlers.onHecateBrand → CurseManager)에 있다 —
+    // 이 유물의 힘은 자기 수치가 아니라 «남의 피해»로 나가기 때문에 속성으로는 표현이 안 된다.
+    attrs: []
+  },
+  harmonia: {
+    name: '하르모니아', icon: '♫', color: 0xE86A9A, // 로즈 — 8분음표
+    desc: '주변 아군 이동속도 +10% · 기본 스타터킷과 함께 시작',
+    story: [
+      '흩어진 것들을 하나로 엮는 자의 가호.',
+      '상처를 덮는 대신 사이를 잇는다 — 선율이 닿는 자리에서 따로 싸우던 이들이 하나의 진형이 된다.',
+      '케스토스가 마지막 매듭을 조이는 순간 모든 굴레가 끊기고, 화음이 닿는 곳까지 누구도 흐트러지지 않는다.'
+    ],
+    // 헤카테와 같은 이유로 여기 붙일 속성이 없다 — 패시브가 «주변 아군»에게 가는 오라라
+    // 자기 속성으로는 표현이 안 된다. 구현은 모드 쪽 HarmonyManager 에 있다.
+    attrs: []
   }
 }
-const FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer']
+const FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer', 'hecate', 'harmonia']
 
 function ftGet(server, player) { return String(LS.fate(server, player.username) || '') }
 

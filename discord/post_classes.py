@@ -1,4 +1,4 @@
-# Last Stardust — 8종 클래스 카드를 한 번에 게시한다.
+# Last Stardust — 10종 클래스 카드를 한 번에 게시한다.
 #
 # 클래스마다 채널(스레드)이 다르므로 웹훅도 각자 자기 파일이 갖는다.
 # 그래서 이 파일은 전송 코드를 따로 갖지 않고, post_*.py 를 순서대로 실행해 주기만 한다.
@@ -29,6 +29,8 @@ MODULES = [
     "post_hygieia",
     "post_erebos",
     "post_cuchulainn",
+    "post_hecate",
+    "post_harmonia",
 ]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

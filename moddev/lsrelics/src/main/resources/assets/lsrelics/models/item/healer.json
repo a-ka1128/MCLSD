@@ -1,4 +1,5 @@
 {
+  "credit": "LIKELY IN-HOUSE (unconfirmed): part names staff/fabric + _glow follow this project convention",
   "textures": {
     "0": "lsrelics:item/healer",
     "particle": "lsrelics:item/healer",

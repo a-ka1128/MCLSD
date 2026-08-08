@@ -326,7 +326,8 @@ public final class RelicEventHandlers {
         return i == LSRelics.GUARDIAN.get() || i == LSRelics.HUNTER.get()
             || i == LSRelics.SAGE.get() || i == LSRelics.PIONEER.get()
             || i == LSRelics.GUNNER.get() || i == LSRelics.HEALER.get()
-            || i == LSRelics.ASSASSIN.get() || i == LSRelics.LANCER.get();
+            || i == LSRelics.ASSASSIN.get() || i == LSRelics.LANCER.get()
+            || i == LSRelics.HECATE.get() || i == LSRelics.HARMONIA.get();
     }
 
     // ※ 예전에 있던 "대상 최대 체력 비례 평타 보너스"는 제거했다.
@@ -542,10 +543,31 @@ public final class RelicEventHandlers {
     }
 
     // ── 바람의 발걸음: 활로 처치 시 이동속도 추가 상승 ──
+    // ── 패시브: 헤카테 「저주의 각인」 ──
+    // 평타가 맞을 때마다 저주 1중첩(8초 · 최대 5 · 보스는 8). 중첩당 그 적이 받는 피해 +3%.
+    //
+    // ※ 스킬로 들어간 피해에는 안 쌓는다. 재의 채찍이 이미 2중첩을 주고 연좌·궁극이 따로 있어서,
+    //   여기까지 스킬을 세면 한 번 휘두를 때 상한까지 차버려 «쌓는 재미»가 사라진다.
+    //   평타로 쌓고 스킬로 크게 굴리는 게 이 유물의 결이다.
+    @SubscribeEvent
+    public static void onHecateBrand(LivingIncomingDamageEvent event) {
+        if (event.getEntity().level().isClientSide) return;
+        if (LsDamage.inSkill()) return;
+        if (!(event.getSource().getEntity() instanceof ServerPlayer p)) return;
+        if (p.getMainHandItem().getItem() != LSRelics.HECATE.get()) return;
+        CurseManager.add(event.getEntity(), 1);
+    }
+
     @SubscribeEvent
     public static void onKill(LivingDeathEvent event) {
         if (!(event.getSource().getEntity() instanceof Player player)) return;
         if (player.level().isClientSide) return;
+
+        // ── 패시브: 하르모니아 「공명」의 처치 중첩 ──
+        // 하르모니아를 «든 사람»이 아니라 **오라 안의 누가 죽여도** 쌓인다. 지휘관의 버프라
+        // 자기가 잡아야 오르면 「지휘」가 아니라 그냥 자기 버프가 된다.
+        if (player instanceof ServerPlayer sp) HarmonyManager.onAllyKill(sp);
+
         if (player.getMainHandItem().getItem() != LSRelics.HUNTER.get()) return;
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 80, 0, false, true)); // +20% 4초
     }

@@ -144,6 +144,8 @@ public final class DummyManager {
         if (item == LSRelics.HUNTER.get())   return "시리우스";
         if (item == LSRelics.ASSASSIN.get()) return "스틱스";
         if (item == LSRelics.LANCER.get())   return "게볼그";
+        if (item == LSRelics.HECATE.get())   return "헤스페로스";
+        if (item == LSRelics.HARMONIA.get()) return "케스토스";
         if (item == LSRelics.PIONEER.get())  return "타이탄";
         if (item == LSRelics.GUARDIAN.get()) return "이지스";
         if (item == LSRelics.SAGE.get())     return "셀레스티아";

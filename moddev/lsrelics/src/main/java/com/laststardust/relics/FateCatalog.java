@@ -32,7 +32,9 @@ public final class FateCatalog {
         new Fate("gunner",   LSRelics.GUNNER,   0xF7931E), // 태양 오렌지
         new Fate("healer",   LSRelics.HEALER,   0x2ECC71), // 에메랄드
         new Fate("assassin", LSRelics.ASSASSIN, 0x9400D3), // 다크 바이올렛
-        new Fate("lancer",   LSRelics.LANCER,   0xDC143C)  // 크림슨 레드
+        new Fate("lancer",   LSRelics.LANCER,   0xDC143C), // 크림슨 레드
+        new Fate("hecate",   LSRelics.HECATE,   0x17A2A2), // 녹청 — 어느 색과도 안 겹친다
+        new Fate("harmonia", LSRelics.HARMONIA, 0xE86A9A)  // 로즈 — 히기에이아(에메랄드)와 한눈에 갈린다
     );
 
     // 클라가 보낸 문자열을 그대로 명령에 넣지 않기 위한 화이트리스트.

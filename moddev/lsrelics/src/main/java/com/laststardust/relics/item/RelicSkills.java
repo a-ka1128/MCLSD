@@ -66,6 +66,9 @@ public final class RelicSkills {
     private static final int BLUE = 0x8FB6FF;
     private static final int VOID = 0x9A5CFF;
     private static final int DARK = 0x4A2C7A;
+    private static final int TEAL = 0x17A2A2;   // 헤카테 — 가호색 녹청 (FateCatalog 와 같은 값)
+    private static final int ASH  = 0x6B7280;   // 헤카테 — 재
+    private static final int ROSE = 0xE86A9A;   // 하르모니아 — 가호색 로즈
 
     // ─────────────────────────────── 스킬: 별지기의 지팡이 "소멸" ───────────────────────────────
     public static void annihilate(Level level, Player player, ItemStack stack) {
@@ -1477,6 +1480,32 @@ public final class RelicSkills {
         return left;
     }
 
+    /**
+     * 남은 쿨다운을 {@code frac} 비율만큼 «당긴다» — 하르모니아의 결속의 매듭이 쓴다.
+     *
+     * <p>쿨다운은 키마다 «끝나는 절대 틱»으로 저장된다({@link #ready}). 총 길이는 어디에도
+     * 안 적혀 있으므로 「총량의 몇 %」는 계산할 수 없다. 대신 <b>남은 시간의 몇 %</b>를 당긴다 —
+     * 자기 제한적이라(남을수록 많이 당겨진다) 긴 쿨에 더 잘 듣고, 다 돌아간 쿨은 건드리지 않는다.
+     *
+     * <p>키를 훑어 {@code cd} 로 시작하는 것만 손댄다. 다른 값(별·잔탄·과열)은 시간이 아니다.
+     */
+    public static void hastenCooldowns(ItemStack stack, ServerLevel level, float frac) {
+        if (frac <= 0) return;
+        CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        long now = level.getGameTime();
+        boolean changed = false;
+        for (String key : new java.util.ArrayList<>(tag.getAllKeys())) {
+            if (!key.startsWith("cd")) continue;
+            long end = tag.getLong(key);
+            long left = end - now;
+            if (left <= 0) continue;
+            long cut = Math.max(1, Math.round(left * frac));
+            tag.putLong(key, end - cut);
+            changed = true;
+        }
+        if (changed) stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+    }
+
     // 쿨다운 즉시 해제 — 스킬이 헛방으로 끝났을 때 쿨을 되돌린다(필중이 대상 없이 나가는 경우 등).
     public static void clearCooldown(ItemStack stack, String key) {
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
@@ -1670,4 +1699,345 @@ public final class RelicSkills {
             level.sendParticles(p, px, py, pz, 1, 0, 0, 0, 0.0);
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  헤카테 — 헤스페로스(낫). 약화·지원.
+    //
+    //  다른 여덟 유물이 「내 화력」을 올린다면 헤카테는 **남의 화력을 올린다.**
+    //  저주 중첩(CurseManager)이 그 축이고, 아래 넷은 그 중첩을 다루는 방식이 각각 다르다:
+    //    평타 = 1중첩씩 쌓는다 (RelicEventHandlers 패시브)
+    //    R    = 광역으로 2중첩 + 적을 약하게
+    //    V    = 도망치며 발을 묶는다 (중첩과 무관 — 생존)
+    //    C    = 쌓인 중첩을 주변에 «복사»한다
+    //    X    = 광역 즉시 최대 + 회복 차단 + 약화
+    //
+    //  ※ 개인 DPS 목표는 85~88 로 다른 유물(96~100)보다 낮다. 파티 배수가 /dummy 단독
+    //    측정에 안 잡히기 때문이다 — 파나케이아(더미 87.8)를 그대로 둔 것과 같은 이유.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ─────────────────────────────── 기본: 헤카테 "재의 채찍" (기본·1성) ───────────────────────────────
+    // R 키. 전방 부채꼴을 낫으로 쓸어 저주 2중첩 + 적 공격력 25% 감소(6초). 쿨 10초.
+    //
+    // 피해 자체는 크지 않다. 이 스킬의 값어치는 «맞은 적 전부»에게 중첩과 약화가 걸리는 것이고,
+    // 그게 파티 전체의 딜과 생존으로 돌아간다.
+    public static void ashWhip(Level level, Player player, ItemStack stack) {
+        if (!(level instanceof ServerLevel sl)) return;
+        if (!ready(sl, player, stack, "cdWhip", "재의 채찍", 200, 1)) return;
+
+        Vec3 look = player.getViewVector(1.0f);
+        Vec3 flat = new Vec3(look.x, 0, look.z).normalize();
+        Vec3 origin = player.position();
+        double length = 6.0, halfAngle = 60.0;          // 낫이라 각이 넓다
+        double cosHalf = Math.cos(Math.toRadians(halfAngle));
+
+        AABB box = new AABB(origin.x - length, origin.y - 2.5, origin.z - length,
+                            origin.x + length, origin.y + 2.5, origin.z + length);
+        int hit = 0;
+        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, box,
+                en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            Vec3 to = new Vec3(e.getX() - origin.x, 0, e.getZ() - origin.z);
+            double dist = to.length();
+            if (dist > length) continue;
+            if (dist > 0.01 && to.normalize().dot(flat) < cosHalf) continue;
+
+            LsDamage.hit(e, relicSource(sl, player), dmg(stack, 7.4f), "재의 채찍");
+            com.laststardust.relics.CurseManager.add(e, 2);
+            com.laststardust.relics.CurseManager.weaken(e, 0.25f, 120);   // 6초
+            sl.sendParticles(ParticleTypes.SOUL, e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(),
+                8, 0.3, 0.3, 0.3, 0.02);
+            hit++;
+        }
+
+        // ── 연출: 앞을 훑고 지나가는 잿빛 호 ──
+        for (int step = 0; step <= 18; step++) {
+            double a = Math.toRadians(-halfAngle + (2 * halfAngle) * step / 18.0);
+            double cx = flat.x * Math.cos(a) - flat.z * Math.sin(a);
+            double cz = flat.x * Math.sin(a) + flat.z * Math.cos(a);
+            double px = origin.x + cx * length * 0.75;
+            double pz = origin.z + cz * length * 0.75;
+            sl.sendParticles(ParticleTypes.ASH, px, origin.y + 1.0, pz, 2, 0.1, 0.3, 0.1, 0.01);
+        }
+        beamDust(sl, origin.add(0, 1.0, 0), origin.add(flat.scale(length)).add(0, 1.0, 0), 0.5, TEAL, 1.4f);
+        dustBurst(sl, origin.add(flat.scale(2.0)).add(0, 1.0, 0), 1.6, 40, ASH, 1.5f);
+        play(level, player, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.6f);
+        play(level, player, SoundEvents.SOUL_ESCAPE.value(), 0.8f, 0.7f);
+        if (hit > 0) play(level, player, SoundEvents.AMETHYST_BLOCK_CHIME, 0.6f, 0.5f);
+    }
+
+    // ─────────────────────────────── 이동: 헤카테 "재의 결계" (이동·2성) ───────────────────────────────
+    // V 키. 뒤로 물러나면서 **원래 있던 자리**에 재를 남겨 1.5초 속박. 쿨 8초.
+    //
+    // ※ 속박을 «착지점»이 아니라 «출발점»에 남긴다. 적에게서 물러나는 기술인데 도착한 빈 땅을
+    //   묶으면 아무 일도 안 일어난다. 쫓아오는 것을 끊고 빠지는 게 이 스킬의 요점이다.
+    public static void ashWard(Level level, Player player, ItemStack stack) {
+        if (!(level instanceof ServerLevel sl)) return;
+        if (!ready(sl, player, stack, "cdWard", "재의 결계", 160, 2)) return;
+
+        Vec3 origin = player.position();                 // 결계는 «여기» 남는다
+
+        Vec3 look = player.getViewVector(1.0f).normalize();
+        Vec3 back = new Vec3(-look.x, 0, -look.z).normalize();
+        player.setDeltaMovement(back.x * 1.15, 0.42, back.z * 1.15);
+        player.hurtMarked = true;
+        player.resetFallDistance();
+
+        AABB box = new AABB(origin.x - 4, origin.y - 2, origin.z - 4,
+                            origin.x + 4, origin.y + 3, origin.z + 4);
+        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, box,
+                en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            if (e.distanceToSqr(origin) > 16.0) continue;
+            // 바닐라에 «뿌리내림»이 없어 최고 등급 둔화 + 속도 0 으로 대신한다.
+            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 5, false, true));
+            e.setDeltaMovement(0, e.getDeltaMovement().y, 0);
+            sl.sendParticles(ParticleTypes.ASH, e.getX(), e.getY() + 0.1, e.getZ(), 10, 0.3, 0.1, 0.3, 0.01);
+        }
+
+        shockRing(sl, origin.x, origin.y + 0.1, origin.z, 4.0, 40, ParticleTypes.SOUL_FIRE_FLAME, 0.02);
+        dustBurst(sl, origin.add(0, 0.4, 0), 2.0, 50, ASH, 1.6f);
+        play(level, player, SoundEvents.SOUL_SAND_BREAK, 1.0f, 0.6f);
+        play(level, player, SoundEvents.ENDER_DRAGON_FLAP, 0.5f, 1.4f);
+    }
+
+    // ─────────────────────────────── 추가: 헤카테 "연좌" (추가·3성) ───────────────────────────────
+    // C 키. 바라본 적의 저주 중첩을 주변 6칸의 적 최대 8마리에게 **복사**한다. 쿨 16초.
+    //
+    // ── 왜 «복사»이고 «소모»가 아닌가 ──
+    // 중첩을 터뜨려 없애는 설계도 있었는데, 그러면 「파티 버프를 내 딜과 맞바꾸는」 함정 선택이 된다.
+    // 친구끼리 하는 서버에서 그런 함정은 재미가 아니라 그냥 실수다. 복사는 순수하게 이득이다.
+    //
+    // 대상에게 저주가 없으면 쿨을 돌려준다 — 헛방으로 16초를 날리면 억울하다.
+    public static void guiltByAssociation(Level level, Player player, ItemStack stack) {
+        if (!(level instanceof ServerLevel sl)) return;
+        if (!ready(sl, player, stack, "cdGuilt", "연좌", 320, 3)) return;
+
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getViewVector(1.0f);
+        double reach = beamReach(sl, player, eye, look, 14.0);
+
+        LivingEntity target = null;
+        double best = Double.MAX_VALUE;
+        AABB scan = new AABB(eye, eye.add(look.scale(reach))).inflate(2.0);
+        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, scan,
+                en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
+            double d = to.length();
+            if (d > reach + 1.5) continue;
+            if (d > 0.01 && to.normalize().dot(look) < 0.93) continue;   // 시선 원뿔
+            if (d < best) { best = d; target = e; }
+        }
+
+        int src = target == null ? 0 : com.laststardust.relics.CurseManager.stacks(target);
+        if (src <= 0) {
+            clearCooldown(stack, "cdGuilt");
+            if (player instanceof ServerPlayer sp) {
+                sp.displayClientMessage(Component.literal("§8저주가 걸린 적을 봐야 한다"), true);
+            }
+            play(level, player, SoundEvents.NOTE_BLOCK_BASS.value(), 0.5f, 0.7f);
+            return;
+        }
+
+        Vec3 c = target.getBoundingBox().getCenter();
+        AABB near = new AABB(c.x - 6, c.y - 4, c.z - 6, c.x + 6, c.y + 4, c.z + 6);
+        int spread = 0;
+        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, near,
+                en -> en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            if (spread >= 8) break;
+            if (e == target) continue;
+            if (e.distanceToSqr(c.x, c.y, c.z) > 36.0) continue;
+            // 상한은 대상마다 다르다(보스 8 / 잡몹 5) — set() 안에서 걸린다
+            com.laststardust.relics.CurseManager.set(e,
+                Math.max(com.laststardust.relics.CurseManager.stacks(e), src));
+            beamDust(sl, c, e.getBoundingBox().getCenter(), 0.4, TEAL, 1.3f);
+            sl.sendParticles(ParticleTypes.SOUL, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
+                10, 0.3, 0.3, 0.3, 0.02);
+            spread++;
+        }
+
+        // 원본의 지속시간도 새로 채운다 — 퍼뜨리는 동안 원본이 꺼지면 이상하다
+        com.laststardust.relics.CurseManager.set(target, src);
+        dustBurst(sl, c, 1.5, 40, TEAL, 1.5f);
+        shockRing(sl, c.x, c.y, c.z, 6.0, 48, ParticleTypes.SCULK_SOUL, 0.03);
+        play(level, player, SoundEvents.CHAIN_BREAK, 1.0f, 0.6f);
+        playAt(level, c, SoundEvents.SOUL_ESCAPE.value(), 1.0f, 0.5f);
+        if (player instanceof ServerPlayer sp) {
+            sp.displayClientMessage(Component.literal(
+                "§3연좌 §7— 저주 " + src + "중첩을 §f" + spread + "§7마리에게"), true);
+        }
+    }
+
+    // ─────────────────────────────── 궁극: 헤카테 "헤카테의 밤" (궁극·4성) ───────────────────────────────
+    // X 키. 반경 12칸 12초 — 저주 즉시 최대 · 회복 차단 · 받는 피해 +10% · 적 공격력 −20%. 쿨 60초.
+    //
+    // 한 문장으로: **우리는 더 아프게 때리고, 적은 덜 아프게 때린다.**
+    // 다른 여덟 유물의 궁극이 전부 «자기 화력»인데 이것만 «판을 바꾼다».
+    //
+    // ※ 「방어구 무시 20%」안이 있었는데 뺐다. 마크 잡몹은 방어도가 0~2 라 그 20% 가 실제로는
+    //   +0.3% 였고, 중장갑 보스에게만 +13% 로 튀었다 — 진폭 40배짜리 죽은 줄이었다.
+    //   공격력 감소는 모든 몹이 공격을 하므로 어디서나 같은 값어치를 낸다.
+    public static void nightOfHecate(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdNight", "헤카테의 밤", 1200, 4)) return;
+
+        Vec3 c = player.position();
+        double r = 12.0;
+        int ticks = 240;                                  // 12초
+
+        AABB box = new AABB(c.x - r, c.y - 5, c.z - r, c.x + r, c.y + 5, c.z + r);
+        int touched = 0;
+        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
+                en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            if (e.distanceToSqr(c.x, c.y, c.z) > r * r) continue;
+            com.laststardust.relics.CurseManager.set(e,
+                com.laststardust.relics.CurseManager.cap(e));      // 즉시 최대 (보스는 8)
+            com.laststardust.relics.CurseManager.blockHeal(e, ticks);
+            com.laststardust.relics.CurseManager.weaken(e, 0.20f, ticks);
+            // 받는 피해 +10% 는 기존 「약점 노출」 표식을 그대로 쓴다 — 같은 일을 두 번 구현하면
+            // 나중에 한쪽만 고치게 된다 (WeaknessHandler).
+            e.getPersistentData().putLong("lsWeakUntil", level.getGameTime() + ticks);
+            level.sendParticles(ParticleTypes.SOUL, e.getX(), e.getY() + e.getBbHeight() * 0.6, e.getZ(),
+                14, 0.4, 0.4, 0.4, 0.03);
+            touched++;
+        }
+
+        // ── 연출: 달빛이 꺼지고 잿빛 원이 퍼진다 ──
+        for (int i = 1; i <= 4; i++) {
+            shockRing(level, c.x, c.y + 0.1, c.z, r * i / 4.0, 60, ParticleTypes.SOUL_FIRE_FLAME, 0.02);
+        }
+        dustBurst(level, c.add(0, 1.2, 0), r * 0.4, 90, TEAL, 1.8f);
+        dustBurst(level, c.add(0, 0.6, 0), r * 0.3, 60, ASH, 1.6f);
+        level.sendParticles(ParticleTypes.FLASH, c.x, c.y + 1.5, c.z, 1, 0, 0, 0, 0);
+        play(level, player, SoundEvents.WITHER_SPAWN, 0.5f, 1.6f);
+        play(level, player, SoundEvents.SOUL_ESCAPE.value(), 1.2f, 0.5f);
+        SoundScheduler.at(level, c, SoundEvents.AMBIENT_CAVE.value(), 1.0f, 0.6f, 4);
+        player.displayClientMessage(Component.literal(
+            "§3✦ 헤카테의 밤 §7— §f" + touched + "§7마리가 저주에 잠겼다"), true);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  하르모니아 — 케스토스(엮는 띠). 버프·지휘.
+    //
+    //  **회복이 하나도 없다.** 히기에이아가 서포트의 «회복» 절반을 갖고 이쪽이 «강화» 절반을
+    //  갖는다 — 여기에 힐이나 보호막을 넣으면 두 직업이 같은 자리를 놓고 싸운다
+    //  (docs/CLASS-9-10.md §2 설계 의도 1).
+    //
+    //  피해를 주는 스킬이 하나도 없어서 /dummy 로는 **0 이 나온다.** 그게 정상이다 —
+    //  이 유물의 값어치는 전부 남의 숫자로 나간다. 실측은 「하르모니아가 있을 때 파티 총합」으로
+    //  재야 하고, 그건 8종 단독 측정과 다른 방법이다.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ─────────────────────────────── 기본: 하르모니아 "고양의 선율" (기본·1성) ───────────────────────────────
+    // R 키. 전방 10칸 아군에게 공격속도 +25% 4초 + 넉백 저항. 쿨 10초.
+    public static void anthem(Level level, Player player, ItemStack stack) {
+        if (!(level instanceof ServerLevel sl)) return;
+        if (!ready(sl, player, stack, "cdAnthem", "고양의 선율", 200, 1)) return;
+
+        Vec3 look = player.getViewVector(1.0f);
+        Vec3 flat = new Vec3(look.x, 0, look.z).normalize();
+        Vec3 origin = player.position();
+        int n = 0;
+        for (ServerPlayer a : sl.players()) {
+            if (!a.isAlive()) continue;
+            Vec3 to = new Vec3(a.getX() - origin.x, 0, a.getZ() - origin.z);
+            double d = to.length();
+            if (d > 10.0) continue;
+            // 자기 자신은 각도와 무관하게 받는다 — 앞을 보고 있어야 자기 버프가 걸리는 건 이상하다
+            if (a != player && d > 0.01 && to.normalize().dot(flat) < 0.5) continue;
+            com.laststardust.relics.HarmonyManager.anthem(a);
+            a.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 0, false, true));
+            sl.sendParticles(ParticleTypes.NOTE, a.getX(), a.getY() + a.getBbHeight() + 0.4, a.getZ(),
+                6, 0.3, 0.2, 0.3, 1.0);
+            n++;
+        }
+
+        beamDust(sl, origin.add(0, 1.2, 0), origin.add(flat.scale(10.0)).add(0, 1.2, 0), 0.5, ROSE, 1.4f);
+        shockRing(sl, origin.x, origin.y + 0.1, origin.z, 4.0, 32, ParticleTypes.NOTE, 1.0);
+        play(level, player, SoundEvents.NOTE_BLOCK_CHIME.value(), 1.0f, 1.4f);
+        play(level, player, SoundEvents.BEACON_POWER_SELECT, 0.6f, 1.6f);
+        if (player instanceof ServerPlayer sp) {
+            sp.displayClientMessage(Component.literal("§d고양의 선율 §7— 아군 §f" + n + "§7명"), true);
+        }
+    }
+
+    // ─────────────────────────────── 이동: 하르모니아 "엮인 걸음" (이동·2성) ───────────────────────────────
+    // V 키. 앞 위로 도약 · 착지 지점 4칸 내 아군에게 신속 II 3초. 쿨 8초.
+    //
+    // ※ 착지 «지점»을 미리 알 수 없으므로 도약 직후가 아니라 **착지할 때** 버프를 건다.
+    //   지금은 그 스케줄러가 없어서, 도약 순간의 위치를 기준으로 건다 — 같이 움직이는 파티라면
+    //   결과가 거의 같고, 「밟고 나면 걸린다」는 감각도 유지된다.
+    public static void wovenStep(Level level, Player player, ItemStack stack) {
+        if (!(level instanceof ServerLevel sl)) return;
+        if (!ready(sl, player, stack, "cdWoven", "엮인 걸음", 160, 2)) return;
+
+        Vec3 look = player.getViewVector(1.0f).normalize();
+        Vec3 flat = new Vec3(look.x, 0, look.z).normalize();
+        player.setDeltaMovement(flat.x * 1.1, 0.55, flat.z * 1.1);
+        player.hurtMarked = true;
+        player.resetFallDistance();
+
+        Vec3 c = player.position();
+        for (ServerPlayer a : sl.players()) {
+            if (!a.isAlive() || a.distanceToSqr(c.x, c.y, c.z) > 16.0) continue;
+            a.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 60, 1, false, true));
+            sl.sendParticles(ParticleTypes.NOTE, a.getX(), a.getY() + a.getBbHeight() + 0.3, a.getZ(),
+                4, 0.25, 0.2, 0.25, 1.0);
+        }
+        dustBurst(sl, c.add(0, 0.6, 0), 1.8, 40, ROSE, 1.5f);
+        play(level, player, SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.5f);
+        play(level, player, SoundEvents.PLAYER_ATTACK_SWEEP, 0.5f, 1.8f);
+    }
+
+    // ─────────────────────────────── 추가: 하르모니아 "결속의 매듭" (추가·3성) ───────────────────────────────
+    // C 키. 발밑에 매듭 12초 — 반경 6칸 아군 받는 피해 −15% + 스킬 쿨이 초당 2%씩 당겨진다. 쿨 25초.
+    //
+    // 「여기 서 있어라」를 만드는 스킬이다. 공성 수비처럼 자리를 지켜야 하는 구간에서
+    // 파티가 뭉칠 이유가 되고, 그게 이 직업이 «지휘»인 이유다.
+    public static void bindingKnot(Level level, Player player, ItemStack stack) {
+        if (!(level instanceof ServerLevel sl)) return;
+        if (!ready(sl, player, stack, "cdKnot", "결속의 매듭", 500, 3)) return;
+        if (!(player instanceof ServerPlayer sp)) return;
+
+        Vec3 c = player.position();
+        com.laststardust.relics.HarmonyManager.knot(sp, sl, c);
+
+        for (int i = 1; i <= 3; i++) {
+            shockRing(sl, c.x, c.y + 0.1, c.z, 6.0 * i / 3.0, 44, ParticleTypes.NOTE, 1.0);
+        }
+        dustBurst(sl, c.add(0, 0.8, 0), 3.0, 60, ROSE, 1.6f);
+        play(level, player, SoundEvents.NOTE_BLOCK_BELL.value(), 1.0f, 1.0f);
+        SoundScheduler.at(sl, c, SoundEvents.NOTE_BLOCK_CHIME.value(), 0.8f, 1.3f, 6);
+        sp.displayClientMessage(Component.literal("§d결속의 매듭 §7— 12초"), true);
+    }
+
+    // ─────────────────────────────── 궁극: 하르모니아 "만상의 화음" (궁극·4성) ───────────────────────────────
+    // X 키. 24칸 내 전 아군 10초 — 공격력 +30% · 이동속도 +25% · 디버프 해제 + 3초 재부여 면역. 쿨 90초.
+    //
+    // 해제만 하고 면역이 없으면 다음 틱에 그대로 다시 걸려 절반이 헛것이 된다 — 공성처럼
+    // 디버프가 계속 날아오는 자리에서 특히 그렇다. 그래서 둘이 한 묶음이다(HarmonyManager).
+    public static void grandChord(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdChord", "만상의 화음", 1800, 4)) return;
+
+        Vec3 c = player.position();
+        int n = 0;
+        for (ServerPlayer a : level.players()) {
+            if (!a.isAlive() || a.distanceToSqr(c.x, c.y, c.z) > CHORD_R * CHORD_R) continue;
+            com.laststardust.relics.HarmonyManager.chord(a);
+            level.sendParticles(ParticleTypes.NOTE, a.getX(), a.getY() + a.getBbHeight() + 0.5, a.getZ(),
+                18, 0.4, 0.3, 0.4, 1.0);
+            level.sendParticles(ParticleTypes.END_ROD, a.getX(), a.getY() + 0.2, a.getZ(),
+                12, 0.3, 0.5, 0.3, 0.02);
+            n++;
+        }
+
+        for (int i = 1; i <= 5; i++) {
+            shockRing(level, c.x, c.y + 0.1, c.z, CHORD_R * i / 5.0, 70, ParticleTypes.NOTE, 1.0);
+        }
+        dustBurst(level, c.add(0, 1.4, 0), 4.0, 100, ROSE, 1.9f);
+        level.sendParticles(ParticleTypes.FLASH, c.x, c.y + 1.5, c.z, 1, 0, 0, 0, 0);
+        play(level, player, SoundEvents.NOTE_BLOCK_BELL.value(), 1.2f, 0.8f);
+        play(level, player, SoundEvents.BEACON_ACTIVATE, 0.9f, 1.2f);
+        SoundScheduler.at(level, c, SoundEvents.NOTE_BLOCK_CHIME.value(), 1.0f, 1.5f, 5);
+        player.displayClientMessage(Component.literal(
+            "§d✦ 만상의 화음 §7— 아군 §f" + n + "§7명이 하나로"), true);
+    }
+
+    private static final double CHORD_R = 24.0;
 }
