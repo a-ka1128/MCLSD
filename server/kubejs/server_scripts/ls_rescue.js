@@ -179,7 +179,7 @@ function rsComplete(server) {
   try {
     var rc = rsSancPos(server)
     server.runCommandSilent(`summon item ${rc.x + 0.5} ${rc.y + 1} ${rc.z + 0.5} {Item:{id:"kubejs:rift_essence",count:1}}`)
-    rsSay(server, '§5✦ 균열 정수 +1 §7— 구출된 자가 품고 있던 것 (성역에 떨어졌다)')
+    rsSay(server, '§5✦ 별의 파편 +1 §7— 구출된 자가 품고 있던 것 (성역에 떨어졌다)')
   } catch (err) { lsWarn('ls_rescue:161', err) }
   rsSay(server, `§8   ${s.job} — 세상이 리셋되면 정식 개업한다.`)
   lsAdv(server, '@a', 'rescue_first')   // 도전과제 (ls_util.js) — 파티가 같이 구한 것이라 @a

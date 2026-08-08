@@ -38,7 +38,7 @@ const MAX_WAVES = 5          // 일반 공성 최대 웨이브
 const SIEGE_EVERY = 3        // 공성 주기(일) — 커스텀 낮밤 기준 실시간 약 1시간에 1회
 const GRAND_EVERY = 12       // 대공세 주기(일) — SIEGE_EVERY의 배수라 반드시 공성일에 겹친다
 const REWARD_MULT = 1.5      // 보상 배율 — Ducat이 거래에도 쓰이므로 유입 상향
-const GRAND_ESS = 2          // 대공세 격퇴 시 균열 정수
+const GRAND_ESS = 2          // 대공세 격퇴 시 별의 파편
 const HIGH_THREAT_ESS = 7    // 이 위협도 이상에서 일반 공성을 격퇴하면 정수를 준다
 const HIGH_THREAT_ESS_AMT = 1
 // 첫 공세 — 유물 없이 맨몸(철제 장비)으로 막는 밤.
@@ -57,7 +57,7 @@ const FINAL_BOSS_ID = 'bosses_of_mass_destruction:lich' // 어둠의 심장 (나
 const NIGHT_T0 = 13200       // 보스 체력↔밤 진행 매핑: 시작(초저녁)
 const NIGHT_T1 = 22800       //                       끝(새벽 직전)
 
-// 보스 처치 시 균열 정수(kubejs:rift_essence) 드롭 수 = 마을 재건 재화 (콘텐츠 게이팅)
+// 보스 처치 시 별의 파편(kubejs:rift_essence) 드롭 수 = 마을 재건 재화 (콘텐츠 게이팅)
 const ESSENCE_DROP = {
   'cataclysm:the_harbinger': 2, 'cataclysm:ignis': 3, 'cataclysm:netherite_monstrosity': 3,
   'cataclysm:ender_guardian': 3, 'cataclysm:the_leviathan': 3, 'cataclysm:ancient_remnant': 3,
@@ -587,7 +587,7 @@ function firstSiegeCleared(server) {
   server.runCommandSilent('title @a subtitle {"text":"첫 밤을 버텨낸 자에게 별이 응답했다","color":"gray"}')
   playAll(server, 'minecraft:block.beacon.power_select', 1, 1.2)
   playAll(server, 'minecraft:ui.toast.challenge_complete', 1, 1)
-  say(server, `§b✦ 첫 공세를 버텨냈다 — §d균열 정수 +${FIRST_SIEGE_ESS}§7씩 주어졌다.`)
+  say(server, `§b✦ 첫 공세를 버텨냈다 — §d별의 파편 +${FIRST_SIEGE_ESS}§7씩 주어졌다.`)
   say(server, '§7   §e제단§7에 정수를 바쳐 당신의 유물을 깨우세요. §8(/relic 로 확인)')
   lsAdv(server, '@a', 'siege_first')   // 도전과제 (ls_util.js) — 파티가 같이 버틴 것이라 @a
   console.log('[LS-SIEGE] first siege cleared — relics unlocked')
@@ -653,7 +653,7 @@ function finishSiege(server, outcome) {
     if (ess > 0) {
       var gc = sancPos(server)
       server.runCommandSilent(`summon item ${gc.x + 0.5} ${gc.y + 1} ${gc.z + 0.5} {Item:{id:"kubejs:rift_essence",count:${ess}}}`)
-      say(server, `§5✦ 균열 정수 +${ess} §7— ${grand ? '대공세를' : `위협도 ${threat}의 공세를`} 격퇴한 대가 (성역에 떨어졌다)`)
+      say(server, `§5✦ 별의 파편 +${ess} §7— ${grand ? '대공세를' : `위협도 ${threat}의 공세를`} 격퇴한 대가 (성역에 떨어졌다)`)
       playAll(server, 'minecraft:block.amethyst_block.chime', 0.9, 0.7)
     }
     console.log(`[LS-SIEGE] WIN reward=${reward} grand=${grand}`)
@@ -743,12 +743,12 @@ EntityEvents.death(event => {
   const e = event.entity
   if (!e) return
   const srv = e.server
-  // 보스 처치 → 균열 정수 드롭 (마을 재건 재화)
+  // 보스 처치 → 별의 파편 드롭 (마을 재건 재화)
   if (srv) {
     var ec = ESSENCE_DROP[String(e.type)]
     if (ec) {
       srv.runCommandSilent(`summon item ${e.x} ${e.y + 0.5} ${e.z} {Item:{id:"kubejs:rift_essence",count:${ec}}}`)
-      say(srv, `§5✦ 균열 정수 +${ec} §7— ${e.type} 격파 (마을 재건 재화)`)
+      say(srv, `§5✦ 별의 파편 +${ec} §7— ${e.type} 격파 (마을 재건 재화)`)
     }
   }
   if (!e.tags) return
@@ -1326,7 +1326,7 @@ ServerEvents.commandRegistry(event => {
         const nodeEss = townLvl(s, 'sanctum') >= 3 ? 3 : 2
         const nc = sancPos(s)
         s.runCommandSilent(`summon item ${nc.x + 0.5} ${nc.y + 1} ${nc.z + 0.5} {Item:{id:"kubejs:rift_essence",count:${nodeEss}}}`)
-        say(s, `§5✦ 균열 정수 +${nodeEss} §7— 어둠의 근원이 응결됐다 (성역에 떨어졌다)`)
+        say(s, `§5✦ 별의 파편 +${nodeEss} §7— 어둠의 근원이 응결됐다 (성역에 떨어졌다)`)
         say(s, `§b✔ 균열 노드 파괴: §d${name} §7— 세상이 숨을 돌린다 (남은 ${names.length}개) §e공동 금고 +${nodeReward}`)
         playAll(s, 'minecraft:ui.toast.challenge_complete', 1, 0.8)
         playAll(s, 'minecraft:block.beacon.activate', 0.8, 1.2)

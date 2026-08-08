@@ -15,7 +15,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 public final class TownCatalog {
     private TownCatalog() {}
 
-    // 균열 정수 — 보스를 잡아야 나오는 전용 재화. 제작·수집과 겹치지 않아 진행도에 비례해 쌓인다.
+    // 별의 파편 — 보스를 잡아야 나오는 전용 재화. 제작·수집과 겹치지 않아 진행도에 비례해 쌓인다.
     public static final ResourceLocation ESSENCE = ResourceLocation.parse("kubejs:rift_essence");
 
     public record Level(int ducat, ResourceLocation item, int count, String nameKey, String fxKey, String flag) {

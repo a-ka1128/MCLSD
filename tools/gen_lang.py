@@ -29,7 +29,7 @@ from pathlib import Path
 # Simply Swords 는 항목이 300 이 넘어 표를 따로 뒀다. 여기 같이 두면 «규칙» 과 «번역» 이
 # 섞여서 도구를 못 읽는다. 저 파일은 무엇으로 옮기는지만, 이 파일은 어떻게 찍는지만 담는다.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lang_simplyswords import TABLE as SS_TABLE  # noqa: E402
+from lang_simplyswords import TABLE as SS_TABLE, LSRELICS as LSR_TABLE  # noqa: E402
 
 # 콘솔이 cp949 라 한글·기호를 그대로 찍으면 UnicodeEncodeError 로 죽는다.
 # 파일은 어차피 UTF-8 로 쓰지만, 「못 옮긴 것」 보고가 콘솔에서 터지면 그게 제일 필요한 순간에 안 보인다.
@@ -38,6 +38,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 ROOT = Path(__file__).resolve().parent.parent
 MODS = ROOT / 'server' / 'mods'
 PACK = ROOT / 'client' / 'resourcepacks' / 'LS-Korean'
+# ※ 커스텀 텍스처는 이 도구가 안 건드린다. 제자리는 `kubejs/assets/` — 아래 팩 쓰기 주석 참고.
 PACK_FORMAT = 34          # 1.21.1
 LANG_EN = 'en_us.json'
 LANG_KO = 'ko_kr.json'
@@ -235,6 +236,8 @@ def translate(mod, key, en):
         return OVERRIDES[full]
     if mod == 'simplyswords' and key in SS_TABLE:
         return SS_TABLE[key]
+    if mod == 'lsrelics' and key in LSR_TABLE:
+        return LSR_TABLE[key]
     # 재료 + 종류 조합
     for mat_en, mat_ko in MATS.items():
         if en.startswith(mat_en + ' '):
@@ -285,6 +288,11 @@ def main():
                     if f'{mod}:{k}' in OVERRIDES or k in SS_TABLE:
                         todo.setdefault(mod, {})[k] = v
 
+    # 우리 모드는 «이미 한국어인데 문구가 낡은» 경우라 위 스캔(미번역 탐지)에 안 걸린다.
+    # 그래서 표에 있는 것을 그대로 얹는다.
+    if LSR_TABLE:
+        todo.setdefault('lsrelics', {}).update({k: '' for k in LSR_TABLE})
+
     out, missed, used, bad = {}, [], set(), []
     for mod, kv in todo.items():
         for k, v in kv.items():
@@ -301,11 +309,13 @@ def main():
                 if FMT.findall(v) != FMT.findall(t):
                     bad.append((mod, k, FMT.findall(v), FMT.findall(t)))
 
-    # ── 팩 쓰기 (통째로 다시 만든다 — 손으로 고친 게 남으면 다음 실행과 갈린다) ──
+    # ── 팩 쓰기 ──
+    # **lang 파일만** 지우고 다시 쓴다. 예전엔 `assets/` 를 통째로 비웠는데, 팩에 텍스처가
+    # 들어오면서 그게 **다음 실행에 텍스처를 조용히 지우는** 함정이 됐다(2026-08-08).
+    # 이 도구가 소유하는 건 lang 이지 assets 전체가 아니다.
     assets = PACK / 'assets'
-    if assets.exists():
-        for p in sorted(assets.rglob('*'), reverse=True):
-            p.unlink() if p.is_file() else p.rmdir()
+    for p in assets.rglob(LANG_KO):
+        p.unlink()
     total = 0
     for mod, kv in sorted(out.items()):
         d = assets / mod / 'lang'
@@ -315,10 +325,15 @@ def main():
             encoding='utf-8')
         total += len(kv)
         print(f'  {len(kv):4d}  {mod}')
+    # ※ 커스텀 아이템 텍스처는 **여기서 다루지 않는다.** 제자리는 `kubejs/assets/` 다 —
+    #   커스텀 아이템은 어차피 클라에도 `kubejs/startup_scripts/ls_items.js` 가 있어야
+    #   등록되므로(없으면 레지스트리 불일치로 튕긴다), 텍스처를 팩에 따로 실으면
+    #   **같은 PNG 가 두 벌**이 되어 언젠가 갈린다. 「kubejs 폴더를 통째로 맞춘다」 규칙 하나로 둔다.
+
     PACK.mkdir(parents=True, exist_ok=True)
     (PACK / 'pack.mcmeta').write_text(json.dumps({
         'pack': {'pack_format': PACK_FORMAT,
-                 'description': 'Last Stardust — 무기 이름 한글화'}
+                 'description': 'Last Stardust — 한글화 + 커스텀 텍스처 (필수)'}
     }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
     print(f'\n총 {total} 항목 · {len(out)} 모드 → {PACK.relative_to(ROOT)}')

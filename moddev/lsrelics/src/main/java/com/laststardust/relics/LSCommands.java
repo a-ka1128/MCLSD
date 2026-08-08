@@ -26,7 +26,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 // 각성 단계를 아이템에 새기는 관리자 명령.
 //
-// 각성의 "자격 판정"(관문 클리어 수·균열 정수 소모)은 KubeJS(ls_ascend.js)가 한다 —
+// 각성의 "자격 판정"(관문 클리어 수·별의 파편 소모)은 KubeJS(ls_ascend.js)가 한다 —
 // 진행도가 전부 거기 persistentData에 있기 때문. 여기서는 판정이 끝난 뒤
 // 실제 아이템 NBT에 별을 새기는 일만 맡는다.
 //   /lsrelic star <1-5>   손에 든 유물의 각성 단계를 설정

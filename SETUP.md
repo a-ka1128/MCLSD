@@ -22,9 +22,19 @@
 2. `MODS.md`의 모드를 전부 추가. **의존성 프롬프트는 수락** — Balm·GeckoLib·Placebo 등은 Prism이 자동 추가.
 3. ⚠️ 항목: 경제 모드는 **하나만**; Puffish는 **Puffish Attributes** + 스킬트리 팩도 같이.
    (FTB 계열 5개와 SDM 상점 4개는 **2026-08-06 에 제거됐다** — 넣지 말 것. 이유는 `MODS.md`.)
-4. **리소스팩**을 인스턴스의 `resourcepacks/` 에 넣고 **옵션에서 켠다** — 넣기만 하면 목록에만 뜬다.
-   `client/resourcepacks/LS-Korean.zip`(무기 이름 한글화)은 이 저장소에 들어 있다. 나머지는 `MODS.md` 표 참고.
-5. **한 번 실행**해서(싱글플레이 테스트 월드) 정상 부팅 + EMI(레시피 뷰어)·모드 콘텐츠 확인. 빨간 에러는 다음
+4. ⚠️ **`server/kubejs/` 의 `startup_scripts/` 와 `assets/` 를 클라 인스턴스의 같은 자리에 복사한다.**
+   커스텀 아이템(별의 파편·별먼지·균열 열쇠)은 **클라에도 등록돼 있어야** 한다 — 없으면 접속하는 순간
+   레지스트리 불일치로 **튕긴다.** 텍스처도 여기 같이 있다(`assets/kubejs/textures/item/`).
+   ```
+   server\kubejs\startup_scripts\  →  <인스턴스>\minecraft\kubejs\startup_scripts\
+   server\kubejs\assets\           →  <인스턴스>\minecraft\kubejs\assets\
+   ```
+   **`server_scripts/` 는 복사하지 않는다** — 그건 서버만 돈다.
+   ※ 아이템을 더하거나 이름을 바꿀 때마다 이 복사를 다시 해야 한다. 안 하면 조용히 안 튕기다가
+     «접속만 하면 튕기는» 상태가 된다. (2026-08-08 에 실제로 이 단계가 문서에 없어서 걸렸다.)
+5. **리소스팩**을 인스턴스의 `resourcepacks/` 에 넣고 **옵션에서 켠다** — 넣기만 하면 목록에만 뜬다.
+   `client/resourcepacks/LS-Korean.zip`(한글화 627항목)은 이 저장소에 들어 있다. 나머지는 `MODS.md` 표 참고.
+6. **한 번 실행**해서(싱글플레이 테스트 월드) 정상 부팅 + EMI(레시피 뷰어)·모드 콘텐츠 확인. 빨간 에러는 다음
    단계 전에 해결.
 
 ## Phase 3 — 친구 배포용 패키징 (.mrpack)

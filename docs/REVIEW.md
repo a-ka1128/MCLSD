@@ -169,7 +169,7 @@ STORY의 세계관 명사가 코드와 **정확히 일치**한다 — 재작업 
 - 각성 5걸음 = `ls_ascend.js` 1~5성 ✅
 - 네 관문(개척/심층/정점/균열핵) = `ls_rift.js TIERS` ✅
 - 위협도 0~15 = `ls_siege.js MAX_THREAT` ✅
-- 정화 봉화 = `ls_beacon.js` ✅ · 균열 정수 = `kubejs:rift_essence` ✅
+- 정화 봉화 = `ls_beacon.js` ✅ · 별의 파편 = `kubejs:rift_essence` ✅
 - "세계가 밝아지면 그림자도 깊어진다"(6장) = `ls_mobscale.js`의 서사적 정당화 ✅
 
 > **결론:** STORY는 시스템의 사후 서사가 아니라 **설계와 맞물려 쓰였다.** 코드 이름을 바꿀 필요가 없고,

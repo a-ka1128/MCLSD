@@ -47,7 +47,7 @@ const RELICS = {
 }
 
 const RL_ESS = 'kubejs:rift_essence'
-const RL_COST = 1   // 유물 해금에 바치는 균열 정수
+const RL_COST = 1   // 유물 해금에 바치는 별의 파편
 
 // ── 유물 지급 (모드 아이템이 스탯·무적 내장 → 순수 give) ──
 // 유물은 그냥 주지 않는다: 첫 공세를 맨몸으로 버텨 얻은 정수를 제단에 바쳐야 깨어난다.
@@ -63,7 +63,7 @@ function rlGrant(server, player, force) {
     // 그래서 정수가 0개일 때 검사를 공짜로 통과해 유물이 그냥 나갔다.
     var have = lsCountItem(player, RL_ESS)
     if (have < RL_COST) {
-      player.tell(Text.of(`§c균열 정수가 부족합니다: §e${have}/${RL_COST}`))
+      player.tell(Text.of(`§c별의 파편이 부족합니다: §e${have}/${RL_COST}`))
       player.tell(Text.of('§7   첫 공세를 막아내면 정수가 주어집니다 — 그것을 제단에 바치세요.'))
       return 0
     }
@@ -152,7 +152,7 @@ ServerEvents.commandRegistry(event => {
         ctx.source.sendSystemMessage(Text.of('§8      — 이 무기를 마지막으로 쥐었던 자'))
       } else {
         var have = lsCountItem(p, RL_ESS)
-        ctx.source.sendSystemMessage(Text.of(`§7미획득 — §d균열 정수 ${RL_COST}개§7를 제단에 바쳐야 깨어난다. §8(보유 ${have})`))
+        ctx.source.sendSystemMessage(Text.of(`§7미획득 — §d별의 파편 ${RL_COST}개§7를 제단에 바쳐야 깨어난다. §8(보유 ${have})`))
         ctx.source.sendSystemMessage(Text.of('§8   첫 공세를 막아내면 정수가 주어진다.'))
       }
       return 1

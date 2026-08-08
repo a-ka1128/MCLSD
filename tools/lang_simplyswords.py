@@ -21,6 +21,15 @@
 #   엉뚱한 값이 박힌다.
 # · `§6` 등 색 코드도 그대로 둔다.
 
+# ── 우리 모드(lsrelics)의 낡은 문구 덮어쓰기 ──
+# jar 안 ko_kr.json 은 이미 한국어인데 «균열 정수» 라는 옛 이름을 쓰고 있다. 소스는 고쳤지만
+# 배포된 jar 는 그대로라, 고치려면 Gradle 재빌드 + jar 교체가 필요하다.
+# 리소스팩은 mod 의 lang 도 키 단위로 덮으므로 여기서 한 줄로 끝난다 — 재빌드 위험을 안 진다.
+# (모드를 다시 빌드해도 팩이 이기므로 어긋나지 않는다. 소스도 같이 고쳐 뒀다.)
+LSRELICS = {
+    'lsfate.gui.hint': '가호를 정하고 첫 공세를 버텨 얻은 별의 파편을 제단에 바쳐야 유물이 깨어난다.',
+}
+
 P = 'item.simplyswords.'
 E = 'effect.simplyswords.'
 A = 'advancements.simplyswords.'

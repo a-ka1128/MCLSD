@@ -1,5 +1,5 @@
 // Last Stardust — 유물 각성 (Ascension)
-// 유물의 성장 계단. 관문(ls_rift.js) 클리어가 자격을 열고, 균열 정수가 값을 치른다.
+// 유물의 성장 계단. 관문(ls_rift.js) 클리어가 자격을 열고, 별의 파편이 값을 치른다.
 //
 //   1성  유물 획득 시 기본        패시브 + 기본 스킬 (우클릭)
 //   2성  T1 개척 클리어 후        피해 ×1.5 · 체력↑ · 이동기 해금 (웅크림 두 번)
@@ -86,7 +86,7 @@ function asStamp(server, uname) {
   return s
 }
 
-// 균열 정수 보유량.
+// 별의 파편 보유량.
 //
 // ── 여기가 오래 고장나 있었다 ──
 // 예전엔 `clear <이름> <아이템> 0` 의 반환값으로 개수를 셌는데, runCommandSilent 는
@@ -126,7 +126,7 @@ function asAscend(server, player) {
   // ② 정수 비용
   const have = asEssence(server, uname)
   if (have < req.cost) {
-    player.tell(Text.of(`§c균열 정수가 부족하다: §e${have}/${req.cost}`))
+    player.tell(Text.of(`§c별의 파편이 부족하다: §e${have}/${req.cost}`))
     player.tell(Text.of('§7   공세 격퇴 · 현상금 · 구출 · 균열 시련에서 얻는다.'))
     return 0
   }
@@ -135,7 +135,7 @@ function asAscend(server, player) {
   const ap = lsPlayerByName(server, uname)
   const took = ap ? lsTakeItem(ap, AS_ESS, req.cost) : 0
   if (took < req.cost) {
-    player.tell(Text.of(`§c균열 정수 회수에 실패했다: §e${took}/${req.cost}`))
+    player.tell(Text.of(`§c별의 파편 회수에 실패했다: §e${took}/${req.cost}`))
     lsWarn('ls_ascend:essence-take', `took ${took} of ${req.cost} from ${uname}`)
     return 0
   }

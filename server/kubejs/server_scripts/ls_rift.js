@@ -19,7 +19,7 @@ const APPROACH = 64          // 이 거리 이내로 다가오면 제단이 출�
 const NEAR_SANCTUARY = 96    // 봉인 해제는 성역 근처에서만(의식)
 
 // ── 진행 게이트 정의 (핵심 보스 4종, 전부 오버월드 소환 가능·정상 작동) ──
-// minR~maxR: 성역 기준 링 거리(m). cost: 개봉에 바칠 균열 정수. reward: 클리어 금고 보상.
+// minR~maxR: 성역 기준 링 거리(m). cost: 개봉에 바칠 별의 파편. reward: 클리어 금고 보상.
 // tier: 클리어 시 부여될 Apotheosis 월드티어. (haven → frontier → ascent → summit → pinnacle)
 const TIERS = [
   { key: 't1', name: '개척', boss: 'mowziesmobs:ferrous_wroughtnaut', bossName: '강철거인',
@@ -88,7 +88,7 @@ function openAltar(server, player) {
   let have = 0
   // 개수는 인벤토리를 직접 읽는다 (ls_util.js) — /clear 반환값으로 세는 건 애초에 불가능하다.
   have = lsCountItem(player, RF_ESS)
-  if (have < t.cost) { player.tell(Text.of(`§c균열 정수 부족: §e${have}/${t.cost} §7— 보스를 처치해 모으세요.`)); return 0 }
+  if (have < t.cost) { player.tell(Text.of(`§c별의 파편 부족: §e${have}/${t.cost} §7— 보스를 처치해 모으세요.`)); return 0 }
   if (lsTakeItem(player, RF_ESS, t.cost) < t.cost) { player.tell(Text.of('§c정수 회수에 실패했습니다.')); return 0 }
   // 링 좌표 롤
   const ang = Math.random() * Math.PI * 2
@@ -355,7 +355,7 @@ ServerEvents.commandRegistry(event => {
       } else {
         var nt = TIERS[nextIdx(s)]
         ctx.source.sendSystemMessage(Text.of(`§7다음 봉인: §e${nt.name} §7→ §d${nt.bossName} §7(${nt.minR}~${nt.maxR}m)`))
-        ctx.source.sendSystemMessage(Text.of(`§8   개봉 비용 §5균열 정수 ${nt.cost}개§8 · 성역에서 §e/expedition open`))
+        ctx.source.sendSystemMessage(Text.of(`§8   개봉 비용 §5별의 파편 ${nt.cost}개§8 · 성역에서 §e/expedition open`))
       }
       return 1
     })
