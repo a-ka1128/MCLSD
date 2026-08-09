@@ -39,6 +39,19 @@ public final class LSRelicsClient {
         event.registerItem(com.laststardust.relics.client.MusketArmPose.INSTANCE, LSRelics.GUNNER.get());
     }
 
+    // 스틱스의 «왼손 한 자루» — 플레이어 렌더러에 레이어를 얹는다.
+    //
+    // 두 번 도는 이유: 플레이어 모델은 «기본»과 «슬림(알렉스)» 두 종류이고 렌더러가 따로다.
+    // 하나만 붙이면 스킨 종류에 따라 «어떤 사람은 칼이 하나»가 된다 — 재현이 안 되는 버그다.
+    @SubscribeEvent
+    public static void onAddLayers(net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers event) {
+        for (net.minecraft.client.resources.PlayerSkin.Model skin : event.getSkins()) {
+            if (event.getSkin(skin) instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer pr) {
+                pr.addLayer(new com.laststardust.relics.client.DualWieldLayer(pr));
+            }
+        }
+    }
+
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
