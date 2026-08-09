@@ -2364,13 +2364,74 @@ public final class RelicSkills {
     //
     // ※ 아군 경감이 8칸인 이유: 「전 파티」로 하면 하르모니아 「만상의 화음」(24칸)과 정면으로
     //   겹친다. 8칸이면 «내 뒤에 서라»가 되어 멀리서 전체를 덮는 쪽과 축이 갈린다.
+    // ── 준비 동작 (2026-08-09) ──
+    // 「누르면 바로 앞에 이펙트」가 궁극처럼 안 보인다는 지적. 대검을 «치켜들었다 내려찍는»
+    // 그림으로 바꿨다. 마크에는 커스텀 애니메이션이 없으므로 **시간으로** 만든다:
+    //   0.8초 동안 뿌리내린 채 기세가 머리 위로 모이고 → 그다음에 내려찍는다.
+    // 지연 실행 수단은 강철 발의 마무리와 같은 것을 쓴다(스택에 만료 틱 → ParryManager 틱).
+    //
+    // ⚠️ **조준은 내려찍는 순간의 시선을 쓴다.** 시전 시점으로 잠그면 0.8초 사이에 보스가
+    //    움직였을 때 「분명 봤는데 헛나갔다」가 된다. 대신 준비 중에 돌아설 수 있으니
+    //    그만큼 «맞히기»는 쉬워진다 — 대가는 0.8초 동안 못 움직이는 것이다.
+    // ⚠️ 준비 중에 무기를 바꾸거나 죽으면 **그대로 사라진다**(쿨은 이미 돌았다).
+    //    강철 발의 마무리와 같은 성질이고, 「자리를 지키지 못했다」와 뜻이 맞는다.
     public static void sunderAll(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdSunder", "일도양단", 1800, 4)) return;
 
-        // ── 기세를 태운다 ──
-        // ⚠️ 반드시 beamHurt «전에» 소모해야 한다. 뒤에 두면 ParryManager.onMomentumStrike 의
-        //    상시 배수(+6%/중첩)가 이 일격에도 붙어 아래 boost 와 «이중»으로 곱해진다.
+        // ── 기세는 «치켜드는 순간» 태운다 ──
+        // 내려찍을 때 태우면 준비 0.8초 동안 패링해서 한 중첩 더 얹는 짓이 된다.
+        // 세기는 «결심한 순간»에 정해지는 게 이 스킬의 뜻에도 맞는다.
         int mom = com.laststardust.relics.ParryManager.consumeMomentum(player);
+        com.laststardust.relics.ParryManager.armWith(stack, level,
+            com.laststardust.relics.ParryManager.K_SLAM, "sunderMom",
+            com.laststardust.relics.ParryManager.SUNDER_WINDUP, mom);
+
+        // 뿌리내린다 — 준비 동작의 «대가»가 눈에 보여야 한다.
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
+            com.laststardust.relics.ParryManager.SUNDER_WINDUP, 6, false, false));
+
+        Vec3 f = player.position();
+        shockRing(level, f.x, f.y + 0.1, f.z, 3.2, 44, ParticleTypes.ELECTRIC_SPARK, 0.05);
+        dustBurst(level, f.add(0, 1.0, 0), 0.8, 20, STEEL, 1.4f);
+        play(level, player, SoundEvents.NETHERITE_BLOCK_PLACE, 1.0f, 0.5f);
+        // 올라가는 4음 — 「모이고 있다」를 소리로 알린다.
+        Vec3 head = f.add(0, 2.4, 0);
+        SoundScheduler.at(level, head, SoundEvents.NOTE_BLOCK_BELL.value(), 0.7f, 0.8f, 4);
+        SoundScheduler.at(level, head, SoundEvents.NOTE_BLOCK_BELL.value(), 0.7f, 1.0f, 8);
+        SoundScheduler.at(level, head, SoundEvents.NOTE_BLOCK_BELL.value(), 0.8f, 1.3f, 12);
+        SoundScheduler.at(level, head, SoundEvents.NOTE_BLOCK_BELL.value(), 0.9f, 1.7f, 15);
+        player.displayClientMessage(Component.literal(
+            "§7⊗ 일도양단 §8— 치켜든다 · 기세 §f" + mom + "§8 소모"), true);
+    }
+
+    /**
+     * 치켜드는 0.8초 동안 «매 틱» 불리는 그림. {@code ParryManager} 의 틱이 남은 틱 수를 준다.
+     *
+     * <p>모이는 방향이 <b>바깥→안</b>인 게 중요하다. 밖으로 퍼지면 「터졌다」로 읽히고,
+     * 안으로 모여야 「모으고 있다 — 아직 안 나갔다」로 읽힌다. 그래야 뒤의 내려찍기가 «해소»가 된다.
+     */
+    public static void sunderCharge(ServerLevel level, ServerPlayer player, int left) {
+        int total = com.laststardust.relics.ParryManager.SUNDER_WINDUP;
+        double p = 1.0 - (double) left / total;              // 0 → 1
+        Vec3 f = player.position();
+        double apexY = f.y + 2.2 + 1.4 * p;                  // 검끝이 올라간다
+
+        // 모여드는 고리 — 반경이 줄고 높이가 오른다
+        ring(level, f.x, apexY, f.z, 2.6 * (1.0 - p) + 0.4, 12, dustOpt(STEEL, 1.3f), 0.0);
+        // 발밑에서 검끝까지 빨려 올라가는 기둥
+        beamParticles(level, f.add(0, 0.2, 0), new Vec3(f.x, apexY, f.z), 0.45,
+            ParticleTypes.ELECTRIC_SPARK, 0.02);
+        // 마지막 4틱 — 검끝이 하얗게 달아오른다
+        if (left <= 4) {
+            dustBurst(level, new Vec3(f.x, apexY, f.z), 0.25, 8, 0xFFFFFF, 1.6f);
+        }
+    }
+
+    /** 내려찍는 순간. 여기서부터가 원래의 일도양단이다. */
+    public static void sunderStrike(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        int mom = Math.round(com.laststardust.relics.ParryManager.momOf(stack));
+        // ⚠️ 기세는 이미 치켜들 때 태웠다. 그래서 ParryManager.onMomentumStrike 의 상시
+        //    배수(+6%/중첩)는 «안» 붙고, 아래 boost 가 그 자리를 대신한다 — 이중으로 곱해지지 않는다.
         float boost = 1.0f + com.laststardust.relics.ParryManager.SUNDER_PER * mom;
 
         Vec3 eye = player.getEyePosition();
@@ -2399,16 +2460,40 @@ public final class RelicSkills {
         // 아군 경감 창을 연다 (ParryManager.onSunderGuard 가 8칸 안을 감싼다)
         com.laststardust.relics.ParryManager.markSunder(player, 100);
 
+        // ── ① 내려친 궤적 ── 검끝(머리 위)에서 발밑까지 한 줄로 떨어진다.
+        //    이게 없으면 준비 동작에서 모아둔 것이 «어디로 갔는지» 안 보인다.
+        Vec3 foot = player.position();
+        Vec3 apex = foot.add(0, 3.6, 0);
+        beamDust(level, apex, foot.add(0, 0.1, 0), 0.22, 0xFFFFFF, 1.8f);
+        beamParticles(level, apex, foot.add(0, 0.1, 0), 0.35, ParticleTypes.SWEEP_ATTACK, 0.0);
+        level.sendParticles(ParticleTypes.FLASH, foot.x, foot.y + 0.3, foot.z, 1, 0, 0, 0, 0);
+
+        // ── ② 착지 ── 발밑에서 퍼지는 두 겹 고리. 안쪽은 터지고 바깥쪽은 «퍼져나간다».
+        shockRing(level, foot.x, foot.y + 0.1, foot.z, 2.0, 40, ParticleTypes.EXPLOSION, 0.0);
+        shockRing(level, foot.x, foot.y + 0.1, foot.z, 8.0, 72, ParticleTypes.CRIT, 0.35);
+        dustBurst(level, foot.add(0, 0.6, 0), 1.8, 70, STEEL, 2.2f);
+
+        // ── ③ 갈라져 나가는 금 ── 피해 판정선(눈높이)과 별개로 «바닥»에도 한 줄 긋는다.
+        //    실제로 베이는 건 위쪽 선인데, 내려찍기의 그림은 바닥이라야 읽힌다.
+        Vec3 flat = new Vec3(look.x, 0, look.z);
+        if (flat.lengthSqr() > 1.0e-6) {
+            Vec3 crackEnd = foot.add(flat.normalize().scale(reach));
+            beamDust(level, foot.add(0, 0.15, 0), crackEnd.add(0, 0.15, 0), 0.3, STEEL, 2.2f);
+            beamParticles(level, foot.add(0, 0.15, 0), crackEnd.add(0, 0.15, 0), 0.6,
+                ParticleTypes.EXPLOSION, 0.0);
+        }
+
+        // ── ④ 베인 선 ── 원래의 앞으로 뻗는 참격.
         beamDust(level, eye, end, 0.35, STEEL, 2.0f);
         beamParticles(level, eye, end, 0.5, ParticleTypes.SWEEP_ATTACK, 0.0);
         level.sendParticles(ParticleTypes.FLASH, end.x, end.y, end.z, 1, 0, 0, 0, 0);
         dustBurst(level, end, 2.0, 60, STEEL, 2.0f);
-        shockRing(level, player.getX(), player.getY() + 0.1, player.getZ(), 8.0, 60, ParticleTypes.CRIT, 0.02);
-        play(level, player, SoundEvents.GENERIC_EXPLODE.value(), 0.8f, 0.8f);
-        play(level, player, SoundEvents.ANVIL_LAND, 1.2f, 0.5f);
+
+        play(level, player, SoundEvents.ANVIL_LAND, 1.4f, 0.4f);
+        play(level, player, SoundEvents.GENERIC_EXPLODE.value(), 0.9f, 0.7f);
         SoundScheduler.at(level, end, SoundEvents.BEACON_DEACTIVATE, 1.0f, 0.6f, 4);
         player.displayClientMessage(Component.literal(
             "§7⊗ 일도양단 §8— §f" + hit + "§8마리 · 기세 §f" + mom
-            + "§8 소모(+" + Math.round((boost - 1f) * 100) + "%) · 아군 5초 −25%"), true);
+            + "§8(+" + Math.round((boost - 1f) * 100) + "%) · 아군 5초 −25%"), true);
     }
 }

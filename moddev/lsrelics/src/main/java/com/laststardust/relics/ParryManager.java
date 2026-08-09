@@ -76,12 +76,22 @@ public final class ParryManager {
     //    그래서 이 값은 그 6% 를 대체하는 값이지 얹히는 값이 아니다.
     public static final float SUNDER_PER = 0.15f;       // 중첩당 피해 +15% (5중첩 ×1.75)
     public static final float SUNDER_ALLY_DR = 0.25f;   // X 이후 아군 받는 피해 −25%
+    /**
+     * 대검을 치켜드는 시간. 0.8초 — 이 사이 뿌리내린다.
+     *
+     * <p><b>왜 0.8초인가</b>: 0.4초면 준비 동작이 눈에 안 들어와 그냥 «렉»으로 읽히고,
+     * 1.5초면 90초 쿨짜리를 쓰는 데 겁이 난다. 마크 기준으로 「크게 휘두른다」가 읽히는
+     * 최소치가 대략 이 언저리다. <b>인게임에서 답답하면 12틱까지 줄인다.</b>
+     */
+    public static final int SUNDER_WINDUP = 16;
     public static final double SUNDER_ALLY_RANGE = 8.0; // 「내 뒤에 서라」 — 하르모니아(24칸)와 갈린다
 
     // ── 스택 키 ── (무기에 딸린 상태)
     public static final String K_PARRY  = "parryWindow";
     public static final String K_STANCE = "stanceUntil";
     public static final String K_RESOLVE = "resolveUntil"; // 불굴
+    /** X「일도양단」이 «내려찍힐» 틱. 그때까지는 치켜드는 중이다. */
+    public static final String K_SLAM = "sunderSlam";
     /** 자세·불굴의 «세기»는 그때 먹은 기세로 정해지므로 만료와 «같이» 적어둔다. */
     private static final String K_STANCE_DR = "stanceDr";
     private static final String K_RESOLVE_DR = "resolveDr";
@@ -159,6 +169,11 @@ public final class ParryManager {
 
     private static float drOf(ItemStack stack, String drKey) {
         return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getFloat(drKey);
+    }
+
+    /** 치켜들 때 태운 기세. 내려찍는 쪽이 세기를 알아야 해서 스택에 남겨둔다. */
+    public static float momOf(ItemStack stack) {
+        return drOf(stack, "sunderMom");
     }
 
     /** X「일도양단」 직후 아군을 감싸는 창. 시전자에게 적는다. */
@@ -272,6 +287,25 @@ public final class ParryManager {
                 ItemStack held = p.getMainHandItem();
                 if (held.getItem() != LSRelics.NEMESIS.get()) continue;
                 CompoundTag tag = held.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+
+                // ── X「일도양단」 — 치켜드는 중이면 매 틱 그림을 그리고, 다 되면 내려찍는다 ──
+                long slam = tag.getLong(K_SLAM);
+                if (slam != 0) {
+                    long left = slam - t;
+                    if (left > SUNDER_WINDUP) {          // 시간 되감김 — 버린다 (active() 의 max 와 같은 이유)
+                        tag.putLong(K_SLAM, 0);
+                        held.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+                    } else if (left > 0) {
+                        com.laststardust.relics.item.RelicSkills.sunderCharge(level, p, (int) left);
+                        continue;                        // 치켜드는 중엔 다른 게 끼어들 자리가 없다
+                    } else {
+                        tag.putLong(K_SLAM, 0);
+                        held.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+                        com.laststardust.relics.item.RelicSkills.sunderStrike(level, p, held);
+                        continue;
+                    }
+                }
+
                 long at = tag.getLong(K_BURST);
                 if (at == 0 || at > t) continue;
                 tag.putLong(K_BURST, 0);
