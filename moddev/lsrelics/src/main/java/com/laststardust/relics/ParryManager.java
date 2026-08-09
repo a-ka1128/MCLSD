@@ -49,7 +49,10 @@ public final class ParryManager {
     public static final int WINDOW = 8;
     /** C「역린」이 켜져 있으면 창이 2배. */
     public static final int WINDOW_WIDE = 16;
-    public static final int PARRY_CD = 24;          // 1.2초 — 난사를 막되 반응은 되게
+    /** 한 번 패링에 성공하면 이만큼은 창이 안 열린다. 자세(−25%)는 그대로 유지된다. */
+    public static final int PARRY_CD = 24;          // 1.2초
+    /** 쥐고 있는 동안 앞에서 오는 피해를 이만큼 깎는다. 타이밍을 못 맞춰도 받는 몫. */
+    public static final float BLOCK_DR = 0.25f;
 
     public static final int MOMENTUM_MAX = 5;
     public static final float MOMENTUM_PER = 0.06f; // 중첩당 주는 피해 +6% (최대 +30%)
@@ -133,12 +136,31 @@ public final class ParryManager {
         ItemStack held = guard.getMainHandItem();
         if (held.getItem() != LSRelics.NEMESIS.get()) return;
 
+        // ── 방패처럼 «쥐고 있는가» ──
+        // 창의 시작점을 따로 저장하지 않는다. 바닐라가 이미 세고 있다(getTicksUsingItem).
+        // 놓았다 다시 쥐면 0 부터 다시 세므로 «다시 노린다»가 공짜로 성립한다.
+        boolean guarding = guard.isUsingItem() && guard.getUseItem() == held;
+        boolean front = guarding && facing(guard, event);
         boolean wide = active(held, sl, K_SCALE, 100);
-        if (!active(held, sl, K_PARRY, wide ? WINDOW_WIDE : WINDOW)) {
-            // 창 밖이면 「강철 발」만 본다 — 그건 타이밍이 필요 없는 바닥이다
-            if (active(held, sl, K_STANCE, 60)) event.setAmount(event.getAmount() * (1f - STANCE_DR));
+        int window = wide ? WINDOW_WIDE : WINDOW;
+
+        boolean perfect = front
+            && guard.getTicksUsingItem() <= window
+            && !active(held, sl, K_PARRY, PARRY_CD);   // 한 번 성공하면 잠깐 못 연다
+
+        if (!perfect) {
+            float mult = 1f;
+            // 못 맞춰도 «막고는 있다» — 이게 「못 해도 탱커」의 첫 바닥이다.
+            // 방패와 같이 앞에서 오는 것만 막는다.
+            if (front) mult *= (1f - BLOCK_DR);
+            // 강철 발은 자세가 아니라 «자리»라 방향을 안 본다.
+            if (active(held, sl, K_STANCE, 60)) mult *= (1f - STANCE_DR);
+            if (mult < 1f) event.setAmount(event.getAmount() * mult);
             return;
         }
+        // 연속 무효화 방지 — 한 번의 자세로 무리 전체를 지우면 타이밍이 의미를 잃는다.
+        // (광역으로 되받는 건 C「역린」의 몫이다.)
+        arm(held, sl, K_PARRY, PARRY_CD);
 
         // ── 성공 ──
         event.setCanceled(true);
@@ -168,6 +190,22 @@ public final class ParryManager {
             sl.sendParticles(ParticleTypes.SWEEP_ATTACK,
                 e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(), 1, 0, 0, 0, 0);
         }
+    }
+
+    /**
+     * 앞에서 오는 공격인가. <b>바닐라 방패와 같은 계산을 쓴다</b>
+     * ({@code LivingEntity.isDamageSourceBlocked}) — 손맛이 방패와 어긋나면
+     * 「왜 이건 막히고 저건 안 막히지」가 되고, 그건 배울 수 없는 규칙이다.
+     *
+     * <p>피해 위치를 모르면(질식·독처럼 «어디서»가 없는 것) 막을 수 없는 것으로 본다.
+     */
+    private static boolean facing(ServerPlayer guard, LivingIncomingDamageEvent event) {
+        var from = event.getSource().getSourcePosition();
+        if (from == null) return false;
+        var look = guard.getViewVector(1.0f);
+        var to = from.vectorTo(guard.position()).normalize();
+        to = new net.minecraft.world.phys.Vec3(to.x, 0.0, to.z);
+        return to.dot(look) < 0.0;
     }
 
     /**

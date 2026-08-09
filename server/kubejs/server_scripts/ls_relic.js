@@ -50,7 +50,7 @@ const RELICS = {
   harmonia: { id: 'lsrelics:harmonia', name: '§d바르비톤', title: 'harmonia_relic', kind: '저음 리라 (좌클릭 음률 — 원거리 연사 · R 고양의 선율 — 아군 버프/적 피해 · V 엮인 걸음 · C 결속의 매듭 · X 만상의 화음)',
     lore: '흩어진 이들을 하나의 선율로 묶는 리라 — 상처를 덮는 대신 사이를 잇는다. 이 선율이 닿는 곳에서 누구도 흐트러지지 않는다.',
     echo: '나 혼자로는 아무것도 못 했다. 그래서 우리를 묶었다.' },
-  nemesis: { id: 'lsrelics:nemesis', name: '§7아드라스테이아', title: 'nemesis_relic', kind: '대검 (좌클릭 3타 콤보 · 우클릭 흘리기 — 0.4초 패링 · R 강철 발 · V 참격 인계 · C 역린 · X 일도양단)',
+  nemesis: { id: 'lsrelics:nemesis', name: '§7아드라스테이아', title: 'nemesis_relic', kind: '대검 (좌클릭 3타 콤보 · 우클릭 흘리기 — 쥐고 방어, 쥔 직후 0.4초는 완벽 패링 · R 강철 발 · V 참격 인계 · C 역린 · X 일도양단)',
     lore: '피할 수 없는 것의 이름을 새긴 대검 — 받은 것은 무엇이든 그대로 돌아간다. 이 날이 흘려낸 일격은 벤 자에게 되돌아가리라.',
     echo: '막는 법은 배웠다. 물러서는 법은 끝내 못 배웠다.' }
 }

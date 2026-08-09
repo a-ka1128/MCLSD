@@ -6,9 +6,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 
 // 아드라스테이아 — 대검(네메시스의 가호). **패링 탱커.**
@@ -34,20 +36,41 @@ public class NemesisBlade extends Item implements RelicActions {
         super(properties);
     }
 
-    // ── 우클릭 = 흘리기 ──
-    // 여기서는 «창을 여는 것»만 한다. 성공/실패 판정은 맞는 순간에 나므로
-    // ParryManager.onParry 가 맡는다.
+    // ── 우클릭 = 흘리기 (방패처럼 «누르고 있는다») ──
+    //
+    // ── 왜 탭이 아니라 홀드인가 (2026-08-09, 유저 요청) ──
+    // 처음엔 «한 번 눌러 0.4초 창을 연다» 였는데, 인게임에서 방패처럼 쥐고 있는 조작을 원했다.
+    // 그런데 홀드를 «계속 막기»로만 만들면 이지스의 「수호 반격」(태세)과 똑같아진다 —
+    // 그건 이 직업을 만들 때 제일 피하려던 것이다.
+    //
+    // 그래서 둘을 겹쳤다(소울류가 쓰는 방식):
+    //   쥐고 있는 동안        방어 자세 — 앞에서 오는 피해 −25% · 쿨 없음 · 이동이 느려진다
+    //   **쥔 뒤 0.4초 안**   완벽 패링 — 무효화 + 반격 + 기세
+    // 조작은 방패 그대로인데 타이밍의 값어치가 남는다. 못 맞춰도 −25% 는 받으므로
+    // 「못 해도 탱커」 원칙에도 오히려 더 맞는다.
+    //
+    // 판정은 전부 ParryManager.onParry 가 한다 — 여기서는 자세를 취하기만 한다.
+    // 창의 시작점은 별도 저장 없이 `getTicksUsingItem()` 이 알려준다.
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        if (!(level instanceof ServerLevel sl) || !(player instanceof ServerPlayer sp)) {
-            return InteractionResultHolder.success(stack);
+        player.startUsingItem(hand);
+        if (level instanceof ServerLevel sl && player instanceof ServerPlayer sp) {
+            RelicSkills.deflect(sl, sp, stack);
         }
-        if (!RelicSkills.shotReady(sl, stack, ParryManager.PARRY_CD)) {
-            return InteractionResultHolder.fail(stack);
-        }
-        RelicSkills.deflect(sl, sp, stack);
-        return InteractionResultHolder.success(stack);
+        return InteractionResultHolder.consume(stack);
+    }
+
+    /** 방패와 같은 팔 자세. 3인칭에서 「막고 있다」가 보여야 상대도 읽을 수 있다. */
+    @Override
+    public UseAnim getUseAnimation(ItemStack stack) {
+        return UseAnim.BLOCK;
+    }
+
+    /** 놓을 때까지 계속 — 방패와 같다. */
+    @Override
+    public int getUseDuration(ItemStack stack, LivingEntity entity) {
+        return 72000;
     }
 
     // ── R = 강철 발 (기본·1성) ──
