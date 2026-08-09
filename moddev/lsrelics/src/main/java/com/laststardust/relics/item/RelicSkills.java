@@ -2334,10 +2334,19 @@ public final class RelicSkills {
             com.laststardust.relics.ParryManager.K_RESOLVE, "resolveDr",
             com.laststardust.relics.ParryManager.RESOLVE_TICKS, dr);
 
+        // ── 발밑 충격 ──
+        // 순수 방어 스킬로 두면 22초 쿨을 쓰고도 «화면에 아무 일도 안 일어난» 느낌이 남는다.
+        // 밀어내지는 «않는다» — 버티는 스킬이 적을 흩어놓으면 그 다음 6초 동안 막을 게 없어진다.
+        // (밀어내기는 R「강철 발」의 마무리가 이미 맡고 있다.)
         Vec3 c = player.position().add(0, 1.0, 0);
+        float burst = com.laststardust.relics.ParryManager.RESOLVE_DMG_BASE
+                    + com.laststardust.relics.ParryManager.RESOLVE_DMG_PER * mom;
+        hurtAround(level, player, player.getX(), player.getY() + 1.0, player.getZ(),
+            4.5, dmg(stack, burst), 0.0, "불굴");
+
         dome(level, player.getX(), player.getY(), player.getZ(), 2.2, 50, ParticleTypes.CRIT);
         dustBurst(level, c, 1.4, 16 + mom * 10, STEEL, 1.7f);
-        shockRing(level, player.getX(), player.getY() + 0.1, player.getZ(), 3.0, 36, ParticleTypes.ELECTRIC_SPARK, 0.2);
+        shockRing(level, player.getX(), player.getY() + 0.1, player.getZ(), 4.5, 44, ParticleTypes.ELECTRIC_SPARK, 0.2);
         play(level, player, SoundEvents.ANVIL_USE, 0.9f, 0.6f);
         play(level, player, SoundEvents.NETHERITE_BLOCK_PLACE, 1.0f, 0.6f);
         player.displayClientMessage(Component.literal(
@@ -2346,6 +2355,7 @@ public final class RelicSkills {
 
     // ─────────────────────────────── 궁극: 네메시스 "일도양단" (궁극·4성) ───────────────────────────────
     // X 키. 전방 12칸 직선 대형 일격 · 맞은 적 경직 + 방어력 절반 · **이후 5초간 주변 8칸 아군 −25%**.
+    // **기세를 전부 태운다** — 중첩당 피해 +15%(5중첩 ×1.75). R·C 와 같은 자원을 놓고 다툰다.
     //
     // ── 왜 탱커 궁극이 «공격»인가 ──
     // 이지스의 궁극이 이미 «생존»이다(5초 무적 + 도발 + 아군 보호막). 여기서 또 버티는 궁극을
@@ -2357,12 +2367,18 @@ public final class RelicSkills {
     public static void sunderAll(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdSunder", "일도양단", 1800, 4)) return;
 
+        // ── 기세를 태운다 ──
+        // ⚠️ 반드시 beamHurt «전에» 소모해야 한다. 뒤에 두면 ParryManager.onMomentumStrike 의
+        //    상시 배수(+6%/중첩)가 이 일격에도 붙어 아래 boost 와 «이중»으로 곱해진다.
+        int mom = com.laststardust.relics.ParryManager.consumeMomentum(player);
+        float boost = 1.0f + com.laststardust.relics.ParryManager.SUNDER_PER * mom;
+
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
         double reach = beamReach(level, player, eye, look, 12.0);
         Vec3 end = eye.add(look.scale(reach));
 
-        beamHurt(level, player, eye, look, 12.0, 2.2, dmg(stack, 26.0f), 0.0, false, "일도양단");
+        beamHurt(level, player, eye, look, 12.0, 2.2, dmg(stack, 26.0f) * boost, 0.0, false, "일도양단");
 
         // 맞은 것들을 경직시키고 방어력을 절반으로 — 뒤이어 파티가 때릴 시간을 만든다.
         int hit = 0;
@@ -2392,6 +2408,7 @@ public final class RelicSkills {
         play(level, player, SoundEvents.ANVIL_LAND, 1.2f, 0.5f);
         SoundScheduler.at(level, end, SoundEvents.BEACON_DEACTIVATE, 1.0f, 0.6f, 4);
         player.displayClientMessage(Component.literal(
-            "§7⊗ 일도양단 §8— §f" + hit + "§8마리 · 아군 5초 −25%"), true);
+            "§7⊗ 일도양단 §8— §f" + hit + "§8마리 · 기세 §f" + mom
+            + "§8 소모(+" + Math.round((boost - 1f) * 100) + "%) · 아군 5초 −25%"), true);
     }
 }

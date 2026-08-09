@@ -64,6 +64,17 @@ public final class ParryManager {
     /** C「불굴」 — 중첩당 −7%, 5중첩이면 −35%. 기세가 0 이면 아무 일도 안 난다. */
     public static final float RESOLVE_PER = 0.07f;
     public static final int RESOLVE_TICKS = 120;    // 6초
+    /** C「불굴」의 반경 4.5칸 충격. 기세 중첩당 이만큼 «기본 피해»가 붙는다. */
+    public static final float RESOLVE_DMG_BASE = 4.0f;
+    public static final float RESOLVE_DMG_PER = 1.6f;
+
+    // ── X「일도양단」 — 기세를 «태워» 한 방으로 만든다 (2026-08-09, 유저 결정) ──
+    // R·C 도 기세를 먹으므로 셋이 같은 자원을 놓고 다툰다. 여기가 배율이 제일 큰 이유는
+    // 90 초 쿨이라 기회비용이 가장 비싸기 때문이다 — 「아껴서 터뜨린다」가 성립하려면
+    // 그쪽이 실제로 이득이어야 한다.
+    // ⚠️ 소모하면 {@link #onMomentumStrike} 의 상시 배수(+6%/중첩)는 «안» 붙는다.
+    //    그래서 이 값은 그 6% 를 대체하는 값이지 얹히는 값이 아니다.
+    public static final float SUNDER_PER = 0.15f;       // 중첩당 피해 +15% (5중첩 ×1.75)
     public static final float SUNDER_ALLY_DR = 0.25f;   // X 이후 아군 받는 피해 −25%
     public static final double SUNDER_ALLY_RANGE = 8.0; // 「내 뒤에 서라」 — 하르모니아(24칸)와 갈린다
 
@@ -188,7 +199,7 @@ public final class ParryManager {
             return;
         }
         // 연속 무효화 방지 — 한 번의 자세로 무리 전체를 지우면 타이밍이 의미를 잃는다.
-        // (광역으로 되받는 건 C「역린」의 몫이다.)
+        // (무리를 한 번에 되받는 건 R「강철 발」의 마무리 충격과 X「일도양단」의 몫이다.)
         arm(held, sl, K_PARRY, PARRY_CD);
 
         // ── 성공 ──
