@@ -65,7 +65,7 @@ public final class CooldownDisplay {
         {"cdAnthem", "선율", 200, "R"}, {"cdWoven", "걸음", 160, "V"}, {"cdKnot", "매듭", 500, "C"}, {"cdChord", "화음", 1800, "X"}
     };
     private static final Object[][] NEMESIS_SKILLS = {
-        {"cdStance", "강철 발", 240, "R"}, {"cdRecall", "인계", 180, "V"}, {"cdScale", "역린", 440, "C"}, {"cdSunder", "일도양단", 1800, "X"}
+        {"cdStance", "강철 발", 240, "R"}, {"cdRecall", "인계", 180, "V"}, {"cdResolve", "불굴", 440, "C"}, {"cdSunder", "일도양단", 1800, "X"}
     };
 
     // ── 액션바 양보 ──

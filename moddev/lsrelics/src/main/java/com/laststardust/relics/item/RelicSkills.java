@@ -2216,14 +2216,8 @@ public final class RelicSkills {
     // 쿨은 아이템 쪽(NemesisBlade.use)이 shotReady 로 건다 — 스킬 슬롯이 아니라 상시 조작이라
     // ready() 의 성급 검사·쿨 표시를 태울 이유가 없다.
     public static void deflect(ServerLevel level, ServerPlayer player, ItemStack stack) {
-        boolean wide = com.laststardust.relics.ParryManager.active(stack, level,
-            com.laststardust.relics.ParryManager.K_SCALE, 100);
-        com.laststardust.relics.ParryManager.arm(stack, level,
-            com.laststardust.relics.ParryManager.K_PARRY,
-            wide ? com.laststardust.relics.ParryManager.WINDOW_WIDE
-                 : com.laststardust.relics.ParryManager.WINDOW);
-
         // 창이 열린 «순간»이 보여야 타이밍을 배울 수 있다. 짧고 선명하게.
+        // (창의 시작점은 저장하지 않는다 — 바닐라의 getTicksUsingItem 이 이미 센다.)
         Vec3 look = player.getViewVector(1.0f);
         Vec3 c = player.position().add(0, 1.1, 0).add(look.x * 0.6, 0, look.z * 0.6);
         ring(level, c.x, c.y, c.z, 0.9, 14, ParticleTypes.CRIT, 0.0);
@@ -2237,11 +2231,24 @@ public final class RelicSkills {
     // ── 이게 「못 해도 탱커」의 두 번째 바닥이다 ──
     // 패링은 타이밍을 요구하지만 이건 버튼 하나다. 초보가 잡아도 −40% 는 확실히 받는다.
     // 대신 그 3초 동안 못 움직인다 — 공짜가 아니라 «자리를 거는» 선택이 되게.
+    //
+    // ── 도발을 붙였다 (2026-08-09, 유저 요청) ──
+    // 「어그로를 못 끄는 탱커」였다. 앞에 서 있을 뿐 몹을 자기한테 붙이지 못하니, 아틀라스가
+    // 없으면 결국 원거리가 맞았다. 도발 → 3초 버틴다 → 밀어낸다 로 한 줄이 이어진다.
+    //   ⚠️ 아틀라스보다 «작게» 준다: 이지스 R 이 8칸/4초, 궁극이 16칸/8초다.
+    //      여기는 6칸/4초 — 자리를 지킬 만큼만이고, 판을 통째로 끌어오는 건 여전히 아틀라스다.
+    //   그만큼 종료 폭발을 9.0 → 7.0 으로 내렸다. 도발이 붙어 값어치가 오른 만큼 돌려준다.
     public static void steelStance(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdStance", "강철 발", 240, 1)) return;
         int ticks = 60;
-        com.laststardust.relics.ParryManager.arm(stack, level,
-            com.laststardust.relics.ParryManager.K_STANCE, ticks);
+        com.laststardust.relics.TauntManager.taunt(level, player, 6.0, 80);
+
+        // 기세를 먹고 그만큼 단단해진다. 0 이어도 −20% 는 나온다 — 바닥은 바닥대로 남긴다.
+        int mom = com.laststardust.relics.ParryManager.consumeMomentum(player);
+        float dr = com.laststardust.relics.ParryManager.STANCE_BASE
+                 + com.laststardust.relics.ParryManager.STANCE_PER * mom;
+        com.laststardust.relics.ParryManager.armWith(stack, level,
+            com.laststardust.relics.ParryManager.K_STANCE, "stanceDr", ticks, dr);
         // 끝나는 «순간»에 밀어내기가 나오도록 만료를 따로 적어둔다 (ParryManager.onServerTick)
         com.laststardust.relics.ParryManager.arm(stack, level, "stanceBurst", ticks);
         // 이동 불가 = 최고 등급 둔화. 마크에 「고정」이 없어서 이렇게 근사한다(재의 결계와 같은 수법).
@@ -2254,7 +2261,8 @@ public final class RelicSkills {
         dustBurst(level, c.add(0, 0.8, 0), 1.6, 40, STEEL, 1.6f);
         play(level, player, SoundEvents.ANVIL_LAND, 0.7f, 0.6f);
         play(level, player, SoundEvents.NETHERITE_BLOCK_PLACE, 1.0f, 0.7f);
-        player.displayClientMessage(Component.literal("§7⊗ 강철 발 §8— 3초"), true);
+        player.displayClientMessage(Component.literal(
+            "§7⊗ 강철 발 §8— 3초 · 6칸 도발 · 받는 피해 §f−" + Math.round(dr * 100) + "%"), true);
     }
 
     /**
@@ -2272,7 +2280,7 @@ public final class RelicSkills {
         for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
                 en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
             if (e.distanceToSqr(c.x, c.y, c.z) > r * r) continue;
-            LsDamage.hit(e, src, dmg(stack, 9.0f), "강철 발");
+            LsDamage.hit(e, src, dmg(stack, 7.0f), "강철 발");
             Vec3 push = e.position().subtract(c).normalize().scale(0.9);
             e.setDeltaMovement(push.x, 0.42, push.z);
             e.hurtMarked = true;
@@ -2300,23 +2308,40 @@ public final class RelicSkills {
         play(level, player, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.7f);
     }
 
-    // ─────────────────────────────── 추가: 네메시스 "역린" (추가·3성) ───────────────────────────────
-    // C 키. 5초간 **패링 창이 2배**(0.4→0.8초)로 넓어지고, 패링 성공 시 반격이 4칸 광역으로 나간다.
+    // ─────────────────────────────── 추가: 네메시스 "불굴" (추가·3성) ───────────────────────────────
+    // C 키. **기세를 전부 소모**해 중첩당 받는 피해 −7% (5중첩이면 −35%) 6초. 쿨 22초.
     //
-    // ※ 「잘하는 사람이 더 잘하게」인 스킬이라 후보 중 제일 위험했다. 그래도 넣은 이유는
-    //   **창이 넓어지는 5초가 곧 배우는 구간**이기 때문이다 — 0.8초는 초보도 맞출 수 있고,
-    //   그동안 타이밍의 감을 잡으면 평소의 0.4초로 넘어갈 수 있다.
-    public static void reverseScale(ServerLevel level, ServerPlayer player, ItemStack stack) {
-        if (!ready(level, player, stack, "cdScale", "역린", 440, 3)) return;
-        com.laststardust.relics.ParryManager.arm(stack, level,
-            com.laststardust.relics.ParryManager.K_SCALE, 100);   // 5초
+    // ── 왜 「역린」(패링 창 2배)을 버렸나 (2026-08-09, 유저 결정) ──
+    // 역린은 「잘하는 사람이 더 잘하게」였고, 이 직업이 세운 「못 해도 탱커」와 반대로 갔다.
+    // 그보다 큰 문제는 **기세에 쓸 곳이 없었다**는 것이다 — 쌓이면 딜이 오르는 게 전부라
+    // 플레이어가 «고를» 것이 없었다. 이제 R 과 C 가 둘 다 기세를 먹으므로
+    // 「지금 단단해질까, 더 쌓아서 크게 쓸까」가 매 순간의 선택이 된다.
+    //
+    // ⚠️ 기세가 0 이면 아무 일도 안 나므로 **쿨을 돌려준다.** 헤카테 「연좌」가 저주 없는
+    //    적에게 헛방일 때 쿨을 돌려주는 것과 같은 처리다 — 헛손질로 22초를 날리면 억울하다.
+    public static void unyielding(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdResolve", "불굴", 440, 3)) return;
+        int mom = com.laststardust.relics.ParryManager.momentum(player);
+        if (mom <= 0) {
+            clearCooldown(stack, "cdResolve");
+            player.displayClientMessage(Component.literal("§8기세가 없다 — 먼저 흘려내라"), true);
+            play(level, player, SoundEvents.NOTE_BLOCK_BASS.value(), 0.5f, 0.7f);
+            return;
+        }
+        com.laststardust.relics.ParryManager.consumeMomentum(player);
+        float dr = com.laststardust.relics.ParryManager.RESOLVE_PER * mom;
+        com.laststardust.relics.ParryManager.armWith(stack, level,
+            com.laststardust.relics.ParryManager.K_RESOLVE, "resolveDr",
+            com.laststardust.relics.ParryManager.RESOLVE_TICKS, dr);
+
         Vec3 c = player.position().add(0, 1.0, 0);
         dome(level, player.getX(), player.getY(), player.getZ(), 2.2, 50, ParticleTypes.CRIT);
-        dustBurst(level, c, 1.4, 44, STEEL, 1.7f);
+        dustBurst(level, c, 1.4, 16 + mom * 10, STEEL, 1.7f);
         shockRing(level, player.getX(), player.getY() + 0.1, player.getZ(), 3.0, 36, ParticleTypes.ELECTRIC_SPARK, 0.2);
-        play(level, player, SoundEvents.BEACON_ACTIVATE, 0.9f, 0.7f);
-        play(level, player, SoundEvents.ANVIL_USE, 0.8f, 0.6f);
-        player.displayClientMessage(Component.literal("§7⊗ 역린 §8— 창 2배 · 5초"), true);
+        play(level, player, SoundEvents.ANVIL_USE, 0.9f, 0.6f);
+        play(level, player, SoundEvents.NETHERITE_BLOCK_PLACE, 1.0f, 0.6f);
+        player.displayClientMessage(Component.literal(
+            "§7⊗ 불굴 §8— 기세 §f" + mom + "§8 소모 · 받는 피해 §f−" + Math.round(dr * 100) + "%§8 6초"), true);
     }
 
     // ─────────────────────────────── 궁극: 네메시스 "일도양단" (궁극·4성) ───────────────────────────────

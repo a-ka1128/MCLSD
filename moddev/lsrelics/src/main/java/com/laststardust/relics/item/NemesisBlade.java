@@ -15,9 +15,9 @@ import net.minecraft.world.level.Level;
 
 // 아드라스테이아 — 대검(네메시스의 가호). **패링 탱커.**
 //   · 좌클릭 = 평타 (Better Combat `claymore` 3타 콤보)
-//   · 우클릭 = 흘리기 — 0.4초 패링 창
+//   · 우클릭 = 흘리기 — 쥐고 방어(−25%), 쥔 직후 0.4초는 완벽 패링
 //   · R = 강철 발 (기본, 1성)   · V = 참격 인계 (이동, 2성)
-//   · C = 역린 (추가, 3성)      · X = 일도양단 (궁극, 4성)
+//   · C = 불굴 (추가, 3성)      · X = 일도양단 (궁극, 4성)
 //   · 패시브(1성) = 강철의 각오 — 방어력 +5 · 방어 강도 +3 · 기세 (ParryManager)
 //
 // ── 우클릭을 쓰는 근접 유물은 이것뿐이다 ──
@@ -85,10 +85,10 @@ public class NemesisBlade extends Item implements RelicActions {
         RelicSkills.bladeRecall(level, player, stack);
     }
 
-    // ── C = 역린 (추가·3성) ──
+    // ── C = 불굴 (추가·3성) ──
     @Override
     public void extraSkill(ServerLevel level, ServerPlayer player, ItemStack stack) {
-        RelicSkills.reverseScale(level, player, stack);
+        RelicSkills.unyielding(level, player, stack);
     }
 
     // ── X = 일도양단 (궁극·4성) ──

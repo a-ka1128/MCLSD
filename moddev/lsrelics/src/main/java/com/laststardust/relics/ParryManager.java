@@ -21,7 +21,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
 /**
- * 네메시스의 「흘리기」 — 패링 창과 그에 딸린 상태 넷.
+ * 네메시스의 「흘리기」 — 패링 창과 그에 딸린 상태들.
  *
  * <p>── 이지스의 「수호 반격」과 무엇이 다른가 ──
  * 이지스는 <b>태세</b>다. 켜두면 3초간 자동으로 −40% 와 반사가 붙고 타이밍이 필요 없다.
@@ -33,7 +33,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
  * 두 번째 탱커를 넣는 이유가 「아틀라스가 없을 때 대신 설 사람」인데, 그 대체재가 숙련을
  * 요구하면 초보가 잡았을 때 전선이 그대로 무너진다. 그래서 바닥을 깔았다:
  * 방어력 +5 / 방어 강도 +3 상시({@code LSRelics.nemesisAttrs}) · 체력 40칸 ·
- * 타이밍이 필요 없는 R「강철 발」(−40%).
+ * 타이밍이 필요 없는 R「강철 발」(기세 0 이어도 −20%).
  *
  * <p>── 상태를 어디에 두나 ──
  * 창·태세처럼 <b>무기에 딸린 것</b>은 스택의 {@code custom_data} 에 만료 틱을 적는다
@@ -47,8 +47,6 @@ public final class ParryManager {
     // ── 수치 (docs/CLASS-11.md §2·§3) ──
     /** 패링 창. 0.4초. 「순간」이라는 정체성이 이 숫자 하나에 걸려 있다. */
     public static final int WINDOW = 8;
-    /** C「역린」이 켜져 있으면 창이 2배. */
-    public static final int WINDOW_WIDE = 16;
     /** 한 번 패링에 성공하면 이만큼은 창이 안 열린다. 자세(−25%)는 그대로 유지된다. */
     public static final int PARRY_CD = 24;          // 1.2초
     /** 쥐고 있는 동안 앞에서 오는 피해를 이만큼 깎는다. 타이밍을 못 맞춰도 받는 몫. */
@@ -58,14 +56,24 @@ public final class ParryManager {
     public static final float MOMENTUM_PER = 0.06f; // 중첩당 주는 피해 +6% (최대 +30%)
     public static final int MOMENTUM_TICKS = 200;   // 10초
 
-    public static final float STANCE_DR = 0.40f;    // R「강철 발」 받는 피해 −40%
+    // ── R「강철 발」 — 기세를 먹고 그만큼 단단해진다 (2026-08-09, 유저 결정) ──
+    // 기본 −20% 에 중첩당 −5%, 5중첩이면 −45%. 기세가 0 이어도 −20% 는 나오므로
+    // 「못 해도 탱커」의 바닥은 유지된다.
+    public static final float STANCE_BASE = 0.20f;
+    public static final float STANCE_PER = 0.05f;
+    /** C「불굴」 — 중첩당 −7%, 5중첩이면 −35%. 기세가 0 이면 아무 일도 안 난다. */
+    public static final float RESOLVE_PER = 0.07f;
+    public static final int RESOLVE_TICKS = 120;    // 6초
     public static final float SUNDER_ALLY_DR = 0.25f;   // X 이후 아군 받는 피해 −25%
     public static final double SUNDER_ALLY_RANGE = 8.0; // 「내 뒤에 서라」 — 하르모니아(24칸)와 갈린다
 
     // ── 스택 키 ── (무기에 딸린 상태)
     public static final String K_PARRY  = "parryWindow";
     public static final String K_STANCE = "stanceUntil";
-    public static final String K_SCALE  = "scaleUntil";   // 역린
+    public static final String K_RESOLVE = "resolveUntil"; // 불굴
+    /** 자세·불굴의 «세기»는 그때 먹은 기세로 정해지므로 만료와 «같이» 적어둔다. */
+    private static final String K_STANCE_DR = "stanceDr";
+    private static final String K_RESOLVE_DR = "resolveDr";
     // ── 엔티티 키 ── (사람에게 붙는 상태)
     private static final String K_MOM      = "lsMomentum";
     private static final String K_MOM_END  = "lsMomentumUntil";
@@ -86,6 +94,15 @@ public final class ParryManager {
     /** 주는 피해 배수. 기세가 없으면 1.0. */
     public static float momentumMult(Player p) {
         return 1.0f + MOMENTUM_PER * momentum(p);
+    }
+
+    /** 기세를 전부 쓰고 그 수를 돌려준다. 스킬이 «얼마나 세게» 나갈지는 이 값이 정한다. */
+    public static int consumeMomentum(ServerPlayer p) {
+        int n = momentum(p);
+        CompoundTag d = p.getPersistentData();
+        d.putInt(K_MOM, 0);
+        d.putLong(K_MOM_END, 0);
+        return n;
     }
 
     public static void addMomentum(ServerPlayer p) {
@@ -120,6 +137,19 @@ public final class ParryManager {
         return left > 0 && left <= max;
     }
 
+    /** 만료와 «세기»를 같이 적는다. 세기는 시전 시점의 기세로 정해져 그 뒤엔 안 변한다. */
+    public static void armWith(ItemStack stack, ServerLevel level, String key, String drKey,
+                               int ticks, float dr) {
+        CompoundTag t = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        t.putLong(key, level.getGameTime() + ticks);
+        t.putFloat(drKey, dr);
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(t));
+    }
+
+    private static float drOf(ItemStack stack, String drKey) {
+        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getFloat(drKey);
+    }
+
     /** X「일도양단」 직후 아군을 감싸는 창. 시전자에게 적는다. */
     public static void markSunder(ServerPlayer caster, int ticks) {
         caster.getPersistentData().putLong(K_SUNDER, now(caster) + ticks);
@@ -141,11 +171,9 @@ public final class ParryManager {
         // 놓았다 다시 쥐면 0 부터 다시 세므로 «다시 노린다»가 공짜로 성립한다.
         boolean guarding = guard.isUsingItem() && guard.getUseItem() == held;
         boolean front = guarding && facing(guard, event);
-        boolean wide = active(held, sl, K_SCALE, 100);
-        int window = wide ? WINDOW_WIDE : WINDOW;
 
         boolean perfect = front
-            && guard.getTicksUsingItem() <= window
+            && guard.getTicksUsingItem() <= WINDOW
             && !active(held, sl, K_PARRY, PARRY_CD);   // 한 번 성공하면 잠깐 못 연다
 
         if (!perfect) {
@@ -153,8 +181,9 @@ public final class ParryManager {
             // 못 맞춰도 «막고는 있다» — 이게 「못 해도 탱커」의 첫 바닥이다.
             // 방패와 같이 앞에서 오는 것만 막는다.
             if (front) mult *= (1f - BLOCK_DR);
-            // 강철 발은 자세가 아니라 «자리»라 방향을 안 본다.
-            if (active(held, sl, K_STANCE, 60)) mult *= (1f - STANCE_DR);
+            // 강철 발·불굴은 «자세»가 아니라 «상태»라 방향을 안 본다. 셋은 곱해진다.
+            if (active(held, sl, K_STANCE, 60)) mult *= (1f - drOf(held, K_STANCE_DR));
+            if (active(held, sl, K_RESOLVE, RESOLVE_TICKS)) mult *= (1f - drOf(held, K_RESOLVE_DR));
             if (mult < 1f) event.setAmount(event.getAmount() * mult);
             return;
         }
@@ -181,15 +210,6 @@ public final class ParryManager {
         LsDamage.hit(attacker, src, com.laststardust.relics.item.RelicSkills.dmg(held, 6.0f), "흘리기");
         stagger(sl, attacker);
 
-        // 역린이 켜져 있으면 반격이 주변으로 퍼진다
-        if (!wide) return;
-        AABB box = attacker.getBoundingBox().inflate(4.0);
-        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, box,
-                en -> en != attacker && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
-            LsDamage.hit(e, src, com.laststardust.relics.item.RelicSkills.dmg(held, 4.5f), "역린");
-            sl.sendParticles(ParticleTypes.SWEEP_ATTACK,
-                e.getX(), e.getY() + e.getBbHeight() * 0.5, e.getZ(), 1, 0, 0, 0, 0);
-        }
     }
 
     /**
