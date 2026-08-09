@@ -82,6 +82,12 @@ def build_header(c):
     out += [f"> {line}" for line in c.get("lore", [])]
     if c.get("relic"):
         out.append(f"### 유물 — {c['relic']}")
+    # `echo` — 이 무기를 마지막으로 쥐었던 사람이 남긴 한 줄.
+    # 로어(별이 하는 말)와 «다른 사람의 글»이라, 붙여 쓰면 같은 목소리로 읽힌다.
+    # 인게임에서 3초 늦게 내보내는 것과 같은 이유로 여기서는 유물 이름 «뒤»에 두고
+    # 작은 글씨(-#)로 낮춘다 — 명문보다 작아야 사람의 말로 읽힌다.
+    if c.get("echo"):
+        out.append(f'-# *"{c["echo"]}"*  — 이 무기를 마지막으로 쥐었던 자')
     return "\n".join(out) if out else None
 
 
