@@ -49,8 +49,22 @@ public final class ParryManager {
     public static final int WINDOW = 8;
     /** 한 번 패링에 성공하면 이만큼은 창이 안 열린다. 자세(−25%)는 그대로 유지된다. */
     public static final int PARRY_CD = 24;          // 1.2초
-    /** 쥐고 있는 동안 앞에서 오는 피해를 이만큼 깎는다. 타이밍을 못 맞춰도 받는 몫. */
-    public static final float BLOCK_DR = 0.25f;
+    /**
+     * 네메시스 — 쥐고 있는 동안 앞에서 오는 피해를 이만큼 깎는다. 타이밍을 못 맞춰도 받는 몫.
+     *
+     * <p>⚠️ 0.25 → <b>0.15</b> (2026-08-10, 유저 결정). 같은 조작이 이지스에도 붙으면서
+     * 둘의 몫을 갈랐다 — <b>이지스는 패링이 없는 대신 두껍고, 네메시스는 얇은 대신 패링이 있다.</b>
+     * 그대로 두면 「네메시스는 이지스가 하는 걸 다 하는데 패링까지 있는」 무기가 된다.
+     */
+    public static final float BLOCK_DR = 0.15f;
+
+    /**
+     * 이지스 — 쥐고 방어. <b>완벽 패링이 없다.</b>
+     *
+     * <p>이지스는 「못 해도 탱커」가 아니라 <b>「타이밍이 아예 필요 없는 탱커」</b>다.
+     * 그 자리를 지키려면 흘리기의 값어치가 «두께»여야 하고, 그래서 네메시스보다 크다.
+     */
+    public static final float AEGIS_BLOCK_DR = 0.25f;
 
     public static final int MOMENTUM_MAX = 5;
     public static final float MOMENTUM_PER = 0.06f; // 중첩당 주는 피해 +6% (최대 +30%)
@@ -196,13 +210,24 @@ public final class ParryManager {
         if (!(event.getEntity() instanceof ServerPlayer guard)) return;
         if (!(guard.level() instanceof ServerLevel sl)) return;
         ItemStack held = guard.getMainHandItem();
-        if (held.getItem() != LSRelics.NEMESIS.get()) return;
+        boolean nemesis = held.getItem() == LSRelics.NEMESIS.get();
+        boolean aegis = held.getItem() == LSRelics.GUARDIAN.get();
+        if (!nemesis && !aegis) return;
 
         // ── 방패처럼 «쥐고 있는가» ──
         // 창의 시작점을 따로 저장하지 않는다. 바닐라가 이미 세고 있다(getTicksUsingItem).
         // 놓았다 다시 쥐면 0 부터 다시 세므로 «다시 노린다»가 공짜로 성립한다.
         boolean guarding = guard.isUsingItem() && guard.getUseItem() == held;
         boolean front = guarding && facing(guard, event);
+
+        // ── 이지스는 여기서 끝난다 ──
+        // 패링도, 기세도, 자세 상태도 없다. 앞에서 오는 것을 −25% 로 깎는 게 전부다.
+        // 「수호 반격」(C·태세·−40%)이 이미 이지스의 «반응» 자리를 차지하고 있어서,
+        // 우클릭까지 반응 조작이 되면 같은 무기 안에서 둘이 겹친다.
+        if (aegis) {
+            if (front) event.setAmount(event.getAmount() * (1f - AEGIS_BLOCK_DR));
+            return;
+        }
 
         boolean perfect = front
             && guard.getTicksUsingItem() <= WINDOW

@@ -29,7 +29,7 @@ function rlCmd(server, s) { server.runCommandSilent(s) }
 // ⚠️ 새 줄을 쓸 때 지킬 것: **현재형 · 반말 · 옆 사람에게** · 열 자~스무 자.
 //    과거형으로 쓰면 혼자 남아 회상하는 목소리가 되어 열두 줄의 결이 깨진다.
 const RELICS = {
-  guardian: { id: 'lsrelics:guardian', name: '§b에테르 이지스', title: 'guardian_relic', kind: '방패+무기 (좌클릭 공격 · 우클릭 막기 · 웅크림+우클릭 수호의 파동)',
+  guardian: { id: 'lsrelics:guardian', name: '§b에테르 이지스', title: 'guardian_relic', kind: '방패+무기 (좌클릭 공격 · 우클릭 쥐고 방어 — 앞에서 오는 피해 −25% · R 수호의 파동 · V 이지스 돌진 · C 수호 반격 · X 불멸의 맹세)',
     lore: '천공의 마지막 빛으로 벼려낸 방패 — 성벽이 무너지는 날, 그대가 곧 성벽이 되리라.',
     echo: '괜찮아. 내가 앞에 있잖아.' },
   hunter: { id: 'lsrelics:hunter', name: '§a시리우스', title: 'hunter_relic', kind: '활 (우클릭 발사 · 웅크림+우클릭 유성 화살)',
@@ -59,7 +59,7 @@ const RELICS = {
   harmonia: { id: 'lsrelics:harmonia', name: '§d바르비톤', title: 'harmonia_relic', kind: '저음 리라 (좌클릭 음률 — 원거리 연사 · R 고양의 선율 — 아군 버프/적 피해 · V 엮인 걸음 · C 결속의 매듭 · X 만상의 화음)',
     lore: '흩어진 이들을 하나의 선율로 묶는 리라 — 상처를 덮는 대신 사이를 잇는다. 이 선율이 닿는 곳에서 누구도 흐트러지지 않는다.',
     echo: '조금만 더 같이 가자.' },
-  nemesis: { id: 'lsrelics:nemesis', name: '§7아드라스테이아', title: 'nemesis_relic', kind: '대검 (좌클릭 3타 콤보 · 우클릭 흘리기 — 쥐고 방어, 쥔 직후 0.4초는 완벽 패링 · R 강철 발 · V 참격 인계 · C 불굴 · X 일도양단)',
+  nemesis: { id: 'lsrelics:nemesis', name: '§7아드라스테이아', title: 'nemesis_relic', kind: '대검 (좌클릭 3타 콤보 · 우클릭 흘리기 — 쥐고 방어 −15%, 쥔 직후 0.4초는 완벽 패링 · R 강철 발 · V 참격 인계 · C 불굴 · X 일도양단)',
     lore: '피할 수 없는 것의 이름을 새긴 대검 — 받은 것은 무엇이든 그대로 돌아간다. 이 날이 흘려낸 일격은 벤 자에게 되돌아가리라.',
     echo: '여기는 내가 막을게.' },
   chiron: { id: 'lsrelics:chiron', name: '§2펠리온', title: 'chiron_relic', kind: '봉 (좌클릭 6타 콤보 — 때릴 때마다 아군 회복 · R 축성 · V 바람 걸음 · C 가르침 · X 펠리온의 밤)',
