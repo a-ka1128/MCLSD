@@ -64,20 +64,35 @@ def write(name, attrs, note):
 #
 # 덤: 찌르기가 정말 안 나간다면 보이는 콤보는 0.80 → 0.85 → 0.92 → 1.03 이 되어
 # **가장 넓은 베기로 깔끔하게 끝난다.** 원래 순서였다면 마지막이 조건부라 «끊긴» 느낌이었다.
+# ── 애니메이션이 «두 번씩» 나오던 것 (2026-08-10 인게임 확인) ──
+# 가로R 두 번 → 가로L 두 번 → 교차 두 번 … 으로 콤보가 두 배 느리게 돌았다.
+#
+# 원인: 베터컴뱃은 **한 손 무기를 주손·보조손 번갈아** 친다. 한 항목이 «주손 패스»와
+# «보조손 패스» 양쪽에서 한 번씩 나가므로 같은 동작이 두 번 보인다.
+# 바닐라 `dagger` 프리셋이 그대로 그렇고, 스틱스는 그 프리셋을 베낀 것이었다.
+#
+# 해법은 BC 가 그 목적으로 만들어 둔 조건 **`MAIN_HAND_ONLY`** 를 전부에 붙이는 것이다.
+# (원래 찌르기 한 줄에만 붙어 있었다 — 그 줄만 한 번씩 나가던 이유다.)
+#
+# ⚠️ 밸런스 영향 없음: 두 번씩 나가도 **모든 항목이 똑같이** 두 배가 되므로 평균은 같다.
+#    {0.80,0.80,0.85,0.85,0.92,0.92,1.03,1.03} 평균 0.90 = {0.80,0.85,0.92,1.03} 평균 0.90.
+#
+# ⚠️ 우리 유물 중 이 문제가 있는 건 **스틱스뿐**이다 — 나머지 여섯은 전부 two_handed 다.
+MH = ["MAIN_HAND_ONLY"]
 DAG = "bettercombat:dagger_slash"
 write("assassin", {
     "range_bonus": -0.5,
     "two_handed": False,
     "category": "dagger",
     "attacks": [
-        atk("one_handed_slash_horizontal_right", 0.80, sound=DAG),
-        atk("one_handed_slash_horizontal_left", 0.85, sound=DAG),
-        atk("dual_handed_slash_cross", 0.92, hitbox="VERTICAL_PLANE", angle=120, sound=DAG),
+        atk("one_handed_slash_horizontal_right", 0.80, sound=DAG, conditions=MH),
+        atk("one_handed_slash_horizontal_left", 0.85, sound=DAG, conditions=MH),
+        atk("dual_handed_slash_cross", 0.92, hitbox="VERTICAL_PLANE", angle=120, sound=DAG, conditions=MH),
         atk("dual_handed_stab", 1.40, hitbox="FORWARD_BOX", sound=DAG,
             conditions=["DUAL_WIELDING_SAME_CATEGORY", "MAIN_HAND_ONLY"]),
-        atk("dual_handed_slash_uncross", 1.03, sound=DAG),
+        atk("dual_handed_slash_uncross", 1.03, sound=DAG, conditions=MH),
     ],
-}, "조건 없는 4타 평균 0.90 = 옛 조건 없는 2타 평균 0.90 → 유지")
+}, "실제로 나가는 4타 평균 0.90 = 옛 실제 2타 평균 0.90 → 유지 (찌르기는 쌍수 조건)")
 
 # ── 이지스 — 2타 → 3타 ──
 # 망치인데 «내려찍고 옆으로 후린다» 두 동작뿐이라 금방 질린다.
