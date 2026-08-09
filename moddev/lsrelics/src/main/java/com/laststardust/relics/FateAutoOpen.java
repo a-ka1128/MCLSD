@@ -81,8 +81,14 @@ public final class FateAutoOpen {
     private static final int TITLE_GAP = 70;     // 마지막 줄 → 타이틀
     private static final int SCREEN_GAP = 90;    // 타이틀 → 선택 화면
 
-    private static final String TITLE = "§f당신은 별의 의지를 이을 별의 잔해입니다.";
-    private static final String SUBTITLE = "§7/fate §8로 당신의 별을 선택하세요.";
+    // ⚠️ 타이틀은 **4배 크기로 그려지고 줄바꿈도 축소도 안 한다.** 길면 양옆이 잘린다.
+    //    처음엔 「당신은 별의 의지를 이을 별의 잔해입니다.」(20자)였는데 잘릴 자리라 나눴다.
+    //
+    // 부제에서 `/fate` 안내를 뺀 이유: 바로 뒤에 **선택 화면이 자동으로 열린다.**
+    // 열릴 것을 굳이 알려주면 연출이 설명서가 된다.
+    // (화면이 어떤 이유로든 안 열려도 `ls_fate.js` 가 접속 때 보내는 안내 줄이 남아 있다.)
+    private static final String TITLE = "§f별의 잔해";
+    private static final String SUBTITLE = "§7당신은 별의 의지를 이을 자입니다";
 
     // ── 대본 ──
     // (틱, 할 일) 목록. 프롤로그를 안 보는 사람은 마지막 «화면 열기» 하나짜리 대본을 쓴다.
