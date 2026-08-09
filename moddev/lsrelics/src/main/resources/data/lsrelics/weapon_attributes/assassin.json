@@ -1,12 +1,12 @@
 {
   "attributes": {
     "range_bonus": -0.5,
-    "two_handed": true,
+    "two_handed": false,
     "category": "dagger",
     "attacks": [
       {
         "hitbox": "HORIZONTAL_PLANE",
-        "damage_multiplier": 0.8,
+        "damage_multiplier": 0.88,
         "angle": 150,
         "upswing": 0.5,
         "animation": "bettercombat:one_handed_slash_horizontal_right",
@@ -16,7 +16,7 @@
       },
       {
         "hitbox": "HORIZONTAL_PLANE",
-        "damage_multiplier": 0.85,
+        "damage_multiplier": 0.95,
         "angle": 150,
         "upswing": 0.5,
         "animation": "bettercombat:one_handed_slash_horizontal_left",
@@ -26,7 +26,7 @@
       },
       {
         "hitbox": "VERTICAL_PLANE",
-        "damage_multiplier": 0.92,
+        "damage_multiplier": 1.02,
         "angle": 120,
         "upswing": 0.5,
         "animation": "bettercombat:dual_handed_slash_cross",
@@ -50,7 +50,7 @@
       },
       {
         "hitbox": "HORIZONTAL_PLANE",
-        "damage_multiplier": 1.03,
+        "damage_multiplier": 1.0833,
         "angle": 150,
         "upswing": 0.5,
         "animation": "bettercombat:dual_handed_slash_uncross",

@@ -71,30 +71,43 @@ def write(name, attrs, note):
 # 한 항목이 «주손 패스»와 «보조손 패스» 양쪽에서 한 번씩 나가므로 같은 동작이 두 번 보인다.
 # 바닐라 `dagger` 프리셋이 그대로 그렇고, 스틱스는 그 프리셋을 베낀 것이었다.
 #
-# ❌ **처음 시도한 해법은 틀렸다**: 전 항목에 `MAIN_HAND_ONLY` 를 붙였더니
-#    **보조손 차례에 쓸 공격이 하나도 없어 콤보 인덱스가 안 넘어갔다** — 1번만 무한 반복.
-#    이 조건은 «이 한 줄만 주손 전용» 일 때 쓰는 것이지, 손 번갈이 자체를 끄는 스위치가 아니다.
+# ❌ 시도 1 — 전 항목에 `MAIN_HAND_ONLY`: **보조손 차례에 쓸 공격이 하나도 없어
+#    콤보 인덱스가 안 넘어갔다**(1번만 무한 반복). 이 조건은 «이 한 줄만 주손 전용» 일 때
+#    쓰는 것이지 손 번갈이를 끄는 스위치가 아니다.
 #
-# ✅ **손 번갈이를 끄는 건 `two_handed: true` 다.** 우리 유물 여섯이 전부 그래서
-#    거기서는 이 문제가 한 번도 안 났다. 스틱스도 «쌍단검» 이라 두 손이 다 찬 게 사실에 맞는다.
-#    ⚠️ 대가: 보조손에 아무것도 못 든다(횃불·토템·방패). 나머지 열두 유물과 같은 조건이 된다.
+# ❌ 시도 2 — `two_handed: true`: 손 번갈이는 멈췄지만 **보조손 칸이 막힌다.**
+#    그런데 스틱스는 애초에 **왼손 칸에 한 자루를 «진짜로» 드는** 설계였다.
+#    두 손 무기로 만들면 그 설계가 통째로 불가능해진다 — 정확히 반대로 간 것이다.
+#
+# ✅ **한 손 무기가 맞다.** 두 자루를 실제로 들면 손 번갈이는 «버그»가 아니라
+#    **오른손 → 왼손으로 번갈아 치는 쌍수 그 자체**다. 애니메이션이 두 번씩 보이던 건
+#    칼이 한 자루뿐이라 빈손이 같이 휘둘러서였다.
+#    베터컴뱃의 `DUAL_WIELDING_SAME_CATEGORY` 도 이 구성을 전제로 만들어진 조건이다.
+#
+# ⚠️ **평균은 «두 자루» 기준으로 맞춘다.** `ls_relic.js` 가 스틱스 가호에게만
+#    `item replace entity … weapon.offhand` 로 두 번째 칼을 준다 — 즉 **두 자루가 정상 상태**다.
+#    그러면 조건부 찌르기(1.40)도 나가므로 다섯 타 전부가 평균에 들어간다:
+#      0.88 + 0.95 + 1.02 + 1.40 + 1.0833 = 5.3333  →  평균 1.0667 (옛 0.9+0.9+1.4 와 같다)
+#    ⚠️ 한 자루만 들면 찌르기가 빠져 평균이 0.9833 이 된다(옛 한 자루 0.9 보다 높다).
+#       그건 «정상 상태가 아닌» 경우라 여기 맞추지 않았다.
 DAG = "bettercombat:dagger_slash"
 write("assassin", {
     "range_bonus": -0.5,
-    "two_handed": True,
+    "two_handed": False,
     "category": "dagger",
     "attacks": [
-        atk("one_handed_slash_horizontal_right", 0.80, sound=DAG),
-        atk("one_handed_slash_horizontal_left", 0.85, sound=DAG),
-        atk("dual_handed_slash_cross", 0.92, hitbox="VERTICAL_PLANE", angle=120, sound=DAG),
-        # 쌍수 찌르기 — 두 손 무기가 되면서 «실제로 두 자루를 들 일»은 사라졌지만,
-        # 조건은 원래대로 남긴다. 빼면 이 1.40 이 콤보에 «새로» 들어와 실질 DPS 가 뛴다
-        # (08-04 실측은 이 줄이 안 나가던 상태를 잰 값이다).
+        atk("one_handed_slash_horizontal_right", 0.88, sound=DAG),
+        atk("one_handed_slash_horizontal_left", 0.95, sound=DAG),
+        atk("dual_handed_slash_cross", 1.02, hitbox="VERTICAL_PLANE", angle=120, sound=DAG),
+        # ⚠️ 이 한 줄만 조건부다. 두 자루를 실제로 들었을 때만 나가고, 그때만 나가는 게 맞다 —
+        #    «쌍수 찌르기»는 칼이 하나면 그림 자체가 성립하지 않는다.
+        #    MAIN_HAND_ONLY 가 같이 붙은 이유: 이건 두 손을 한 번에 쓰는 동작이라
+        #    주손·보조손 양쪽에서 나가면 같은 동작이 두 번 보인다.
         atk("dual_handed_stab", 1.40, hitbox="FORWARD_BOX", sound=DAG,
             conditions=["DUAL_WIELDING_SAME_CATEGORY", "MAIN_HAND_ONLY"]),
-        atk("dual_handed_slash_uncross", 1.03, sound=DAG),
+        atk("dual_handed_slash_uncross", 1.0833, sound=DAG),
     ],
-}, "실제로 나가는 4타 평균 0.90 = 옛 실제 2타 평균 0.90 → 유지 (찌르기는 쌍수 조건)")
+}, "두 자루 기준 5타 평균 1.0667 = 옛 3타 평균 1.0667 → 유지")
 
 # ── 이지스 — 2타 → 3타 ──
 # 망치인데 «내려찍고 옆으로 후린다» 두 동작뿐이라 금방 질린다.

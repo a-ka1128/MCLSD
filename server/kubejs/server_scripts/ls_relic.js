@@ -85,12 +85,19 @@ function rlGrant(server, player, force) {
   rlCmd(server, `give ${uname} ${r.id}`)
   // 스틱스는 쌍단검 — 보조손에도 한 자루 쥐여준다. 각성 별은 asStamp 가 양손 모두 새긴다.
   //
-  // ⚠️ **이 줄에 「Better Combat 쌍수」라고 적혀 있었는데 사실이 아니다 (2026-08-05 확인).**
-  // BC 의 쌍수 보너스(공속 ×1.2)를 받으려면 무기가 BC 에 등록돼야 하는데, 폴백 규칙이
-  // 아이템 id 정규식이라 `dagger|knife` 는 있어도 **`lsrelics:assassin` 은 어디에도 안 걸린다.**
-  // 그래서 **두 번째 칼은 딜에 영향이 없다** — 외형과 은신 연출(`StealthRenderHandler`)뿐이다.
+  // 보조손에 한 자루 더 — **스틱스는 쌍단검이라 두 자루가 «정상 상태»다.**
   //
-  // 등록할지 검토했고 **안 하기로 했다(유저 결정)**. 이유는 `docs/DECISIONS.md` 1-C.
+  // ⚠️ **2026-08-10 정정: 아래 옛 주석은 더 이상 사실이 아니다.**
+  //   《BC 폴백 규칙이 아이템 id 정규식이라 `lsrelics:assassin` 은 어디에도 안 걸린다.
+  //     그래서 두 번째 칼은 딜에 영향이 없다 — 외형과 은신 연출뿐이다.
+  //     등록할지 검토했고 안 하기로 했다(`docs/DECISIONS.md` 1-C).》
+  //
+  //   그 뒤 `data/lsrelics/weapon_attributes/assassin.json` 이 실제로 만들어졌다.
+  //   **지금 스틱스는 BC 에 등록돼 있고, 두 자루를 들면 `DUAL_WIELDING_SAME_CATEGORY` 가 통한다** —
+  //   즉 쌍수 찌르기(×1.4)가 콤보에 실제로 들어가고, BC 의 쌍수 공속 보너스도 걸린다.
+  //   1-C 가 그때 추정한 영향은 «총합 +4%» 였다. **아직 실측은 없다.**
+  //
+  //   `tools/make_weapon_combos.py` 는 그래서 평균 배율을 **두 자루 기준**으로 맞춰 둔다.
   if (fate === 'assassin') { rlCmd(server, `item replace entity ${uname} weapon.offhand with ${r.id}`) }
   LS.setHasRelic(server, uname, true)
   // 저장된 각성 단계를 새 유물에 다시 새긴다 (ls_ascend.js — 공유 스코프).
