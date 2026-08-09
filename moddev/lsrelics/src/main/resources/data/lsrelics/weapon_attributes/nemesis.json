@@ -1,1 +1,11 @@
-{ "parent": "bettercombat:claymore" }
+{
+  "parent": "bettercombat:claymore",
+  "attributes": {
+    "range_bonus": 1.0,
+    "attacks": [
+      { "angle": 170 },
+      {},
+      { "angle": 170 }
+    ]
+  }
+}

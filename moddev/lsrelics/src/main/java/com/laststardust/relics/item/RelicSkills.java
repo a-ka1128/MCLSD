@@ -2427,8 +2427,20 @@ public final class RelicSkills {
         }
     }
 
-    /** 내려찍는 순간. 여기서부터가 원래의 일도양단이다. */
+    /**
+     * 내려찍는 순간. 여기서부터가 원래의 일도양단이다.
+     *
+     * <p>── 「모션」에 대해 ──
+     * 마크에 <b>서버가 띄울 수 있는 플레이어 애니메이션은 팔 휘두르기 하나뿐이다.</b>
+     * {@code swing()} 이 그것이고, 1인칭·3인칭 모두에서 «내려치는» 그 동작이 나온다.
+     * 대검을 머리 위로 «치켜드는» 자세는 이걸로 안 되고 별도 애니메이션이 필요하다
+     * (모드팩에 {@code player-animation-lib} 이 이미 있으니 길은 있다 — {@code docs/TODO.md} D-16).
+     * 그래서 치켜드는 0.8초는 <b>파티클로</b> 그리고, 내려찍는 순간만 실제 모션을 쓴다.
+     */
     public static void sunderStrike(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        // 팔을 휘두른다. true = 시전자 자신의 화면에도 보낸다(안 그러면 1인칭에서 안 보인다).
+        player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+
         int mom = Math.round(com.laststardust.relics.ParryManager.momOf(stack));
         // ⚠️ 기세는 이미 치켜들 때 태웠다. 그래서 ParryManager.onMomentumStrike 의 상시
         //    배수(+6%/중첩)는 «안» 붙고, 아래 boost 가 그 자리를 대신한다 — 이중으로 곱해지지 않는다.
