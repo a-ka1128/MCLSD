@@ -209,4 +209,26 @@ public final class FateAutoOpen {
     private static String name(ServerPlayer player) {
         return player.getGameProfile().getName();
     }
+
+    /**
+     * 프롤로그를 <b>지금 다시 튼다</b> — {@code /lsrelic prologue}.
+     *
+     * <p>연출은 한 번 보고 끝나는 물건이라 «다시 보기»가 없으면 박자를 못 고친다.
+     * 재접속으로는 안 되는 게, 「봤다」 표식이 남아 있으면 건너뛰기 때문이다.
+     *
+     * <p>표식도 같이 지운다 — 이걸 안 지우면 «명령으로는 보이는데 진짜 첫 접속에서는
+     * 안 보이는» 상태가 되어, 정작 확인하려던 것을 확인하지 못한다.
+     *
+     * <p>⚠️ 이미 가호가 있으면 마지막의 «선택 화면 열기»만 조용히 건너뛴다
+     * ({@link #openScreen} 이 스스로 확인한다). 글과 타이틀은 그대로 나오므로
+     * 박자를 보는 데는 지장이 없다.
+     */
+    public static void replay(ServerPlayer player) {
+        PENDING.removeIf(p -> p.player == player);          // 돌고 있던 대본은 버린다
+        CompoundTag root = player.getPersistentData();
+        CompoundTag tag = root.getCompound(ServerPlayer.PERSISTED_NBT_TAG);
+        tag.remove(K_SEEN);
+        root.put(ServerPlayer.PERSISTED_NBT_TAG, tag);
+        PENDING.add(new Pending(player, WITH_PROLOGUE));
+    }
 }

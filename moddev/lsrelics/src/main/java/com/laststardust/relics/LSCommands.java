@@ -41,7 +41,20 @@ public final class LSCommands {
                 .requires(s -> s.hasPermission(2))
                 .then(Commands.literal("star")
                     .then(Commands.argument("n", IntegerArgumentType.integer(1, 5))
-                        .executes(ctx -> setStar(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "n"))))));
+                        .executes(ctx -> setStar(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "n")))))
+                // 첫 접속 프롤로그 «다시 보기». 연출은 한 번 보고 끝나는 물건이라
+                // 이게 없으면 박자를 못 고친다 — 재접속으로는 「봤다」 표식 때문에 안 뜬다.
+                .then(Commands.literal("prologue").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) {
+                        ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다."));
+                        return 0;
+                    }
+                    FateAutoOpen.replay(p);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7프롤로그를 다시 튼다 §8— 약 30초. 가호가 이미 있으면 마지막 선택 화면만 안 열린다."), false);
+                    return 1;
+                })));
 
         // 훈련 더미 — 파티 실효 DPS 실측 (보스 체력 설계의 근거가 된다)
         event.getDispatcher().register(
