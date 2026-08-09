@@ -607,11 +607,17 @@ public final class LSCommands {
         for (int i = 0; i < n; i++) {
             double a = Math.PI * 2 * i / n;
             net.minecraft.world.phys.Vec3 at = p.position().add(Math.cos(a) * 2.0, 1.8, Math.sin(a) * 2.0);
-            com.laststardust.relics.SummonManager.summon(sl, p, at, 300);
+            com.laststardust.relics.SummonManager.summon(sl, p, at, com.laststardust.relics.SummonManager.LIFE_TICKS);
         }
         int total = com.laststardust.relics.SummonManager.count(p);
+        // 수치를 같이 찍는다 — 손맛을 보는 단계라 「지금 뭘로 시험 중인지」가 안 보이면
+        // 「약하다/세다」는 감상이 어느 값에 대한 것인지 나중에 못 가린다.
         src.sendSuccess(() -> Component.literal(
-            "§b별의 잔영 §f" + n + "§b기 소환 §7(현재 " + total + "기 · 15초) — §e/lssummon clear §7로 거둠"), false);
+            "§b별의 잔영 §f" + n + "§b기 §7(현재 " + total + "기) — 피해 "
+            + (int) com.laststardust.relics.SummonManager.DAMAGE
+            + " · 체력 " + (int) com.laststardust.relics.SummonManager.HP
+            + " · " + (com.laststardust.relics.SummonManager.LIFE_TICKS / 20) + "초"
+            + " §8| §e/lssummon clear"), false);
         return 1;
     }
 

@@ -67,12 +67,17 @@ public final class SummonManager {
     private static final String TAG_OWNER = "lsSummonOwner";
 
     // ── 프로토타입 수치 (손맛 확인용 — 직업이 확정되면 각성 배율에 묶는다) ──
-    private static final int LIFE_TICKS = 300;    // 15초
+    //
+    // ⚠️ 첫 시험(2026-08-09)에서 «너무 약하다» 는 결과가 나와 올렸다.
+    //    소환사는 **소환수가 곧 화력**이라 유물 평타처럼 취급하면 안 된다. 5성 유물이 90~100
+    //    DPS 인데 잔영 3기 × 5 피해 ≈ 15 DPS 면 15% 다 — 있으나 마나였다.
+    //    지금 값은 3기 기준 대략 40 DPS 를 겨눈 것이고, 여전히 «감»이다.
+    public static final int LIFE_TICKS = 600;     // 30초 — 한 판을 지켜볼 수 있게 늘렸다
     private static final double LEASH = 24.0;     // 이보다 멀어지면 주인 곁으로 당긴다
     private static final double SEEK = 16.0;      // 표적을 찾는 반경
     private static final int RETARGET = 10;       // 0.5초마다 표적 갱신
-    private static final double HP = 14.0;
-    private static final double DAMAGE = 5.0;
+    public static final double HP = 30.0;         // 14 → 30. 한 대 맞고 사라지면 뭘 봤는지 모른다
+    public static final double DAMAGE = 14.0;     // 5 → 14
 
     private static final List<Vex> ACTIVE = new ArrayList<>();
 
@@ -230,6 +235,29 @@ public final class SummonManager {
                 || isSummon(event.getEntity())) {
             event.setCanceled(true);
         }
+    }
+
+    /**
+     * <b>사람의 공격은 잔영에게 안 들어간다.</b>
+     *
+     * <p>첫 시험에서 바로 나온 문제다 — 잔영이 주인 주변을 날아다니는데 평타·광역 스킬이
+     * 그걸 같이 때렸다. 원인은 이 파일이 아니라 <b>스킬 쪽 필터</b>다:
+     * {@code RelicSkills} 의 광역 판정이 전부 {@code !(en instanceof Player)} 로만 거르는데,
+     * 벡스는 몬스터라 그 체를 그냥 통과한다. 재의 채찍·헤카테의 밤·결속의 매듭·일도양단이
+     * 죄다 소환수를 때리고 있었다.
+     *
+     * <p>스킬 필터를 스무 곳 넘게 고치는 대신 여기 한 곳에서 막는다 —
+     * {@code isRelic} 이나 {@code LSKubeBridge.isMonster} 를 한 곳만 고친 것과 같은 판단이다.
+     * 놓치는 스킬이 생길 여지를 아예 없앤다.
+     *
+     * <p>주인만이 아니라 <b>모든 플레이어</b>를 막는다. 협동 서버에서 남의 광역기에 내 잔영이
+     * 녹으면 그건 내 잘못도 아닌데 손해다. 몹·환경 피해는 그대로 들어간다 —
+     * 잔영은 죽을 수 있어야 하고, 그게 소환사가 자리를 잡는 이유다.
+     */
+    @SubscribeEvent
+    public static void onSummonHurt(LivingIncomingDamageEvent event) {
+        if (!isSummon(event.getEntity())) return;
+        if (event.getSource().getEntity() instanceof Player) event.setCanceled(true);
     }
 
     @SubscribeEvent
