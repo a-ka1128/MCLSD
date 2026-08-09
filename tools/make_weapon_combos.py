@@ -56,6 +56,14 @@ def write(name, attrs, note):
 #
 # ⚠️ 만약 인게임에서 **찌르기가 실제로 나온다면** 이 가정이 틀린 것이고,
 #    그때는 다섯 타 전체 평균을 옛 1.0667 에 다시 맞춰야 한다(전부 ×1.0847).
+#
+# ── 찌르기를 4번으로 옮겼다 (유저 지정) ──
+# **행을 통째로 맞바꿨다** — 애니메이션만 바꾸고 배율을 자리에 남기면 조건 없는 네 타가
+# {0.80, 0.85, 0.92, 1.40} 이 되어 평균이 0.9925 로 뛴다(실질 +10%).
+# 조건부 한 줄이 어느 자리에 있든 «조건 없는 네 타»의 집합이 그대로여야 밸런스가 안 움직인다.
+#
+# 덤: 찌르기가 정말 안 나간다면 보이는 콤보는 0.80 → 0.85 → 0.92 → 1.03 이 되어
+# **가장 넓은 베기로 깔끔하게 끝난다.** 원래 순서였다면 마지막이 조건부라 «끊긴» 느낌이었다.
 DAG = "bettercombat:dagger_slash"
 write("assassin", {
     "range_bonus": -0.5,
@@ -65,9 +73,9 @@ write("assassin", {
         atk("one_handed_slash_horizontal_right", 0.80, sound=DAG),
         atk("one_handed_slash_horizontal_left", 0.85, sound=DAG),
         atk("dual_handed_slash_cross", 0.92, hitbox="VERTICAL_PLANE", angle=120, sound=DAG),
-        atk("dual_handed_slash_uncross", 1.03, sound=DAG),
         atk("dual_handed_stab", 1.40, hitbox="FORWARD_BOX", sound=DAG,
             conditions=["DUAL_WIELDING_SAME_CATEGORY", "MAIN_HAND_ONLY"]),
+        atk("dual_handed_slash_uncross", 1.03, sound=DAG),
     ],
 }, "조건 없는 4타 평균 0.90 = 옛 조건 없는 2타 평균 0.90 → 유지")
 
