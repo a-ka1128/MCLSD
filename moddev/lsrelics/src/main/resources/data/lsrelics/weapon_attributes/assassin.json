@@ -1,13 +1,10 @@
 {
   "attributes": {
     "range_bonus": -0.5,
-    "two_handed": false,
+    "two_handed": true,
     "category": "dagger",
     "attacks": [
       {
-        "conditions": [
-          "MAIN_HAND_ONLY"
-        ],
         "hitbox": "HORIZONTAL_PLANE",
         "damage_multiplier": 0.8,
         "angle": 150,
@@ -18,9 +15,6 @@
         }
       },
       {
-        "conditions": [
-          "MAIN_HAND_ONLY"
-        ],
         "hitbox": "HORIZONTAL_PLANE",
         "damage_multiplier": 0.85,
         "angle": 150,
@@ -31,9 +25,6 @@
         }
       },
       {
-        "conditions": [
-          "MAIN_HAND_ONLY"
-        ],
         "hitbox": "VERTICAL_PLANE",
         "damage_multiplier": 0.92,
         "angle": 120,
@@ -58,9 +49,6 @@
         }
       },
       {
-        "conditions": [
-          "MAIN_HAND_ONLY"
-        ],
         "hitbox": "HORIZONTAL_PLANE",
         "damage_multiplier": 1.03,
         "angle": 150,
