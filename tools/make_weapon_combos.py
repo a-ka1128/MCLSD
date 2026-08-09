@@ -54,56 +54,39 @@ def write(name, attrs, note):
 #      → 보조손 칸이 막혀 «왼손에 한 자루»라는 설계 자체가 불가능해졌다. 정반대로 간 것이다.
 #   교훈: **`ls_relic.js` 의 지급 코드를 먼저 읽을 것.** 무기 파일만 보면 전제를 놓친다.
 
-# ── 애니메이션이 «두 번씩» 나오던 것 — 원인을 코드에서 찾았다 (2026-08-10) ──
-# 두 번 헛짚은 뒤 `PlayerAttackHelper` 를 직접 열어봤다. 규칙은 이렇다:
+# ── 애니메이션이 «두 번씩» 나오는 것 — 그대로 둔다 (2026-08-10 유저 결정) ──
+# 가로R·가로L → 가로R·가로L → 교차·교차 → 찌르기 → 풀기·풀기 로 한 동작이 두 번 보인다.
 #
+# 원인은 `PlayerAttackHelper` 에 있다:
 #   shouldAttackWithOffHand(p, combo) = isDualWielding(p) && combo % 2 == 1
-#   selectAttack(combo, attrs, p, isOffHand):
-#       ① 조건(conditions)으로 attacks 를 «먼저 거른다» — 손마다 목록이 달라진다
-#       ② 쌍수면 인덱스는 **combo / 2**, 아니면 combo
-#       ③ 걸러진 목록에서 그 인덱스를 % 로 돌린다
+#   selectAttack: 조건으로 거른 목록에서 **쌍수면 인덱스 = combo / 2**
+# **주손과 보조손이 같은 인덱스를 쓴다** — 한 항목을 양손이 한 번씩 수행하는 게
+# 베터컴뱃의 쌍수 모델이다. **버그가 아니라 설계다.**
 #
-# ②가 핵심이다. **주손과 보조손이 «같은 인덱스»를 쓴다** — 한 항목을 양손이 한 번씩
-# 수행하는 게 베터컴뱃의 쌍수 모델이고, 그래서 같은 동작이 두 번 보인다. 버그가 아니다.
+# 고칠 수는 있었다(주손 전용/보조손 전용을 섞어 두 목록의 «내용»을 다르게 만들면 된다).
+# 다만 그러면 **손마다 빈도가 갈려** 평균이 산술평균이 아니게 되고, 칼을 한 자루만 들면
+# 콤보가 2타로 줄어드는 구멍도 생긴다. 유저가 **원래 값 유지**를 택했다.
 #
-# ❌ 그래서 전 항목 `MAIN_HAND_ONLY` 는 통할 수가 없었다 — 보조손 목록이 **비어서**
-#    선택이 실패하고 콤보가 안 넘어갔다(1번만 무한 반복).
-#
-# ✅ 해법은 ①을 쓰는 것이다. **주손 전용과 보조손 전용을 섞으면 두 목록의 «내용»이 달라진다.**
-#      주손 목록 = [가로R, 교차, 찌르기]  (3)
-#      보조손 목록 = [가로L, 풀기]        (2)
-#    n번째 스윙 = (n%2 손) · (n/2 % 목록길이) 이므로 실제로 나가는 순서는
-#      가로R → 가로L → 교차 → 풀기 → 찌르기 → 가로L → 가로R → 풀기 → 교차 …
-#    **같은 동작이 연달아 두 번 나오지 않는다.** 3과 2라 주기는 6이고, 그만큼 덜 뻔해진다.
-#
-# ⚠️ **빈도가 손마다 달라져서 평균 계산이 바뀐다.** 주손 셋은 각각 전체의 1/6,
-#    보조손 둘은 각각 1/4 를 차지한다:
-#      (가로R + 교차 + 찌르기)/6 + (가로L + 풀기)/4 = 평균
-#      (0.90 + 1.05 + 1.40)/6 + (0.95 + 1.0833)/4 = 0.5583 + 0.5083 = **1.0667** (옛값과 같다)
-#
-# ⚠️ **칼을 한 자루만 들면 콤보가 2타로 줄어든다.** 쌍수가 아니면 보조손 목록을 아예 안 쓰고,
-#    주손 목록에서도 쌍수 조건인 찌르기가 빠져 [가로R, 교차] 만 남는다.
-#    두 자루가 정상 상태이므로 감수한다 — 잃으면 `/relic` 로 다시 받는다.
-MH = ["MAIN_HAND_ONLY"]
-OH = ["OFF_HAND_ONLY"]
+# ❌ 전 항목 `MAIN_HAND_ONLY` 는 어떤 경우에도 답이 아니다 — 보조손 목록이 **비어서**
+#    선택이 실패하고 콤보가 1번에서 멈춘다. 위 규칙 ①이 그 이유를 설명한다.
 DAG = "bettercombat:dagger_slash"
 write("assassin", {
     "range_bonus": -0.5,
     "two_handed": False,
     "category": "dagger",
     "attacks": [
-        atk("one_handed_slash_horizontal_right", 0.90, sound=DAG, conditions=MH),
-        atk("one_handed_slash_horizontal_left", 0.95, sound=DAG, conditions=OH),
-        atk("dual_handed_slash_cross", 1.05, hitbox="VERTICAL_PLANE", angle=120, sound=DAG, conditions=MH),
+        atk("one_handed_slash_horizontal_right", 0.88, sound=DAG),
+        atk("one_handed_slash_horizontal_left", 0.95, sound=DAG),
+        atk("dual_handed_slash_cross", 1.02, hitbox="VERTICAL_PLANE", angle=120, sound=DAG),
         # ⚠️ 이 한 줄만 조건부다. 두 자루를 실제로 들었을 때만 나가고, 그때만 나가는 게 맞다 —
         #    «쌍수 찌르기»는 칼이 하나면 그림 자체가 성립하지 않는다.
         #    MAIN_HAND_ONLY 가 같이 붙은 이유: 이건 두 손을 한 번에 쓰는 동작이라
         #    주손·보조손 양쪽에서 나가면 같은 동작이 두 번 보인다.
         atk("dual_handed_stab", 1.40, hitbox="FORWARD_BOX", sound=DAG,
             conditions=["DUAL_WIELDING_SAME_CATEGORY", "MAIN_HAND_ONLY"]),
-        atk("dual_handed_slash_uncross", 1.0833, sound=DAG, conditions=OH),
+        atk("dual_handed_slash_uncross", 1.0833, sound=DAG),
     ],
-}, "주손3/보조손2 로 갈라 빈도 가중 평균 1.0667 = 옛값 → 유지")
+}, "두 자루 기준 5타 평균 1.0667 = 옛 3타 평균 1.0667 → 유지")
 
 # ── 이지스 — 2타 → 3타 ──
 # 망치인데 «내려찍고 옆으로 후린다» 두 동작뿐이라 금방 질린다.
