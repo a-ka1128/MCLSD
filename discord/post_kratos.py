@@ -14,7 +14,7 @@ WEBHOOK = webhook("kratos")
 THREAD_ID = thread_id("kratos")
 CLASS = {
     "color": 0xE8B24A,   # 골드
-    "icon": "⚔", "name": "크라토스", "en": "KRATOS",
+    "icon": "🪓", "name": "크라토스", "en": "KRATOS",
     "epithet": "거인을 부순 자", "role": "근접 딜러",
     "relic": "타이탄 브레이커",
     "image": "art/Kratos.png",
