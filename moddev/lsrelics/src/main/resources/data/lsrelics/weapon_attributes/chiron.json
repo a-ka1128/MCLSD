@@ -1,3 +1,6 @@
 {
-  "parent": "bettercombat:battlestaff"
+  "parent": "bettercombat:battlestaff",
+  "attributes": {
+    "pose": "bettercombat:pose_two_handed_polearm"
+  }
 }
