@@ -14,7 +14,7 @@ WEBHOOK = webhook("chiron")
 THREAD_ID = thread_id("chiron")
 CLASS = {
     "color": 0x8FA36B,   # 올리브 — 약초를 아는 스승
-    "icon": "🏛", "name": "케이론", "en": "CHIRON",
+    "icon": "🌿", "name": "케이론", "en": "CHIRON",
     "epithet": "상처 입은 치유자", "role": "근접 하이브리드 힐러",
     "relic": "펠리온",
     "image": "art/Cheiron.png",
