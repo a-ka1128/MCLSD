@@ -3,20 +3,25 @@
 
 ── 왜 리소스팩을 안 뒤졌나 (2026-08-10) ──
 `ASSETS.md` §10 의 교훈은 「밖을 뒤지기 전에 이미 허락받은 팩부터 열어라」였다.
-그런데 **이 무기는 그 규칙의 예외다** — 유저가 원한 그림이 소림 승려가 드는
-**아무 장식 없는 나무 봉**이고, 그건 대검·낫·활과 달리 **형태가 거의 없다.**
-원통 하나에 금속 마감 둘, 손잡이 감김 둘. 열 개 남짓한 상자로 끝난다.
+그런데 **이 무기는 그 규칙의 예외다** — 형태가 거의 없다. 장대 하나에 마디 몇 개다.
+라이선스도, 다운로드도, 「우라니아 지팡이와 안 갈린다」는 위험도 통째로 사라지고,
+**우리가 원하는 대로 정확히 만들 수 있다** — 팩에서 고르면 늘 «비슷한 것»이다.
 
-라이선스도, 다운로드도, 「우라니아 지팡이와 안 갈린다」는 위험도 통째로 사라진다.
-**그리고 우리가 원하는 대로 정확히 만들 수 있다** — 팩에서 고르면 늘 «비슷한 것»이다.
+── 2차: 흰색·금색·남색 (2026-08-10, 유저 스케치) ──
+1차는 물푸레나무 민짜 봉이었다. 유저가 그림으로 다시 잡아줬다:
+**양 끝에 금색 구 · 안쪽에 금색 마디 둘 · 가운데는 남색 · 나머지는 흰색.**
 
-── 로어가 이 형태를 부른다 ──
-아킬레우스의 창 자루는 **펠리온산 물푸레나무**였고, 케이론이 직접 잘라 준 것이다.
-가공하지 않은 물푸레나무 장대 — **그게 신화 그대로다.**
+이게 맞다. **네메시스(아드라스테이아)가 이미 흰색·금색·남색**이고, 「별의 유물」이
+나무 막대기면 열둘 중 이것만 격이 떨어져 보인다. `ASSETS.md` §11 에 적어둔
+「직접 만들면 나머지와 나란히 섰을 때 초라해 보인다」는 위험이 정확히 그 지점이었다.
+
+── 로어는 그대로 산다 ──
+아킬레우스의 창 자루가 **펠리온산 물푸레나무**였고 케이론이 직접 잘라 준 것이다.
+장대의 «형태»가 그 이야기이고, 색은 별의 유물이라는 «격»이다. 둘은 안 싸운다.
 
 ── 우라니아(Divine Staff)와 무엇으로 갈리나 ──
-그쪽은 «길고 가늘고 금빛이며 머리에 큰 장식»이다. 이쪽은 **머리 장식이 아예 없다.**
-실루엣에서 눈이 가는 곳이 «윗머리»인데 거기가 비어 있으면 다른 물건으로 읽힌다.
+그쪽은 «금빛 일색 + 머리에 큰 장식»이다. 이쪽은 **머리 장식이 없고 몸통이 삼색**이다.
+실루엣에서 눈이 가는 곳이 윗머리인데, 거기가 «장식»이 아니라 «구»라 다른 물건으로 읽힌다.
 
 실행:
     python tools/make_chiron_staff.py
@@ -32,23 +37,23 @@ ASSETS = os.path.join(ROOT, 'moddev', 'lsrelics', 'src', 'main', 'resources', 'a
 MODEL = os.path.join(ASSETS, 'models', 'item', 'chiron.json')
 TEX = os.path.join(ASSETS, 'textures', 'item', 'chiron.png')
 
-# ── 팔레트 ──
-# 물푸레나무는 «창백한» 나무다. 참나무처럼 붉으면 곤봉이 아니라 몽둥이로 보인다.
-WOOD_L = (0xE0, 0xD2, 0xB4, 255)   # 밝은 면 (빛 받는 쪽)
-WOOD_M = (0xC6, 0xB3, 0x8E, 255)   # 중간
-WOOD_D = (0x9E, 0x8A, 0x67, 255)   # 그늘 · 나뭇결
-WRAP_L = (0x5E, 0x49, 0x33, 255)   # 손잡이 가죽
-WRAP_D = (0x40, 0x30, 0x1F, 255)
-BRZ_L = (0xA8, 0x84, 0x4E, 255)    # 청동 마감 — 유물 색 #B08D57 의 밝은 쪽
-BRZ_M = (0x82, 0x63, 0x36, 255)
-BRZ_D = (0x59, 0x42, 0x22, 255)
+# ── 팔레트 — 네메시스와 같은 배열 ──
+WHITE_L = (0xF2, 0xF2, 0xF6, 255)
+WHITE_M = (0xD8, 0xDA, 0xE4, 255)
+WHITE_D = (0xB2, 0xB6, 0xC4, 255)
+GOLD_L = (0xF6, 0xDA, 0x8E, 255)
+GOLD_M = (0xE0, 0xB5, 0x52, 255)
+GOLD_D = (0xA6, 0x7C, 0x28, 255)
+NAVY_L = (0x3A, 0x4C, 0x8C, 255)
+NAVY_M = (0x2A, 0x37, 0x68, 255)
+NAVY_D = (0x18, 0x20, 0x42, 255)
 
-# 텍스처는 16x16 을 세로 4칸으로 쪼개 쓴다.
-#   x 0~3  밝은 나무 | x 4~7  그늘 나무 | x 8~11 가죽 | x 12~15 청동
-U_WOOD_L = [0, 0, 4, 16]
-U_WOOD_D = [4, 0, 8, 16]
-U_WRAP = [8, 0, 12, 16]
-U_BRZ = [12, 0, 16, 16]
+# 텍스처 16×16 을 세로 4칸으로 쪼갠다.
+#   x 0~3 흰색 | x 4~7 금색 | x 8~11 남색 | x 12~15 짙은 금색(구의 아랫면)
+U_WHITE = [0, 0, 4, 16]
+U_GOLD = [4, 0, 8, 16]
+U_NAVY = [8, 0, 12, 16]
+U_GOLD_D = [12, 0, 16, 16]
 
 
 def build_texture():
@@ -57,23 +62,23 @@ def build_texture():
     for y in range(16):
         for x in range(16):
             if x < 4:
-                c = WOOD_L if (y % 5) else WOOD_M          # 5픽셀마다 결 한 줄
+                c = WHITE_L if y % 6 else (WHITE_D if y % 3 == 0 else WHITE_M)
             elif x < 8:
-                c = WOOD_M if (y % 4) else WOOD_D
+                c = GOLD_L if y % 5 == 0 else (GOLD_D if y % 5 == 2 else GOLD_M)
             elif x < 12:
-                c = WRAP_L if (y % 2) else WRAP_D          # 감긴 가죽 = 촘촘한 줄
+                c = NAVY_L if y % 5 == 0 else (NAVY_D if y % 5 == 2 else NAVY_M)
             else:
-                c = BRZ_L if y % 6 == 0 else (BRZ_D if y % 6 == 3 else BRZ_M)
+                c = GOLD_D if y % 3 else GOLD_M
             px[x, y] = c
     img.save(TEX)
     return TEX
 
 
-def box(x0, y0, x1, y1, z0, z1, side_uv, cap_uv, rot=None):
-    """세로 기둥 하나. 옆면은 side_uv, 위아래는 cap_uv 를 쓴다."""
+def box(half, y0, y1, side_uv, cap_uv, rot=None):
+    a, b = 8 - half, 8 + half
     el = {
-        "from": [x0, y0, z0],
-        "to": [x1, y1, z1],
+        "from": [a, y0, a],
+        "to": [b, y1, b],
         "faces": {
             "north": {"uv": side_uv, "texture": "#0"},
             "south": {"uv": side_uv, "texture": "#0"},
@@ -88,31 +93,52 @@ def box(x0, y0, x1, y1, z0, z1, side_uv, cap_uv, rot=None):
     return el
 
 
-def pillar(half, y0, y1, side_uv, cap_uv):
-    """정사각 기둥 + 45° 돌린 같은 기둥 = **팔각**. 원형에 제일 가까운 근사다.
+def pillar(half, y0, y1, uv, cap=None):
+    """정사각 기둥 + 45° 돌린 같은 기둥 = **팔각 근사**.
 
     두 상자는 «관통»할 뿐 같은 방향의 면이 겹치지 않으므로 z-fighting 이 없다
     (`tools/fix_zfight.py` 가 정리한 것과 같은 판정 — 맞닿음·관통은 안 싸운다).
     """
-    a, b = 8 - half, 8 + half
-    cap = [8 - half * 0.5, 8 - half * 0.5, 8 + half * 0.5, 8 + half * 0.5]
-    cap = cap_uv  # 위아래는 작아서 결이 안 보인다 — 그냥 같은 영역을 쓴다
-    return [
-        box(a, y0, b, y1, a, b, side_uv, cap),
-        box(a, y0, b, y1, a, b, side_uv, cap, rot=45),
-    ]
+    cap = cap or uv
+    return [box(half, y0, y1, uv, cap), box(half, y0, y1, uv, cap, rot=45)]
+
+
+def orb(cy):
+    """금색 구. 마디 셋을 쌓아 «둥글게» 근사한다 — 마크 모델에 구는 없다.
+
+    가운데를 제일 넓게(1.5) 두고 위아래를 좁혀야(1.0) 실루엣이 공으로 읽힌다.
+    같은 폭으로 쌓으면 그냥 «굵은 마디»다.
+    """
+    return (pillar(1.00, cy - 1.60, cy - 0.95, U_GOLD, U_GOLD_D)
+            + pillar(1.50, cy - 0.95, cy + 0.95, U_GOLD, U_GOLD_D)
+            + pillar(1.00, cy + 0.95, cy + 1.60, U_GOLD, U_GOLD_D))
+
+
+# ── 치수 ──
+# ⚠️ 마인크래프트 아이템 모델은 좌표를 **−16 ~ 32** 까지 허용한다. 0~16 에 가두면
+#    「길다」가 안 나온다 — 두께가 1 인데 길이가 15 면 비율이 1:15 뿐이다.
+#    여기서는 −6 ~ 22 (28칸) 를 써서 1:28 로 뽑는다. 소림 봉의 비율에 가깝다.
+Y_BOT, Y_TOP = -6.0, 22.0
+ORB_B, ORB_T = -4.4, 20.4          # 구의 중심 (양 끝에서 1.6 안쪽)
+BAND_B0, BAND_B1 = 2.0, 3.4        # 아래 금색 마디
+BAND_T0, BAND_T1 = 12.6, 14.0      # 위 금색 마디
+SHAFT = 0.55                       # 자루 반두께
+SLEEVE = 0.66                      # 남색 구간 (자루보다 살짝 굵게 = 감싼 느낌)
+BAND = 0.82                        # 금색 마디
 
 
 def build_model():
     els = []
-    # ── 자루 ── 가늘고 길게. 굵으면 「몽둥이」가 되고 가늘면 「지팡이」가 된다.
-    els += pillar(0.52, 0.5, 15.5, U_WOOD_L, U_WOOD_D)
-    # ── 양 끝 청동 마감 ── 나무만 있으면 장난감처럼 보인다. 여기만 금속이다.
-    els += pillar(0.66, 0.3, 1.5, U_BRZ, U_BRZ)
-    els += pillar(0.66, 14.5, 15.7, U_BRZ, U_BRZ)
-    # ── 손잡이 감김 두 곳 ── 두 손으로 잡는 봉이라는 걸 알려주는 유일한 표식이다.
-    els += pillar(0.62, 5.4, 6.7, U_WRAP, U_WRAP)
-    els += pillar(0.62, 9.3, 10.6, U_WRAP, U_WRAP)
+    # 자루 — 끝에서 끝까지 흰색으로 한 줄. 위에 남색·금색이 «덧씌워진다».
+    els += pillar(SHAFT, ORB_B, ORB_T, U_WHITE)
+    # 가운데 남색
+    els += pillar(SLEEVE, BAND_B1, BAND_T0, U_NAVY)
+    # 남색 구간의 양 끝을 잡아주는 금색 마디 둘
+    els += pillar(BAND, BAND_B0, BAND_B1, U_GOLD, U_GOLD_D)
+    els += pillar(BAND, BAND_T0, BAND_T1, U_GOLD, U_GOLD_D)
+    # 양 끝 금색 구
+    els += orb(ORB_B)
+    els += orb(ORB_T)
 
     model = {
         "credit": "Last Stardust — 케이론 「펠리온」. tools/make_chiron_staff.py 로 생성됨.",
@@ -120,17 +146,19 @@ def build_model():
         "textures": {"0": "lsrelics:item/chiron", "particle": "lsrelics:item/chiron"},
         "elements": els,
         # 우라니아(sage.json)의 값을 기준으로 잡았다 — 같은 «장대»라 손에 걸리는 자리가 같다.
-        # 다만 3인칭은 조금 키웠다. 이 봉은 장식이 없어 작으면 그냥 막대기로 보인다.
+        # ⚠️ 길이를 28칸으로 늘렸으므로 3인칭 배율은 오히려 **낮춘다**(2.6 → 1.6).
+        #    안 낮추면 3인칭에서 봉이 땅을 뚫고 화면을 가로지른다.
         "display": {
-            "thirdperson_righthand": {"rotation": [0, 180, 0], "translation": [0, 0, 2.5], "scale": [2.6, 2.6, 2.6]},
-            "thirdperson_lefthand":  {"rotation": [0, 180, 0], "translation": [0, 0, 2.5], "scale": [2.6, 2.6, 2.6]},
+            "thirdperson_righthand": {"rotation": [0, 180, 0], "translation": [0, 1.5, 2.5], "scale": [1.6, 1.6, 1.6]},
+            "thirdperson_lefthand":  {"rotation": [0, 180, 0], "translation": [0, 1.5, 2.5], "scale": [1.6, 1.6, 1.6]},
             # ⚠️ 1인칭은 «일부러» 작게 둔다. 헤카테에서 「1인칭 시야를 가린다」가 이미 나왔다.
-            "firstperson_righthand": {"rotation": [0, -180, 0], "translation": [0, 4, 1], "scale": [1.6, 1.6, 1.6]},
-            "firstperson_lefthand":  {"rotation": [0, -180, 0], "translation": [0, 4, 1], "scale": [1.6, 1.6, 1.6]},
-            "gui":    {"rotation": [0, 0, -45], "scale": [1.05, 1.05, 1.05]},
-            "ground": {"rotation": [0, 0, -45], "translation": [0, 2, 0], "scale": [0.8, 0.8, 0.8]},
-            "fixed":  {"rotation": [0, -180, -45], "scale": [1.6, 1.6, 1.6]},
-            "head":   {"rotation": [0, 0, 45], "translation": [0, 14, 0], "scale": [1.4, 1.4, 1.4]},
+            "firstperson_righthand": {"rotation": [0, -180, 0], "translation": [0, 3, 1], "scale": [1.0, 1.0, 1.0]},
+            "firstperson_lefthand":  {"rotation": [0, -180, 0], "translation": [0, 3, 1], "scale": [1.0, 1.0, 1.0]},
+            # 인벤토리 아이콘 — 대각선으로 눕혀야 28칸이 칸 안에 들어간다.
+            "gui":    {"rotation": [0, 0, -45], "scale": [0.62, 0.62, 0.62]},
+            "ground": {"rotation": [0, 0, -45], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
+            "fixed":  {"rotation": [0, -180, -45], "scale": [0.9, 0.9, 0.9]},
+            "head":   {"rotation": [0, 0, 45], "translation": [0, 13, 0], "scale": [0.9, 0.9, 0.9]},
         },
     }
     io.open(MODEL, 'w', encoding='utf-8', newline='').write(
