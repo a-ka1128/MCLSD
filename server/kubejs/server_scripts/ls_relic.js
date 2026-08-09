@@ -52,7 +52,10 @@ const RELICS = {
     echo: '나 혼자로는 아무것도 못 했다. 그래서 우리를 묶었다.' },
   nemesis: { id: 'lsrelics:nemesis', name: '§7아드라스테이아', title: 'nemesis_relic', kind: '대검 (좌클릭 3타 콤보 · 우클릭 흘리기 — 쥐고 방어, 쥔 직후 0.4초는 완벽 패링 · R 강철 발 · V 참격 인계 · C 불굴 · X 일도양단)',
     lore: '피할 수 없는 것의 이름을 새긴 대검 — 받은 것은 무엇이든 그대로 돌아간다. 이 날이 흘려낸 일격은 벤 자에게 되돌아가리라.',
-    echo: '막는 법은 배웠다. 물러서는 법은 끝내 못 배웠다.' }
+    echo: '막는 법은 배웠다. 물러서는 법은 끝내 못 배웠다.' },
+  chiron: { id: 'lsrelics:chiron', name: '§6펠리온', title: 'chiron_relic', kind: '봉 (좌클릭 6타 콤보 — 때릴 때마다 아군 회복 · R 축성 · V 바람 걸음 · C 가르침 · X 펠리온의 밤)',
+    lore: '가르치며 싸운 자의 봉 — 이 봉이 오가는 동안 곁의 상처가 아문다. 다만 그 힘은 끝내 제 몸에만 닿지 않는다.',
+    echo: '' }
 }
 
 const RL_ESS = 'kubejs:rift_essence'
@@ -106,6 +109,9 @@ function rlGrant(server, player, force) {
   // 그러면 «누가 썼나»라는 질문 자체가 안 생긴다. 사이를 두어야 다른 목소리가 된다.
   server.scheduleInTicks(60, () => {
     try {
+      // 아직 안 쓴 유물이 있다(케이론). 빈 문자열이면 «"" — 마지막으로 쥐었던 자» 라는
+      // 빈 인용이 나가므로 통째로 건너뛴다.
+      if (!r.echo) return
       rlSay(server, `§8§o   "${r.echo}"`)
       rlSay(server, '§8      — 이 무기를 마지막으로 쥐었던 자')
     } catch (e) { lsWarn('ls_relic:echo', e) }

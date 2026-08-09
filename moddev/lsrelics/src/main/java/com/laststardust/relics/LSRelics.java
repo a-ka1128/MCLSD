@@ -305,6 +305,24 @@ public class LSRelics {
                 new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(2000)
                     .attributes(nemesisAttrs(8.0, -2.8))));
 
+    // 펠리온 — 봉(케이론의 가호). **봉술 몽크 · 근접 하이브리드 힐러.**
+    //
+    // 4.6 / −2.2 = 초당 1.8회. **근접 유물 중 제일 빠르다.**
+    // 「때려야 힐이 나오는 직업」이라 느리면 회복이 뚝뚝 끊긴다 — 기믹과 손맛이 어긋난다.
+    // Better Combat `battlestaff` 6타 콤보가 위에 얹히고, 그 평균 배율이 정확히 1.0 이라
+    // 계산이 깔끔하다: (1+4.6)×5.4 × 1.0 × 1.8 = **평타 DPS 약 54**.
+    //
+    // 방어 속성을 «일부러» 안 준다. 34칸 몸으로 앞에 서는 게 이 직업의 대가다
+    // (`docs/CLASS-13.md` §4).
+    //
+    // ⚠️ **`/dummy` 실측 전까지 전부 가정이다.** 특히 파나케이아와 «같이 서는» 판을 돌려보기
+    //    전엔 회복량을 확정할 수 없다 — 10 + 4 = 14 HPS 면 수성전의 압박이 통째로 사라진다.
+    public static final DeferredItem<com.laststardust.relics.item.ChironStaff> CHIRON =
+        ITEMS.register("chiron",
+            () -> new com.laststardust.relics.item.ChironStaff(
+                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(1600)
+                    .attributes(weapon(4.6, -2.2))));
+
     // 크리에이티브 탭 (테스트/EMI 노출)
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("relics",
         () -> CreativeModeTab.builder()
@@ -323,6 +341,7 @@ public class LSRelics {
                 output.accept(HECATE.get());
                 output.accept(HARMONIA.get());
                 output.accept(NEMESIS.get());
+                output.accept(CHIRON.get());
                 output.accept(HEARTHSTONE.get());
             }).build());
 

@@ -157,9 +157,21 @@ const FATES = {
     // 방어력·방어 강도는 «무기 속성»으로 붙는다(LSRelics.nemesisAttrs) — 여기 가호 패시브로
     // 또 주면 두 번 붙는다. 헤카테·하르모니아와 같은 이유로 attrs 는 비워 둔다.
     attrs: []
+  },
+  chiron: {
+    name: '케이론', icon: '⚕', color: 0xB08D57, // 청동 — 가르치며 싸운 자
+    desc: '적을 때리면 아군이 회복된다 (자신은 제외) · 기본 스타터킷과 함께 시작',
+    story: [
+      '가르치며 싸운 자의 가호.',
+      '펠리온의 봉이 오가는 동안 곁의 상처가 아문다.',
+      '남을 낫게 하는 힘은 끝내 자신에게만 닿지 않지만, 가르친 것이 돌아올 때에야 스승도 비로소 숨을 돌린다.'
+    ],
+    // 전이 회복은 «주변 아군»에게 가는 효과라 자기 속성으로는 표현이 안 된다.
+    // 헤카테·하르모니아·네메시스와 같은 이유로 attrs 는 비워 둔다 — 구현은 모드 쪽 ChironManager 에 있다.
+    attrs: []
   }
 }
-const FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer', 'hecate', 'harmonia', 'nemesis']
+const FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer', 'hecate', 'harmonia', 'nemesis', 'chiron']
 
 function ftGet(server, player) { return String(LS.fate(server, player.username) || '') }
 

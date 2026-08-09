@@ -1652,10 +1652,19 @@ public final class RelicSkills {
     // 체력 비율이 가장 낮은 아군(시전자 포함). 절대 체력이 아니라 비율로 봐야
     // 최대 체력이 제각각인 파티에서 "가장 위태로운 사람"이 제대로 잡힌다.
     private static Player weakestAlly(ServerLevel level, Player caster, double range) {
+        return weakestAlly(level, caster, range, null);
+    }
+
+    /**
+     * 가장 다친 아군. {@code exclude} 는 «대상에서 뺄 사람»이다 —
+     * 케이론이 자기 자신을 제외할 때 쓴다({@code ChironManager}). null 이면 아무도 안 뺀다.
+     */
+    public static Player weakestAlly(ServerLevel level, Player caster, double range, Player exclude) {
         Player best = null;
         float bestRatio = Float.MAX_VALUE;
         for (Player p : level.players()) {
             if (!p.isAlive() || p.isSpectator()) continue;
+            if (p == exclude) continue;
             if (p != caster && p.distanceToSqr(caster) > range * range) continue;
             if (p.getHealth() >= p.getMaxHealth()) continue;
             float ratio = p.getHealth() / p.getMaxHealth();
@@ -2520,5 +2529,162 @@ public final class RelicSkills {
         player.displayClientMessage(Component.literal(
             "§7⊗ 일도양단 §8— §f" + hit + "§8마리 · 기세 §f" + mom
             + "§8(+" + Math.round((boost - 1f) * 100) + "%) · 아군 5초 −25%"), true);
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  케이론 「펠리온」 — 봉술 몽크 (docs/CLASS-13.md)
+    // ══════════════════════════════════════════════════════════════════
+
+    /** 청동 — 케이론의 색. */
+    private static final int BRONZE = 0xB08D57;
+
+    private static void chironHeal(ServerLevel level, ServerPlayer caster, Player target, float amount) {
+        float missing = Math.max(0, target.getMaxHealth() - target.getHealth());
+        final float healed = Math.min(missing, amount);
+        if (healed <= 0) return;
+        com.laststardust.relics.blessing.BlessingEffects.healingBy(caster, () -> target.heal(healed));
+        // 스킬 회복은 «별도 행동»이라 정상적으로 위협도를 낸다 — 패시브 전이 회복만 면제된다.
+        // 그쪽은 이미 «준 피해»로 위협도를 냈기 때문이다(docs/CLASS-13.md §4).
+        com.laststardust.relics.ThreatManager.addHealThreat(level, caster, healed);
+        level.sendParticles(ParticleTypes.HEART,
+            target.getX(), target.getY() + target.getBbHeight() * 0.75, target.getZ(),
+            2, 0.3, 0.3, 0.3, 0.0);
+    }
+
+    // ─────────────────────────────── 기본: 케이론 "축성" (기본·1성) ───────────────────────────────
+    // R 키. 전방 부채꼴(반경 6칸 · 120°) 광역 강타 · **맞힌 수만큼 아군 회복**.
+    //
+    // ── 왜 «맞힌 수»에 비례하나 ──
+    // 이 직업의 파티 기여가 「앞에 서서 때린다」인데, 그 «앞»이 어디여야 하는지를 알려주는 장치다.
+    // 적을 뭉쳐야 힐이 커지므로 **탱커가 도발로 모아둔 자리가 곧 케이론의 자리**가 된다.
+    // 파티 시너지가 설명이 아니라 조작으로 드러난다.
+    //
+    // ⚠️ 상한 5마리는 «공성에서 30마리를 쓸어 150 회복»을 막는 장치다. 반드시 있어야 한다.
+    public static void consecrate(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdConsecrate", "축성", 200, 1)) return;
+
+        Vec3 look = player.getViewVector(1.0f);
+        Vec3 flat = new Vec3(look.x, 0, look.z);
+        if (flat.lengthSqr() < 1.0e-6) flat = new Vec3(1, 0, 0);
+        flat = flat.normalize();
+
+        final double R = 6.0;
+        final double COS = Math.cos(Math.toRadians(60.0));   // 120° = 반각 60°
+        AABB box = player.getBoundingBox().inflate(R);
+        int hit = 0;
+        var src = relicSource(level, player);
+        Vec3 origin = player.position().add(0, 1.0, 0);
+        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
+                en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
+            if (com.laststardust.relics.SummonManager.isSummon(e)) continue;
+            Vec3 rel = e.getBoundingBox().getCenter().subtract(origin);
+            if (rel.lengthSqr() > R * R) continue;
+            Vec3 relFlat = new Vec3(rel.x, 0, rel.z);
+            if (relFlat.lengthSqr() > 1.0e-6 && relFlat.normalize().dot(flat) < COS) continue;
+            LsDamage.hit(e, src, dmg(stack, 8.0f), "축성");
+            hit++;
+        }
+
+        int counted = Math.min(hit, 5);
+        float amount = 1.2f * counted * healScale(stack);
+        if (counted > 0) {
+            // 「가르침」 중이 아니면 자기 자신은 대상에서 뺀다 — 패시브와 같은 규칙이다.
+            Player target = weakestAlly(level, player, com.laststardust.relics.ChironManager.HEAL_RANGE,
+                com.laststardust.relics.ChironManager.teachingActive(player) ? null : player);
+            if (target != null) chironHeal(level, player, target, amount);
+        }
+
+        // ── 연출: 앞으로 퍼지는 청동빛 부채 ──
+        Vec3 c = player.position().add(0, 0.1, 0);
+        for (int i = -3; i <= 3; i++) {
+            Vec3 d = rotateYaw(flat, Math.toRadians(i * 20.0));
+            beamDust(level, c.add(d.scale(0.8)), c.add(d.scale(R)), 0.5, BRONZE, 1.4f);
+        }
+        dustBurst(level, player.position().add(flat.scale(2.0)).add(0, 1.0, 0), 1.2, 24, BRONZE, 1.5f);
+        play(level, player, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.9f);
+        play(level, player, SoundEvents.AMETHYST_BLOCK_CHIME, 0.8f, 0.8f);
+        player.displayClientMessage(Component.literal(
+            "§6⚕ 축성 §8— §f" + hit + "§8마리"
+            + (counted > 0 ? " · 회복 §f" + Math.round(amount) : "")), true);
+    }
+
+    // ─────────────────────────────── 이동: 케이론 "바람 걸음" (이동·2성) ───────────────────────────────
+    // V 키. 6초간 이동속도 +40% · 넉백 면역 · **지나가면서 반경 4칸 아군을 회복**.
+    //
+    // ── 원안의 「자취를 밟으면 회복」을 뺀 이유 ──
+    // 실전에서 아군은 내 발자국을 따라 걷지 않는다. 화면에는 예쁜데 효과가 0 인 스킬이 된다.
+    // 지금은 «내가 지나가면» 그때그때 회복된다 — 그림은 그대로고 효과는 실제로 난다.
+    //
+    // ⚠️ 다른 유물의 V 는 전부 «순간 이동»이다(천사의 발걸음·그림자 도약·질풍 돌진·참격 인계).
+    //    이것만 지속 버프라 **즉발로 빠져나오지 못한다.** 34칸 몸에 탈출기가 없다는 뜻이라,
+    //    인게임에서 답답하면 앞 1초를 순간 가속으로 바꾼다(docs/CLASS-13.md §3).
+    public static void windStep(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdWind", "바람 걸음", 240, 2)) return;
+        com.laststardust.relics.ChironManager.markWind(player,
+            com.laststardust.relics.ChironManager.WIND_TICKS);
+        // 이동속도 +40% = 신속 II. 속성 모디파이어를 손으로 붙였다 떼는 것보다 새어나갈 구멍이 없다.
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED,
+            com.laststardust.relics.ChironManager.WIND_TICKS, 1, false, true));
+
+        Vec3 c = player.position();
+        shockRing(level, c.x, c.y + 0.1, c.z, 2.0, 28, ParticleTypes.CLOUD, 0.15);
+        dustBurst(level, c.add(0, 0.8, 0), 1.0, 18, BRONZE, 1.3f);
+        play(level, player, SoundEvents.HORSE_GALLOP, 0.7f, 1.2f);
+        player.displayClientMessage(Component.literal("§6⚕ 바람 걸음 §8— 6초 · 지나가며 회복"), true);
+    }
+
+    // ─────────────────────────────── 추가: 케이론 "가르침" (추가·3성) ───────────────────────────────
+    // C 키. 8초간 **주변 아군의 평타에도 전이 회복이 생긴다.** 파티 전체가 잠시 케이론이 된다.
+    //
+    // ── 여기에 «자기 회복»이 달려 있다 ──
+    // 패시브가 시전자를 회복 대상에서 빼기 때문에, 이 창이 없으면 케이론은 자기 회복 수단이
+    // **하나도 없다.** 34칸 몸으로 앞에 서는데 그러면 파나케이아가 없는 날 —
+    // 이 직업이 존재하는 바로 그 날 — 케이론이 제일 먼저 죽는다.
+    // **남을 가르치면 그 제자들의 회복이 스승에게도 돌아온다**(ChironManager.transfer).
+    public static void teaching(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdTeach", "가르침", 440, 3)) return;
+        com.laststardust.relics.ChironManager.markTeaching(player,
+            com.laststardust.relics.ChironManager.TEACH_TICKS);
+
+        Vec3 c = player.position();
+        double tr = com.laststardust.relics.ChironManager.TEACH_RANGE;
+        dome(level, c.x, c.y, c.z, tr * 0.5, 70, ParticleTypes.WAX_ON);
+        shockRing(level, c.x, c.y + 0.1, c.z, tr, 60, ParticleTypes.HAPPY_VILLAGER, 0.1);
+        dustBurst(level, c.add(0, 1.2, 0), 1.4, 30, BRONZE, 1.6f);
+        play(level, player, SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.2f);
+        play(level, player, SoundEvents.BEACON_ACTIVATE, 0.6f, 1.4f);
+        player.displayClientMessage(Component.literal(
+            "§6⚕ 가르침 §8— 8초 · 아군의 평타도 낫게 한다 · §f나도 회복된다"), true);
+    }
+
+    // ─────────────────────────────── 궁극: 케이론 "펠리온의 밤" (궁극·4성) ───────────────────────────────
+    // X 키. 10초간 반경 12칸 **아군이 죽지 않는다**(체력 1 에서 버틴다).
+    //
+    // ── 대가는 «반동»이 아니라 «제외»다 ──
+    // 원안엔 「끝나면 막은 피해의 절반을 내가 받는다」가 붙어 있었는데, 그걸 빼기만 하면
+    // 이건 그냥 파티 무적이다(이지스 궁극이 5초 무적, 파나케이아 궁극은 «죽은 뒤» 부활인데
+    // 이건 애초에 안 죽게 만든다). 그래서 계산이 필요 없는 대가를 넣었다 —
+    // **케이론 자신은 이 효과를 안 받는다.**
+    //   · 패시브와 완전히 같은 규칙이다. 남은 살리고 자기는 못 살린다
+    //   · 막은 피해를 세고 되돌리는 복잡한 계산이 사라진다
+    //   · 파티는 10초간 불사인데 케이론은 죽을 수 있고, **케이론이 죽으면 즉시 끝난다**
+    public static void pelionNight(ServerLevel level, ServerPlayer player, ItemStack stack) {
+        if (!ready(level, player, stack, "cdPelion", "펠리온의 밤", 2000, 4)) return;
+        com.laststardust.relics.ChironManager.markNight(player,
+            com.laststardust.relics.ChironManager.NIGHT_TICKS);
+
+        Vec3 c = player.position();
+        double r = com.laststardust.relics.ChironManager.NIGHT_RANGE;
+        dome(level, c.x, c.y, c.z, r, 160, ParticleTypes.END_ROD);
+        for (int i = 1; i <= 3; i++) {
+            shockRing(level, c.x, c.y + 0.1, c.z, r * i / 3.0, 72, ParticleTypes.END_ROD, 0.02);
+        }
+        dustBurst(level, c.add(0, 1.4, 0), 2.0, 60, BRONZE, 2.0f);
+        level.sendParticles(ParticleTypes.FLASH, c.x, c.y + 1.4, c.z, 1, 0, 0, 0, 0);
+        play(level, player, SoundEvents.BEACON_ACTIVATE, 1.2f, 0.7f);
+        play(level, player, SoundEvents.TOTEM_USE, 0.7f, 0.8f);
+        SoundScheduler.at(level, c, SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 0.6f, 6);
+        player.displayClientMessage(Component.literal(
+            "§6⚕ 펠리온의 밤 §8— 10초 · 아군은 죽지 않는다 §c(나는 예외)"), true);
     }
 }

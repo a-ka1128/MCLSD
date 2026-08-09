@@ -29,6 +29,7 @@ const TITLES = {
   hecate_relic: { display: '횃불을 든 자', color: 'dark_aqua' },
   harmonia_relic: { display: '흩어진 이들을 모으는 자', color: 'light_purple' },
   nemesis_relic: { display: '되돌려주는 자', color: 'gray' },
+  chiron_relic: { display: '상처 입은 치유자', color: 'gold' },
   night_lord: { display: '밤의 지배자', color: 'dark_purple' },
   rift_conqueror: { display: '균열 정복자', color: 'red' },
   savior: { display: '구원자', color: 'yellow' },

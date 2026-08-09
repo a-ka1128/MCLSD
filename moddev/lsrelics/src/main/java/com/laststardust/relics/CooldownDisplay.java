@@ -67,6 +67,9 @@ public final class CooldownDisplay {
     private static final Object[][] NEMESIS_SKILLS = {
         {"cdStance", "강철 발", 240, "R"}, {"cdRecall", "인계", 180, "V"}, {"cdResolve", "불굴", 440, "C"}, {"cdSunder", "일도양단", 1800, "X"}
     };
+    private static final Object[][] CHIRON_SKILLS = {
+        {"cdConsecrate", "축성", 200, "R"}, {"cdWind", "바람 걸음", 240, "V"}, {"cdTeach", "가르침", 440, "C"}, {"cdPelion", "펠리온의 밤", 2000, "X"}
+    };
 
     // ── 액션바 양보 ──
     // 액션바는 한 줄뿐이라 여러 시스템이 겹쳐 쓴다(탄약 표시·소생 알림·DPS 측정 바).
@@ -143,6 +146,7 @@ public final class CooldownDisplay {
             else if (item == LSRelics.HECATE.get()) skills = HECATE_SKILLS;
             else if (item == LSRelics.HARMONIA.get()) skills = HARMONIA_SKILLS;
             else if (item == LSRelics.NEMESIS.get()) skills = NEMESIS_SKILLS;
+            else if (item == LSRelics.CHIRON.get()) skills = CHIRON_SKILLS;
             else {
                 // 유물을 내려놓으면 기록도 지운다 — 다시 들었을 때 곧바로 다시 뜨게.
                 LAST_TEXT.remove(player.getUUID());
