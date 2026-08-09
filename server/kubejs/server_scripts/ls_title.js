@@ -20,7 +20,7 @@ function ttSay(server, text) { server.players.forEach(p => p.tell(Text.of(text))
 const TITLES = {
   guardian_relic: { display: '하늘을 떠받친 자', color: 'aqua' },
   hunter_relic: { display: '별을 쏘는 자', color: 'green' },
-  sage_relic: { display: '별지기', color: 'light_purple' },
+  sage_relic: { display: '별지기', color: 'dark_blue' },
   pioneer_relic: { display: '거인을 부순 자', color: 'gold' },
   gunner_relic: { display: '태양을 쏘는 자', color: 'yellow' },
   healer_relic: { display: '별을 되살리는 자', color: 'white' },
@@ -29,7 +29,7 @@ const TITLES = {
   hecate_relic: { display: '횃불을 든 자', color: 'dark_aqua' },
   harmonia_relic: { display: '흩어진 이들을 모으는 자', color: 'light_purple' },
   nemesis_relic: { display: '되돌려주는 자', color: 'gray' },
-  chiron_relic: { display: '상처 입은 치유자', color: 'gold' },
+  chiron_relic: { display: '상처 입은 치유자', color: 'dark_green' },
   night_lord: { display: '밤의 지배자', color: 'dark_purple' },
   rift_conqueror: { display: '균열 정복자', color: 'red' },
   savior: { display: '구원자', color: 'yellow' },

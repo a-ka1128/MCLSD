@@ -2535,8 +2535,8 @@ public final class RelicSkills {
     //  케이론 「펠리온」 — 봉술 몽크 (docs/CLASS-13.md)
     // ══════════════════════════════════════════════════════════════════
 
-    /** 청동 — 케이론의 색. */
-    private static final int BRONZE = 0xB08D57;
+    /** 올리브 — 케이론의 색(가호 색과 같은 값). */
+    private static final int OLIVE = 0x8FA36B;
 
     private static void chironHeal(ServerLevel level, ServerPlayer caster, Player target, float amount) {
         float missing = Math.max(0, target.getMaxHealth() - target.getHealth());
@@ -2598,9 +2598,9 @@ public final class RelicSkills {
         Vec3 c = player.position().add(0, 0.1, 0);
         for (int i = -3; i <= 3; i++) {
             Vec3 d = rotateYaw(flat, Math.toRadians(i * 20.0));
-            beamDust(level, c.add(d.scale(0.8)), c.add(d.scale(R)), 0.5, BRONZE, 1.4f);
+            beamDust(level, c.add(d.scale(0.8)), c.add(d.scale(R)), 0.5, OLIVE, 1.4f);
         }
-        dustBurst(level, player.position().add(flat.scale(2.0)).add(0, 1.0, 0), 1.2, 24, BRONZE, 1.5f);
+        dustBurst(level, player.position().add(flat.scale(2.0)).add(0, 1.0, 0), 1.2, 24, OLIVE, 1.5f);
         play(level, player, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.9f);
         play(level, player, SoundEvents.AMETHYST_BLOCK_CHIME, 0.8f, 0.8f);
         player.displayClientMessage(Component.literal(
@@ -2628,7 +2628,7 @@ public final class RelicSkills {
 
         Vec3 c = player.position();
         shockRing(level, c.x, c.y + 0.1, c.z, 2.0, 28, ParticleTypes.CLOUD, 0.15);
-        dustBurst(level, c.add(0, 0.8, 0), 1.0, 18, BRONZE, 1.3f);
+        dustBurst(level, c.add(0, 0.8, 0), 1.0, 18, OLIVE, 1.3f);
         play(level, player, SoundEvents.HORSE_GALLOP, 0.7f, 1.2f);
         player.displayClientMessage(Component.literal("§6⚕ 바람 걸음 §8— 6초 · 지나가며 회복"), true);
     }
@@ -2650,7 +2650,7 @@ public final class RelicSkills {
         double tr = com.laststardust.relics.ChironManager.TEACH_RANGE;
         dome(level, c.x, c.y, c.z, tr * 0.5, 70, ParticleTypes.WAX_ON);
         shockRing(level, c.x, c.y + 0.1, c.z, tr, 60, ParticleTypes.HAPPY_VILLAGER, 0.1);
-        dustBurst(level, c.add(0, 1.2, 0), 1.4, 30, BRONZE, 1.6f);
+        dustBurst(level, c.add(0, 1.2, 0), 1.4, 30, OLIVE, 1.6f);
         play(level, player, SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.2f);
         play(level, player, SoundEvents.BEACON_ACTIVATE, 0.6f, 1.4f);
         player.displayClientMessage(Component.literal(
@@ -2679,7 +2679,7 @@ public final class RelicSkills {
         for (int i = 1; i <= 3; i++) {
             shockRing(level, c.x, c.y + 0.1, c.z, r * i / 3.0, 72, ParticleTypes.END_ROD, 0.02);
         }
-        dustBurst(level, c.add(0, 1.4, 0), 2.0, 60, BRONZE, 2.0f);
+        dustBurst(level, c.add(0, 1.4, 0), 2.0, 60, OLIVE, 2.0f);
         level.sendParticles(ParticleTypes.FLASH, c.x, c.y + 1.4, c.z, 1, 0, 0, 0, 0);
         play(level, player, SoundEvents.BEACON_ACTIVATE, 1.2f, 0.7f);
         play(level, player, SoundEvents.TOTEM_USE, 0.7f, 0.8f);

@@ -26,7 +26,7 @@ const RELICS = {
   hunter: { id: 'lsrelics:hunter', name: '§a시리우스', title: 'hunter_relic', kind: '활 (우클릭 발사 · 웅크림+우클릭 유성 화살)',
     lore: '가장 밝은 별이 그 손에 내렸으니, 어둠이 삼킨 세상에서도 표적을 놓치지 마라.',
     echo: '화살은 아직 남았는데, 겨눌 것이 너무 커졌다.' },
-  sage: { id: 'lsrelics:sage', name: '§d셀레스티아', title: 'sage_relic', kind: '마법 무기 (우클릭 소멸)',
+  sage: { id: 'lsrelics:sage', name: '§1셀레스티아', title: 'sage_relic', kind: '마법 무기 (우클릭 소멸)',
     lore: '별이 지기 전의 모든 지혜가 이 지팡이에 잠들었노라 — 꺼져가는 하늘을 대신해 길을 밝혀라.',
     echo: '나는 끝을 계산했다. 답이 맞았던 게 가장 견디기 힘들다.' },
   pioneer: { id: 'lsrelics:pioneer', name: '§6타이탄 브레이커', title: 'pioneer_relic', kind: '도끼 (좌클릭 강타 · 우클릭 균열 붕괴 · 쉬프트+우클릭 대지 쪼개기 · 쉬프트+좌클릭 타이탄 강림)',
@@ -53,7 +53,7 @@ const RELICS = {
   nemesis: { id: 'lsrelics:nemesis', name: '§7아드라스테이아', title: 'nemesis_relic', kind: '대검 (좌클릭 3타 콤보 · 우클릭 흘리기 — 쥐고 방어, 쥔 직후 0.4초는 완벽 패링 · R 강철 발 · V 참격 인계 · C 불굴 · X 일도양단)',
     lore: '피할 수 없는 것의 이름을 새긴 대검 — 받은 것은 무엇이든 그대로 돌아간다. 이 날이 흘려낸 일격은 벤 자에게 되돌아가리라.',
     echo: '막는 법은 배웠다. 물러서는 법은 끝내 못 배웠다.' },
-  chiron: { id: 'lsrelics:chiron', name: '§6펠리온', title: 'chiron_relic', kind: '봉 (좌클릭 6타 콤보 — 때릴 때마다 아군 회복 · R 축성 · V 바람 걸음 · C 가르침 · X 펠리온의 밤)',
+  chiron: { id: 'lsrelics:chiron', name: '§2펠리온', title: 'chiron_relic', kind: '봉 (좌클릭 6타 콤보 — 때릴 때마다 아군 회복 · R 축성 · V 바람 걸음 · C 가르침 · X 펠리온의 밤)',
     lore: '가르치며 싸운 자의 봉 — 이 봉이 오가는 동안 곁의 상처가 아문다. 다만 그 힘은 끝내 제 몸에만 닿지 않는다.',
     echo: '' }
 }

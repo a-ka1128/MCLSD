@@ -159,7 +159,7 @@ const FATES = {
     attrs: []
   },
   chiron: {
-    name: '케이론', icon: '⚕', color: 0xB08D57, // 청동 — 가르치며 싸운 자
+    name: '케이론', icon: '⚕', color: 0x8FA36B, // 올리브 — 약초를 아는 스승
     desc: '적을 때리면 아군이 회복된다 (자신은 제외) · 기본 스타터킷과 함께 시작',
     story: [
       '가르치며 싸운 자의 가호.',
