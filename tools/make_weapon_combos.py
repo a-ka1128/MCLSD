@@ -40,21 +40,36 @@ def write(name, attrs, note):
     print("%-10s %d타  평균 %.4f   %s" % (name, len(mults), avg, note))
 
 
-# ── 스틱스(에레보스) — 쌍수 교차 ──
-# 쌍단검인데 가로 베기 둘이 «한 손» 애니메이션이었다. 3타만 쌍수였다.
-# 배율·각도·조건은 하나도 안 건드리고 애니메이션만 바꾼다 → 밸런스 영향 0.
+# ── 스틱스(에레보스) — 3타 → 5타 (2026-08-10 유저 지정) ──
+# 가로R → 가로L → 쌍수 교차 → 쌍수 풀기 → 쌍수 찌르기.
+# 한 손 베기로 시작해 «양손이 열리는» 순서라, 쌍단검이 점점 살아나는 그림이 된다.
+#
+# ⚠️⚠️ **평균을 어디에 맞췄는지가 중요하다.**
+# 마지막 찌르기에는 원래부터 `DUAL_WIELDING_SAME_CATEGORY` 조건이 붙어 있다.
+# 스틱스는 아이템 **하나**이므로 보조손이 비어 이 조건은 **거의 확실히 안 통한다** —
+# 즉 실제로 나가는 콤보는 조건 없는 것들뿐이었고, 08-04 실측(그리고 거기 맞춘
+# relicScale 1.398)은 **그 «실제»를 잰 값**이다.
+#
+# 그래서 조건 없는 네 타의 평균을 **옛 조건 없는 두 타의 평균(0.9)에 정확히** 맞춘다.
+#   0.80 + 0.85 + 0.92 + 1.03 = 3.60  →  평균 0.90  (옛 0.9 + 0.9 = 1.8 → 평균 0.90)
+# 조건부 찌르기는 1.4 그대로 둔다 — 어차피 안 나가고, 나간다면 옛 값과 같아야 한다.
+#
+# ⚠️ 만약 인게임에서 **찌르기가 실제로 나온다면** 이 가정이 틀린 것이고,
+#    그때는 다섯 타 전체 평균을 옛 1.0667 에 다시 맞춰야 한다(전부 ×1.0847).
 DAG = "bettercombat:dagger_slash"
 write("assassin", {
     "range_bonus": -0.5,
     "two_handed": False,
     "category": "dagger",
     "attacks": [
-        atk("dual_handed_slash_cross", 0.9, sound=DAG),
-        atk("dual_handed_slash_uncross", 0.9, sound=DAG),
-        atk("dual_handed_stab", 1.4, hitbox="FORWARD_BOX", sound=DAG,
+        atk("one_handed_slash_horizontal_right", 0.80, sound=DAG),
+        atk("one_handed_slash_horizontal_left", 0.85, sound=DAG),
+        atk("dual_handed_slash_cross", 0.92, hitbox="VERTICAL_PLANE", angle=120, sound=DAG),
+        atk("dual_handed_slash_uncross", 1.03, sound=DAG),
+        atk("dual_handed_stab", 1.40, hitbox="FORWARD_BOX", sound=DAG,
             conditions=["DUAL_WIELDING_SAME_CATEGORY", "MAIN_HAND_ONLY"]),
     ],
-}, "원래 평균 1.0667 유지 (애니메이션만 교체)")
+}, "조건 없는 4타 평균 0.90 = 옛 조건 없는 2타 평균 0.90 → 유지")
 
 # ── 이지스 — 2타 → 3타 ──
 # 망치인데 «내려찍고 옆으로 후린다» 두 동작뿐이라 금방 질린다.
