@@ -35,6 +35,19 @@ public final class LSNetwork {
         reg.playToClient(TownViewPayload.TYPE, TownViewPayload.STREAM_CODEC, LSNetwork::handleTownView);
         reg.playToServer(BlessActionPayload.TYPE, BlessActionPayload.STREAM_CODEC, LSNetwork::handleBlessAction);
         reg.playToClient(BlessViewPayload.TYPE, BlessViewPayload.STREAM_CODEC, LSNetwork::handleBlessView);
+        reg.playToClient(RelicAnimPayload.TYPE, RelicAnimPayload.STREAM_CODEC, LSNetwork::handleAnim);
+    }
+
+    // ── 플레이어 자세 ──
+    // 애니메이션은 클라에만 있다(PlayerAnimator 는 클라 라이브러리). 서버는 «지금 시작하라»만 보낸다.
+    private static void handleAnim(RelicAnimPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            // 라이브러리가 없는 클라도 이 패킷을 받는다 — 없으면 자세만 없고 나머지는 그대로 돈다.
+            if (!net.neoforged.fml.ModList.get().isLoaded("playeranimator")) return;
+            if (payload.anim() == RelicAnimPayload.SUNDER) {
+                com.laststardust.relics.client.anim.RelicAnimations.playSunder(payload.entityId());
+            }
+        });
     }
 
     // ── 별의 제단 ──

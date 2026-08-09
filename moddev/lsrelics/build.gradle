@@ -122,6 +122,12 @@ dependencies {
     // mods 폴더의 배포 jar를 그대로 컴파일에 사용 가능(버전 정확히 일치).
     compileOnly files("D:/Study/MC/CustomServer1/server/mods/geckolib-neoforge-1.21.1-4.9.2.jar")
 
+    // PlayerAnimator — 플레이어 뼈대에 애니메이션을 얹는다. 모드팩에 이미 들어 있다
+    // (베터컴뱃이 공격 모션에 쓴다). 우리는 X「일도양단」의 «치켜듦»에만 쓴다.
+    // ⚠️ 클라 전용이다. 이 라이브러리를 참조하는 코드는 반드시 client/ 아래에 두고
+    //    서버에서 그 클래스를 건드리지 않게 한다 — 전용 서버엔 이 모드가 없어도 되게.
+    compileOnly files("D:/Study/MC/CustomServer1/server/mods/player-animation-lib-forge-2.0.4+1.21.1.jar")
+
     // KubeJS — 이관 기간 동안만 필요하다.
     // 아직 스크립트로 남아 있는 시스템(공성·관문·봉화 등)이 모드가 소유한 데이터(금고 등)를
     // 읽고 써야 해서, LSKubeBridge 가 전역 바인딩 `LS` 를 등록한다.

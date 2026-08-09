@@ -61,8 +61,14 @@ public final class ParryManager {
     // 「못 해도 탱커」의 바닥은 유지된다.
     public static final float STANCE_BASE = 0.20f;
     public static final float STANCE_PER = 0.05f;
-    /** C「불굴」 — 중첩당 −7%, 5중첩이면 −35%. 기세가 0 이면 아무 일도 안 난다. */
-    public static final float RESOLVE_PER = 0.07f;
+    // ── C「불굴」 — 기세가 없어도 «쓸 수는 있다» (2026-08-09, 유저 요청) ──
+    // 원래는 기세 0 이면 막고 쿨을 돌려줬다. 그런데 「눌렀는데 아무 일도 안 난다」는 그 자체로
+    // 불쾌하고, 급할 때 기세를 세고 있을 여유가 없다. 그래서 R「강철 발」과 같은 꼴로 바꿨다 —
+    // **바닥 + 중첩**. 최대치(−35%)는 유저가 정한 값 그대로다.
+    //   0중첩 −10% · 5중첩 −35%
+    // R 과 겹치지 않는다: R 은 −20%~−45% 로 더 세지만 3초·이동 불가고, 이쪽은 6초·자유롭다.
+    public static final float RESOLVE_BASE = 0.10f;
+    public static final float RESOLVE_PER = 0.05f;
     public static final int RESOLVE_TICKS = 120;    // 6초
     /** C「불굴」의 반경 4.5칸 충격. 기세 중첩당 이만큼 «기본 피해»가 붙는다. */
     public static final float RESOLVE_DMG_BASE = 4.0f;

@@ -42,6 +42,16 @@ public final class LSRelicsClient {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            // 플레이어 애니메이션 칸을 예약한다. **플레이어가 만들어지는 시점에만** 레이어를
+            // 붙일 수 있어서, 나중에 재생하려면 지금 자리를 잡아둬야 한다.
+            //
+            // ⚠️ playeranimator 가 없는 클라에서 이 줄이 NoClassDefFoundError 로 «셋업 전체»를
+            //    무너뜨린다 — 유물 하나의 연출 때문에 게임이 안 켜지는 건 말이 안 된다.
+            //    모드팩엔 들어 있지만(베터컴뱃이 쓴다) 확인하고 부른다.
+            if (net.neoforged.fml.ModList.get().isLoaded("playeranimator")) {
+                com.laststardust.relics.client.anim.RelicAnimations.register();
+            }
+
             // 활 모델의 당김 상태 예측(현재는 즉발 연사라 거의 쓰이지 않지만 모델 호환용)
             ItemProperties.register(LSRelics.HUNTER.get(),
                 ResourceLocation.withDefaultNamespace("pull"),

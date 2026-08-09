@@ -2321,15 +2321,12 @@ public final class RelicSkills {
     //    적에게 헛방일 때 쿨을 돌려주는 것과 같은 처리다 — 헛손질로 22초를 날리면 억울하다.
     public static void unyielding(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdResolve", "불굴", 440, 3)) return;
-        int mom = com.laststardust.relics.ParryManager.momentum(player);
-        if (mom <= 0) {
-            clearCooldown(stack, "cdResolve");
-            player.displayClientMessage(Component.literal("§8기세가 없다 — 먼저 흘려내라"), true);
-            play(level, player, SoundEvents.NOTE_BLOCK_BASS.value(), 0.5f, 0.7f);
-            return;
-        }
-        com.laststardust.relics.ParryManager.consumeMomentum(player);
-        float dr = com.laststardust.relics.ParryManager.RESOLVE_PER * mom;
+        // 기세가 0 이어도 «쓸 수는 있다» — 바닥 −10% 는 항상 나온다. R「강철 발」이 기세 0 에서도
+        // −20% 를 주는 것과 같은 원칙이다. 「눌렀는데 아무 일도 안 난다」를 없애는 게 목적이라
+        // 예전의 «쿨 환급» 은 뺐다 — 이제 헛방이 아니기 때문이다.
+        int mom = com.laststardust.relics.ParryManager.consumeMomentum(player);
+        float dr = com.laststardust.relics.ParryManager.RESOLVE_BASE
+                 + com.laststardust.relics.ParryManager.RESOLVE_PER * mom;
         com.laststardust.relics.ParryManager.armWith(stack, level,
             com.laststardust.relics.ParryManager.K_RESOLVE, "resolveDr",
             com.laststardust.relics.ParryManager.RESOLVE_TICKS, dr);
@@ -2389,6 +2386,12 @@ public final class RelicSkills {
         // 뿌리내린다 — 준비 동작의 «대가»가 눈에 보여야 한다.
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
             com.laststardust.relics.ParryManager.SUNDER_WINDUP, 6, false, false));
+
+        // 대검을 치켜드는 «자세». 애니메이션은 클라에만 있으므로 보는 사람 전부에게 알린다 —
+        // ⚠️ AndSelf 가 빠지면 1인칭에서 아무 일도 안 일어난다(자기 자신은 자기를 추적하지 않는다).
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+            player, new com.laststardust.relics.network.RelicAnimPayload(
+                player.getId(), com.laststardust.relics.network.RelicAnimPayload.SUNDER));
 
         Vec3 f = player.position();
         shockRing(level, f.x, f.y + 0.1, f.z, 3.2, 44, ParticleTypes.ELECTRIC_SPARK, 0.05);
