@@ -9,7 +9,7 @@
         "damage_multiplier": 0.9,
         "angle": 150,
         "upswing": 0.5,
-        "animation": "bettercombat:one_handed_slash_horizontal_right",
+        "animation": "bettercombat:dual_handed_slash_cross",
         "swing_sound": {
           "id": "bettercombat:dagger_slash"
         }
@@ -19,7 +19,7 @@
         "damage_multiplier": 0.9,
         "angle": 150,
         "upswing": 0.5,
-        "animation": "bettercombat:one_handed_slash_horizontal_left",
+        "animation": "bettercombat:dual_handed_slash_uncross",
         "swing_sound": {
           "id": "bettercombat:dagger_slash"
         }
