@@ -428,6 +428,23 @@ public final class LSCommands {
         //
         // 전용 UI(`/bless` 창)가 오기 전까지 이게 유일한 입구다. UI 가 붙어도 명령은 남긴다 —
         // 화면 없이 상태를 확인할 수 있어야 「버튼이 안 눌린다」의 원인을 가릴 수 있다.
+        // ── 12번째 가호(소환사) 프로토타입 ──
+        // 직업을 통째로 설계하기 «전»에 「마크에서 소환수가 실제로 쓸 만한가」부터 안다.
+        // 스킬이 아니라 명령으로 둔 이유: 아직 유물도 가호도 없고, 손맛만 보는 단계다.
+        event.getDispatcher().register(
+            Commands.literal("lssummon")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.argument("n", IntegerArgumentType.integer(1, 8))
+                    .executes(ctx -> summonTest(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "n"))))
+                .then(Commands.literal("clear").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    int n = com.laststardust.relics.SummonManager.dismiss(p);
+                    ctx.getSource().sendSuccess(() -> Component.literal("§7잔영 " + n + "기 거둠"), false);
+                    return 1;
+                }))
+                .executes(ctx -> summonTest(ctx.getSource(), 3)));
+
         event.getDispatcher().register(
             Commands.literal("bless")
                 .executes(ctx -> blessOpen(ctx.getSource()))
@@ -579,6 +596,22 @@ public final class LSCommands {
         com.laststardust.relics.blessing.BlessGui.sync(p, "");
         src.sendSuccess(() -> Component.literal("§a✦ " + slotName + " ← " + id + " "
             + com.laststardust.relics.blessing.BlessingService.fmt(v) + "%"), false);
+        return 1;
+    }
+
+    /** 「별의 잔영」 n 기를 주인 주변에 띄운다. 손맛 확인용이라 수치는 SummonManager 고정값이다. */
+    private static int summonTest(CommandSourceStack src, int n) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        if (!(p.level() instanceof ServerLevel sl)) return 0;
+        for (int i = 0; i < n; i++) {
+            double a = Math.PI * 2 * i / n;
+            net.minecraft.world.phys.Vec3 at = p.position().add(Math.cos(a) * 2.0, 1.8, Math.sin(a) * 2.0);
+            com.laststardust.relics.SummonManager.summon(sl, p, at, 300);
+        }
+        int total = com.laststardust.relics.SummonManager.count(p);
+        src.sendSuccess(() -> Component.literal(
+            "§b별의 잔영 §f" + n + "§b기 소환 §7(현재 " + total + "기 · 15초) — §e/lssummon clear §7로 거둠"), false);
         return 1;
     }
 

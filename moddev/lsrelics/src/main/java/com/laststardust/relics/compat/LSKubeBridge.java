@@ -532,6 +532,14 @@ public class LSKubeBridge implements KubeJSPlugin {
         // 내려가므로, 조용히 틀리는 대신 시끄럽게 틀린다.
         public boolean isMonster(Object entity) {
             if (entity instanceof net.minecraft.world.entity.Entity e) {
+                // ── 우리 편은 뺀다 (2026-08-09) ──
+                // 소환수(별의 잔영)는 벡스라서 MobCategory.MONSTER 다. 그냥 두면 몹 스케일링이
+                // **플레이어가 부른 자기 편**을 관문 진행도만큼 강화한다 — krip_turrets 포탑이
+                // 정확히 그래서 「진행할수록 내 방어가 공짜로 세지는」 통로가 났었다(TODO D-10).
+                // 그때 교훈대로 **한 곳만** 고친다: `spawned` 훅과 `/mobscale fix` 가 둘 다
+                // 이 다리를 지난다. id 접두사(MS_NEVER_SCALE)로는 못 뺀다 — 야생 벡스까지
+                // 같이 빠지기 때문이다. 그래서 개체에 박은 표식을 본다.
+                if (com.laststardust.relics.SummonManager.isSummon(e)) return false;
                 return e.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER;
             }
             throw new IllegalArgumentException(
