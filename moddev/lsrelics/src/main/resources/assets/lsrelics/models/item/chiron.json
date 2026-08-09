@@ -1,6 +1,5 @@
 {
   "credit": "Last Stardust — 케이론 「펠리온」. tools/make_chiron_staff.py 로 생성됨.",
-  "parent": "minecraft:item/handheld",
   "textures": {
     "0": "lsrelics:item/chiron",
     "particle": "lsrelics:item/chiron"

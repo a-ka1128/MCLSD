@@ -152,7 +152,11 @@ def build_model():
 
     model = {
         "credit": "Last Stardust — 케이론 「펠리온」. tools/make_chiron_staff.py 로 생성됨.",
-        "parent": "minecraft:item/handheld",
+        # ⚠️ **parent 를 쓰면 안 된다.** `minecraft:item/handheld` 는 `item/generated` 를 거쳐
+        #    `builtin/generated` 로 가는데, 그 로더는 **elements 를 통째로 무시하고** layer0
+        #    스프라이트에서 모델을 «생성»한다. layer0 이 없으니 아무것도 안 그려진다 —
+        #    아이템은 손에 있고 툴팁도 뜨는데 화면에 안 보이는, 원인을 찾기 힘든 증상이 된다.
+        #    나머지 유물 모델(nemesis·hecate·harmonia·sage)도 전부 parent 가 없다.
         "textures": {"0": "lsrelics:item/chiron", "particle": "lsrelics:item/chiron"},
         "elements": els,
         # 우라니아(sage.json)의 값을 기준으로 잡았다 — 같은 «장대»라 손에 걸리는 자리가 같다.
