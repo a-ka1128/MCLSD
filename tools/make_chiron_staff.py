@@ -169,7 +169,9 @@ def build_model():
             "firstperson_righthand": {"rotation": [0, -180, 0], "translation": [0, 3, 1], "scale": [1.0, 1.0, 1.0]},
             "firstperson_lefthand":  {"rotation": [0, -180, 0], "translation": [0, 3, 1], "scale": [1.0, 1.0, 1.0]},
             # 인벤토리 아이콘 — 대각선으로 눕혀야 28칸이 칸 안에 들어간다.
-            "gui":    {"rotation": [0, 0, -45], "scale": [0.62, 0.62, 0.62]},
+            # ⚠️ 0.62 였는데 가호 선택 목록에서 «실 한 가닥»으로 보였다(2026-08-10 인게임 확인).
+            #    자루가 0.68 두께라 배율까지 낮으면 남는 게 선뿐이다. 28칸이 칸을 넘지 않는 선에서 올린다.
+            "gui":    {"rotation": [0, 0, -45], "scale": [0.78, 0.78, 0.78]},
             "ground": {"rotation": [0, 0, -45], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
             "fixed":  {"rotation": [0, -180, -45], "scale": [0.9, 0.9, 0.9]},
             "head":   {"rotation": [0, 0, 45], "translation": [0, 13, 0], "scale": [0.9, 0.9, 0.9]},
