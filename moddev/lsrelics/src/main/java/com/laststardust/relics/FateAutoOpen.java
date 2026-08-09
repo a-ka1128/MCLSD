@@ -2,7 +2,14 @@ package com.laststardust.relics;
 
 import com.laststardust.relics.data.LSData;
 
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -11,7 +18,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-// 가호가 없는 사람에게 접속 직후 선택 화면을 띄운다.
+// 가호가 없는 사람에게 접속 직후 «프롤로그 → 선택 화면»을 보여준다.
 //
 // ── 왜 채팅으로는 부족한가 ──
 // 여태 `ls_fate.js` 가 접속 때 «§6✦ 별의 가호를 아직 받지 않았습니다 — /fate» 한 줄을 보냈다.
@@ -32,6 +39,15 @@ import java.util.List;
 // `PlayerLoggedInEvent` 는 클라가 아직 월드에 들어오는 중일 때 온다. 그 시점에 화면을 열라고
 // 보내면 클라가 곧바로 자기 로딩 화면으로 덮어써서 **패킷은 갔는데 아무 일도 안 일어난다.**
 // 서버 틱을 세어 늦춘다.
+//
+// ── 프롤로그 (2026-08-10) ──
+// **처음 오는 사람에게만** 「별이 꺼진 밤」이 채팅에 천천히 흐르고, 끝나면 타이틀이 뜨고,
+// 그다음에 선택 화면이 열린다. 순서가 중요해서 **한 타임라인에 몰아넣었다** —
+// 프롤로그를 KubeJS 에, 화면 열기를 여기에 두면 둘이 서로를 모른 채 겹친다
+// (화면이 3초에 뜨고 글은 20초 동안 그 뒤에서 흐른다).
+//
+// 두 번째부터는 프롤로그를 건너뛰고 예전처럼 2초 뒤 화면만 연다 — 죽고 다시 들어올 때마다
+// 20초를 다시 보게 할 수는 없다.
 @EventBusSubscriber(modid = LSRelics.MODID)
 public final class FateAutoOpen {
     private FateAutoOpen() {}
@@ -40,13 +56,95 @@ public final class FateAutoOpen {
     // 짧게 잡아 실패하면 «가끔 안 뜬다» 가 되는데, 그건 재현이 안 돼서 제일 고치기 어렵다.
     private static final int DELAY_TICKS = 40;
 
+    /** 프롤로그를 본 적 있는가. ⚠️ 죽어도 남아야 하므로 `PlayerPersisted` 안에 적는다. */
+    private static final String K_SEEN = "lsPrologueSeen";
+
+    // ── 프롤로그 본문 ──
+    // 문단 단위로 끊는다. 한 문단 안은 «읽는 속도»로, 문단 사이는 «숨 쉬는 속도»로 벌린다.
+    // 마지막 한 줄만 흰색이다 — 앞이 전부 회색이라 거기서 눈이 멈춘다.
+    private static final String[][] PROLOGUE = {
+        {"§7하늘에는 본래 여러 개의 별이 있었다. 별들은 밤마다 세계를 내려다보았고, 세계는 그 빛 아래에서",
+         "§7잠들었다. 어둠은 어디에나 있었지만, 어디에서도 주인이 아니었다."},
+        {"§7첫 번째 별이 꺼졌을 때, 사람들은 구름이라 했다.",
+         "§7세 번째 별이 꺼졌을 때, 학자들은 별의 순환이라 했다."},
+        {"§7하늘에 하나만 남았을 때 더는 아무도 아무 말도 하지 않았다. 밤이 낮을 밀어내고",
+         "§7있었다. 땅이 갈라진 자리마다 빛이 닿지 않는 검은 틈이 벌어졌고, 그 안에서 무언가가",
+         "§7기어 나왔다. 별을 삼킨 것이 이번에는 세계를 삼키러 온 것이다."},
+        {"§7그리고 마지막 밤. 그 하나마저 떨어졌다.",
+         "§7별은 하늘을 가로질러 이 땅 어딘가에 부딪혀 부서졌고 — 세계는 어둠에 잠겼다."},
+        {"§f하지만 부서진 별의 잔해는, 아직 빛나고 있다."},
+    };
+
+    private static final int START_TICKS = 60;   // 3초 — 로딩 메시지가 지나가길 기다린다
+    private static final int LINE_TICKS = 32;    // 한 줄 읽는 시간
+    private static final int PARA_TICKS = 46;    // 문단 사이의 숨
+    private static final int TITLE_GAP = 70;     // 마지막 줄 → 타이틀
+    private static final int SCREEN_GAP = 90;    // 타이틀 → 선택 화면
+
+    private static final String TITLE = "§f당신은 별의 의지를 이을 별의 잔해입니다.";
+    private static final String SUBTITLE = "§7/fate §8로 당신의 별을 선택하세요.";
+
+    // ── 대본 ──
+    // (틱, 할 일) 목록. 프롤로그를 안 보는 사람은 마지막 «화면 열기» 하나짜리 대본을 쓴다.
+    private interface Beat { void run(ServerPlayer p); }
+
+    private record Cue(int at, Beat beat) {}
+
+    private static final List<Cue> WITH_PROLOGUE = buildProlouge();
+    private static final List<Cue> PLAIN = List.of(new Cue(DELAY_TICKS, FateAutoOpen::openScreen));
+
+    private static List<Cue> buildProlouge() {
+        List<Cue> out = new ArrayList<>();
+        int t = START_TICKS;
+        // 모드팩 로딩 줄과 붙어 시작하면 프롤로그가 그 일부로 읽힌다. 빈 줄로 떼어낸다.
+        final int t0 = t;
+        out.add(new Cue(t0, p -> { say(p, ""); say(p, ""); }));
+        t += 10;
+        for (String[] para : PROLOGUE) {
+            for (String line : para) {
+                final String l = line;
+                out.add(new Cue(t, p -> say(p, l)));
+                t += LINE_TICKS;
+            }
+            final int gap = t;
+            out.add(new Cue(gap, p -> say(p, "")));
+            t += PARA_TICKS;
+        }
+        t += TITLE_GAP;
+        out.add(new Cue(t, FateAutoOpen::showTitle));
+        t += SCREEN_GAP;
+        out.add(new Cue(t, FateAutoOpen::openScreen));
+        return List.copyOf(out);
+    }
+
+    private static void say(ServerPlayer p, String text) {
+        p.sendSystemMessage(Component.literal(text));
+    }
+
+    private static void showTitle(ServerPlayer p) {
+        p.connection.send(new ClientboundSetTitlesAnimationPacket(10, 70, 20));
+        p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(SUBTITLE)));
+        p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(TITLE)));
+        if (p.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            sl.playSound(null, p.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.MASTER, 0.7f, 1.4f);
+        }
+    }
+
+    private static void openScreen(ServerPlayer p) {
+        // 여기서도 다시 본다 — 대본이 도는 20여 초 사이에 OP 가 `/fate set` 을 했을 수 있다.
+        if (p.getServer() == null || !LSData.get(p.getServer()).hero().fate(name(p)).isEmpty()) return;
+        LSCommands.openFateScreen(p);
+    }
+
     private static final class Pending {
         final ServerPlayer player;
-        int ticksLeft;
+        final List<Cue> script;
+        int tick = 0;
+        int next = 0;
 
-        Pending(ServerPlayer player, int ticks) {
+        Pending(ServerPlayer player, List<Cue> script) {
             this.player = player;
-            this.ticksLeft = ticks;
+            this.script = script;
         }
     }
 
@@ -57,15 +155,18 @@ public final class FateAutoOpen {
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (player.getServer() == null) return;
-        // 여기서 한 번 거른다. 2초 뒤에 또 본다 — 그 사이에 `/fate choose` 가 끝날 수 있어서다
+        // 여기서 한 번 거른다. 뒤에서 또 본다 — 그 사이에 `/fate choose` 가 끝날 수 있어서다
         // (다른 사람이 대신 골라줄 수는 없지만, OP 가 `/fate set` 을 쓸 수는 있다).
         if (!LSData.get(player.getServer()).hero().fate(name(player)).isEmpty()) return;
-        PENDING.add(new Pending(player, DELAY_TICKS));
+
+        boolean first = !persisted(player).getBoolean(K_SEEN);
+        if (first) markSeen(player);
+        PENDING.add(new Pending(player, first ? WITH_PROLOGUE : PLAIN));
     }
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        // 2초 안에 나가는 경우가 있다. 안 지우면 사라진 플레이어에게 패킷을 쏜다.
+        // 대본이 도는 중에 나가는 경우가 있다. 안 지우면 사라진 플레이어에게 패킷을 쏜다.
         PENDING.removeIf(p -> p.player == event.getEntity());
     }
 
@@ -73,14 +174,30 @@ public final class FateAutoOpen {
     public static void onTick(ServerTickEvent.Post event) {
         if (PENDING.isEmpty()) return;
         PENDING.removeIf(p -> {
-            if (--p.ticksLeft > 0) return false;
             ServerPlayer sp = p.player;
             if (sp.getServer() == null || sp.hasDisconnected()) return true;
-            // 다시 확인한다 — 기다리는 2초 사이에 가호가 생겼으면 열 이유가 없다.
-            if (!LSData.get(sp.getServer()).hero().fate(name(sp)).isEmpty()) return true;
-            LSCommands.openFateScreen(sp);
-            return true;
+            p.tick++;
+            while (p.next < p.script.size() && p.script.get(p.next).at() <= p.tick) {
+                p.script.get(p.next).beat().run(sp);
+                p.next++;
+            }
+            return p.next >= p.script.size();
         });
+    }
+
+    // ── 「봤다」 표식 ──
+    // ⚠️ 그냥 `getPersistentData()` 에 적으면 **죽으면 사라진다** — 리스폰은 새 ServerPlayer 를
+    //    만들고 `PlayerPersisted` 하위 태그만 옮기기 때문이다. 가호를 고르기 전에 죽는 일이
+    //    충분히 있을 수 있고, 그때마다 20초짜리 프롤로그를 다시 보게 할 수는 없다.
+    private static CompoundTag persisted(ServerPlayer player) {
+        return player.getPersistentData().getCompound(ServerPlayer.PERSISTED_NBT_TAG);
+    }
+
+    private static void markSeen(ServerPlayer player) {
+        CompoundTag root = player.getPersistentData();
+        CompoundTag tag = root.getCompound(ServerPlayer.PERSISTED_NBT_TAG);
+        tag.putBoolean(K_SEEN, true);
+        root.put(ServerPlayer.PERSISTED_NBT_TAG, tag);
     }
 
     private static String name(ServerPlayer player) {

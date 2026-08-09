@@ -2536,7 +2536,7 @@ public final class RelicSkills {
     // ══════════════════════════════════════════════════════════════════
 
     /** 올리브 — 케이론의 색(가호 색과 같은 값). */
-    private static final int OLIVE = 0x8FA36B;
+    private static final int OLIVE = 0x8DA764;
 
     private static void chironHeal(ServerLevel level, ServerPlayer caster, Player target, float amount) {
         float missing = Math.max(0, target.getMaxHealth() - target.getHealth());
