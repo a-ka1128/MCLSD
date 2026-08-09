@@ -2236,12 +2236,16 @@ public final class RelicSkills {
     // 「어그로를 못 끄는 탱커」였다. 앞에 서 있을 뿐 몹을 자기한테 붙이지 못하니, 아틀라스가
     // 없으면 결국 원거리가 맞았다. 도발 → 3초 버틴다 → 밀어낸다 로 한 줄이 이어진다.
     //   ⚠️ 아틀라스보다 «작게» 준다: 이지스 R 이 8칸/4초, 궁극이 16칸/8초다.
-    //      여기는 6칸/4초 — 자리를 지킬 만큼만이고, 판을 통째로 끌어오는 건 여전히 아틀라스다.
+    //      판을 통째로 끌어오는 건 여전히 아틀라스다.
+    //   2026-08-09: C「불굴」이 8칸 4초를 맡으면서 이쪽은 **6칸 2초**로 내려왔다. 쿨 12초짜리가
+    //      오래 붙잡으면 22초짜리 C 가 설 자리가 없다 — 짧은 쿨은 «급할 때 잠깐»을 맡는다.
     //   그만큼 종료 폭발을 9.0 → 7.0 으로 내렸다. 도발이 붙어 값어치가 오른 만큼 돌려준다.
     public static void steelStance(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdStance", "강철 발", 240, 1)) return;
         int ticks = 60;
-        com.laststardust.relics.TauntManager.taunt(level, player, 6.0, 80);
+        // 도발 6칸 2초 — C「불굴」이 8칸 4초를 맡게 되면서 이쪽은 «급할 때 잠깐»으로 물러났다
+        // (2026-08-09, 유저 결정). 쿨 12초짜리가 오래 붙잡으면 22초짜리 C 가 설 자리가 없다.
+        com.laststardust.relics.TauntManager.taunt(level, player, 6.0, 40);
 
         // 기세를 먹고 그만큼 단단해진다. 0 이어도 −20% 는 나온다 — 바닥은 바닥대로 남긴다.
         int mom = com.laststardust.relics.ParryManager.consumeMomentum(player);
@@ -2262,7 +2266,7 @@ public final class RelicSkills {
         play(level, player, SoundEvents.ANVIL_LAND, 0.7f, 0.6f);
         play(level, player, SoundEvents.NETHERITE_BLOCK_PLACE, 1.0f, 0.7f);
         player.displayClientMessage(Component.literal(
-            "§7⊗ 강철 발 §8— 3초 · 6칸 도발 · 받는 피해 §f−" + Math.round(dr * 100) + "%"), true);
+            "§7⊗ 강철 발 §8— 3초 · 6칸 도발 2초 · 받는 피해 §f−" + Math.round(dr * 100) + "%"), true);
     }
 
     /**
@@ -2310,7 +2314,7 @@ public final class RelicSkills {
 
     // ─────────────────────────────── 추가: 네메시스 "불굴" (추가·3성) ───────────────────────────────
     // C 키. **기세를 전부 소모**해 받는 피해 −10% + 중첩당 −5% (5중첩이면 −35%) 6초 ·
-    //       반경 4.5칸 충격(밀어내지 않는다). 쿨 22초.
+    //       **8칸 도발 4초** · 반경 4.5칸 충격(밀어내지 않는다). 쿨 22초.
     //
     // ── 왜 「역린」(패링 창 2배)을 버렸나 (2026-08-09, 유저 결정) ──
     // 역린은 「잘하는 사람이 더 잘하게」였고, 이 직업이 세운 「못 해도 탱커」와 반대로 갔다.
@@ -2326,6 +2330,10 @@ public final class RelicSkills {
         // 기세가 0 이어도 «쓸 수는 있다» — 바닥 −10% 는 항상 나온다. R「강철 발」이 기세 0 에서도
         // −20% 를 주는 것과 같은 원칙이다. 「눌렀는데 아무 일도 안 난다」를 없애는 게 목적이라
         // 예전의 «쿨 환급» 은 뺐다 — 이제 헛방이 아니기 때문이다.
+        // 도발 8칸 4초 (2026-08-09, 유저 결정). R 보다 «넓고 길다» — 쿨이 22초로 두 배 가까이 길고,
+        // 6초를 버티는 스킬이니 그동안 실제로 맞아줘야 뜻이 산다. R 은 반대로 6칸 2초로 물러났다.
+        com.laststardust.relics.TauntManager.taunt(level, player, 8.0, 80);
+
         int mom = com.laststardust.relics.ParryManager.consumeMomentum(player);
         float dr = com.laststardust.relics.ParryManager.RESOLVE_BASE
                  + com.laststardust.relics.ParryManager.RESOLVE_PER * mom;
@@ -2349,7 +2357,7 @@ public final class RelicSkills {
         play(level, player, SoundEvents.ANVIL_USE, 0.9f, 0.6f);
         play(level, player, SoundEvents.NETHERITE_BLOCK_PLACE, 1.0f, 0.6f);
         player.displayClientMessage(Component.literal(
-            "§7⊗ 불굴 §8— 기세 §f" + mom + "§8 소모 · 받는 피해 §f−" + Math.round(dr * 100) + "%§8 6초"), true);
+            "§7⊗ 불굴 §8— 기세 §f" + mom + "§8 소모 · 8칸 도발 4초 · 받는 피해 §f−" + Math.round(dr * 100) + "%§8 6초"), true);
     }
 
     // ─────────────────────────────── 궁극: 네메시스 "일도양단" (궁극·4성) ───────────────────────────────
