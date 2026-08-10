@@ -354,15 +354,17 @@ public final class RelicEventHandlers {
         if (i == LSRelics.PIONEER.get())  return 1.086f;   // 타이탄     102.0 (목표 104, −1.9%) ✅
         if (i == LSRelics.GUNNER.get())   return 1.086f;   // 솔라리스   107.3 (목표 110, −2.5%) ✅
 
-        // ⚠️ 한 판씩이라 아직 못 닫은 둘. 다음 세션에서 게볼그 앞뒤 2판을 채우면 같이 판정된다.
-        if (i == LSRelics.LANCER.get())   return 1.164f;   // 게볼그     109.2 (목표 104, +5.0%) ⚠ 앵커인데 1판
-        if (i == LSRelics.HEALER.get())   return 1.025f;   // 파나케이아  94.2 (목표 90, +4.7%)  ⚠
+        if (i == LSRelics.LANCER.get())   return 1.164f;   // 게볼그     104.0 (앵커)            ✅
+        if (i == LSRelics.HEALER.get())   return 1.025f;   // 파나케이아  91.8 (목표 90, +2.1%)  ✅
 
-        // ── 초과분 되잡기 (08-11 2차) ──
-        if (i == LSRelics.HUNTER.get())   return 1.006f;   // 시리우스 122.5 → 110
-        if (i == LSRelics.ASSASSIN.get()) return 1.262f;   // 스틱스 풀딜 128.5 → 114
-        if (i == LSRelics.NEMESIS.get())  return 0.949f;   // 아드라스테이아 112.5 → 98
-        if (i == LSRelics.CHIRON.get())   return 1.374f;   // 펠리온      84.5 → 90
+        // ── 초과분 되잡기 (08-11 2차) → 2차 검산에서 넷 다 착지 ──
+        if (i == LSRelics.HUNTER.get())   return 1.006f;   // 시리우스   ~110 (목표 110)         ✅
+        if (i == LSRelics.ASSASSIN.get()) return 1.262f;   // 스틱스 풀딜 113.0 (목표 114, −0.9%) ✅ 정면 94.9
+        if (i == LSRelics.NEMESIS.get())  return 0.949f;   // 아드라스테이아 99.9 (목표 98, +2.0%) ✅
+        if (i == LSRelics.CHIRON.get())   return 1.374f;   // 펠리온      88.2 (목표 90, −2.0%)  ✅
+
+        // ✅✅ 2026-08-11 2차 검산에서 **12종 전부 ±3.7%** 로 닫혔다(`DECISIONS.md` 1-E).
+        //    다시 열 조건은 1-B 와 같다: **실전 체감**이지 더미 숫자가 아니다.
         return 1.0f;
     }
 
