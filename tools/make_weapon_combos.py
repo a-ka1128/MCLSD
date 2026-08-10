@@ -88,36 +88,43 @@ write("assassin", {
     ],
 }, "두 자루 기준 5타 평균 1.0667 = 옛 3타 평균 1.0667 → 유지")
 
-# ── 이지스 — 2타 → 3타 ──
-# 망치인데 «내려찍고 옆으로 후린다» 두 동작뿐이라 금방 질린다.
-# 가로 둘로 시작해 **무거운 내려찍기로 마무리**하는 상승 구조로 바꾼다.
+# ── 이지스 ↔ 크라토스 «모션 맞바꿈» (2026-08-10 유저 요청) ──
+# 둘의 동작을 통째로 바꿨다 — 애니메이션 · 각도 · upswing · 판정 · 소리까지.
+#   이지스  ← 도끼 동작 (가로L → 가로R → **세로 쪼개기**, 140°/100°, axe_slash)
+#   크라토스 ← 망치 동작 (가로R → 가로L → **무거운 내려찍기**, 130°/90°, hammer_slam)
+#
+# ⚠️ **damage_multiplier 만 각자 자리에 남긴다.** 배율까지 따라가면 평균이 서로 뒤바뀌어
+#    (1.05 ↔ 1.10) 이지스 +4.8% · 크라토스 −4.5% 로 08-04 실측이 통째로 무너진다.
+#    바꾼 것은 «어떻게 보이는가»뿐이고 «얼마나 아픈가»는 그대로다.
+#
+# ⚠️ 소리도 같이 옮겼다. 도끼처럼 휘두르는데 망치 소리가 나면 그게 더 어긋난다.
+#    무기 소리를 각자 유지하고 싶으면 sound 인자만 되돌리면 된다.
 HAM, CLA = "bettercombat:hammer_slam", "bettercombat:claymore_swing"
+AXE = "bettercombat:axe_slash"
+
 write("guardian", {
     "range_bonus": 0.5,
     "pose": "bettercombat:pose_two_handed_heavy",
     "two_handed": True,
     "category": "hammer",
     "attacks": [
-        atk("two_handed_slash_horizontal_right", 0.85, angle=130, sound=CLA),
-        atk("two_handed_slash_horizontal_left", 0.95, angle=130, sound=CLA),
-        atk("two_handed_slam_heavy", 1.35, hitbox="VERTICAL_PLANE", angle=90, upswing=0.55, sound=HAM),
+        atk("two_handed_slash_horizontal_left", 0.85, angle=140, sound=AXE),
+        atk("two_handed_slash_horizontal_right", 0.95, angle=140, sound=AXE),
+        atk("two_handed_slash_vertical_right", 1.35, hitbox="VERTICAL_PLANE", angle=100, upswing=0.6, sound=AXE),
     ],
-}, "원래 (1.2+0.9)/2 = 1.05 → 유지")
+}, "크라토스 동작 · 배율은 이지스 것 (평균 1.05 유지)")
 
-# ── 크라토스 — 2타 → 3타 ──
-# 도끼는 «가로로 두 번 후리고 세로로 쪼갠다»가 제일 도끼답다.
-AXE = "bettercombat:axe_slash"
 write("pioneer", {
     "range_bonus": 0.5,
     "pose": "bettercombat:pose_two_handed_heavy",
     "two_handed": True,
     "category": "axe",
     "attacks": [
-        atk("two_handed_slash_horizontal_left", 0.95, angle=140, sound=AXE),
-        atk("two_handed_slash_horizontal_right", 1.05, angle=140, sound=AXE),
-        atk("two_handed_slash_vertical_right", 1.30, hitbox="VERTICAL_PLANE", angle=100, upswing=0.6, sound=AXE),
+        atk("two_handed_slash_horizontal_right", 0.95, angle=130, sound=CLA),
+        atk("two_handed_slash_horizontal_left", 1.05, angle=130, sound=CLA),
+        atk("two_handed_slam_heavy", 1.30, hitbox="VERTICAL_PLANE", angle=90, upswing=0.55, sound=HAM),
     ],
-}, "원래 (1.25+0.95)/2 = 1.10 → 유지")
+}, "이지스 동작 · 배율은 크라토스 것 (평균 1.10 유지)")
 
 # ── 헤스페로스(헤카테) — 2타 → 3타 ──
 # 부모 프리셋(scythe)이 가로 베기 둘뿐이라 좌우로 왔다갔다 하는 것만 보였다.
