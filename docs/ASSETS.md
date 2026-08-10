@@ -15,10 +15,15 @@
 > (2026-08-09 운영자 확인)
 
 아래 라이선스 판단은 **전부 이 전제 위에 서 있다.** 그래서 nongko 2팩의 「비상업이면 자유롭게」
-조건이 그대로 충족되고, §8 의 Blades of War 2 건도 현실적 위험이 낮은 상태로 유지된다.
+조건이 그대로 충족된다.
 
-**이 전제가 깨지는 순간(후원 받기·서버 공개·모드 jar 배포·수익화) §8 을 다시 열 것.**
-그때는 nongko 쪽은 「문의 필요」로, Blades of War 2 쪽은 「허락 없음」으로 성격이 바뀐다.
+> **2026-08-11 갱신 — Blades of War 2 는 이 전제에서 풀렸다.**
+> 작성자 디스코드 DM 으로 **「모드 jar 에 넣어 재배포해도 된다」**는 허락을 받았다(§8).
+> 이제 **모드 jar 배포·서버 공개는 이 팩 때문에 막히지 않는다.**
+
+**남은 트리거는 «돈»뿐이다 — 후원 받기·수익화가 붙으면 §8 을 다시 열 것.**
+그때는 nongko 2팩도, Blades of War 2 도 **「상업은 별도 문의」**로 성격이 바뀐다
+(두 곳 다 상업 이용은 확인받지 않았다).
 
 ## 0. 왜 이 조사를 다시 하면 안 되나
 
@@ -47,8 +52,8 @@ py -c "import json,glob; [print(f, [e.get('name') for e in json.load(open(f,enco
 | 크라토스 (도끼) | `pioneer.json` | **Gilded Phoenix Greataxe** | 〃 | 〃 |
 | 쿠훌린 (창) | `lancer.json` | **Crimson Lance** | 〃 | 〃 |
 | 우라니아 (지팡이) | `sage.json` | **Divine Staff** | nongko's Bows to Magic Staves CIT v1.7 | 〃 |
-| **아틀라스 (방패)** | `guardian.json` | **Royal Shield** | **Zerotekz's Blades of War 2 v1.9** | ⚠️ **ARR · 허락 문구 없음 (§8)** |
-| **오리온 (활 4종)** | `hunter.json` `hunter_pulling_0~2` | **Corrupted Bow** | 〃 | ⚠️ **ARR · 허락 문구 없음 (§8)** |
+| **아틀라스 (방패)** | `guardian.json` | **Royal Shield** | **Zerotekz's Blades of War 2 v1.9** | ✅ **ARR 이지만 작성자 허락 (§8)** |
+| **오리온 (활 4종)** | `hunter.json` `hunter_pulling_0~2` | **Corrupted Bow** | 〃 | ✅ **ARR 이지만 작성자 허락 (§8)** |
 | 헤카테 (낫) | `hecate.json` | **Blood Scythe** | Blood Scythe by Linaryx | **MIT** |
 | 하르모니아 (리라) | `harmonia.json` | **lyre** | Bard Craft (NeoForge 1.21.1) | **MIT** |
 | 네메시스 (대검) | `nemesis.json` | **Grand Claymore** | nongko's Fantasy Weapons v1.20B | 비상업 허락 (§8) |
@@ -194,15 +199,26 @@ py -c "import json,glob; [print(f, [e.get('name') for e in json.load(open(f,enco
 사용, 상업 이용은 디스코드로 문의"* 라고 명시해 뒀다. Modrinth 메타데이터가 ARR 인 것과 별개로
 **작성자 본인의 허락이 있다.** 사설 서버는 해당 없음. 후원·유료화가 붙으면 그때 문의.
 
-**⚠️ Blades of War 2 (방패 1 + 활 4) — 허락 문구가 없다.**
+### ✅ Blades of War 2 — **허락받았다 (2026-08-11)**
 
-- 프로젝트 페이지에 사용·재배포·수정에 대한 언급이 **하나도 없고**, "필요하면 디스코드로 오라"만 있다.
-- 우리는 이걸 **리소스팩이 아니라 모드 jar 안에 넣어 재배포하는 형태**로 쓰고 있다.
-- **현재는 비상업 비공개 운영이라(§0-A) 현실적 위험이 낮다.** 다만 **jar 배포·서버 공개·수익화 시
-  성격이 달라진다** — 허락 문구가 아예 없다는 건 「비상업이면 OK」조차 명시돼 있지 않다는 뜻이다.
-- 정리하려면: ① 작성자 디스코드(https://discord.gg/CdawEAH4va)에 문의 — 가장 확실 ·
-  ② 그 5개 파일만 다른 출처로 교체 · ③ 현 상태 유지하고 비공개 운영을 지킨다.
-- **이건 판단이 아니라 상태 보고다.** 결정은 운영자 몫이고, 결정하면 그 근거를 여기 적어둘 것.
+**작성자(Zerotekz) 디스코드 DM 으로 «모드 jar 에 넣어 재배포해도 된다»는 허락을 받았다.**
+위 §8 표의 ARR 은 Modrinth 메타데이터일 뿐이고, **작성자 본인의 허락이 그 위에 선다** —
+nongko 2팩과 같은 구도가 됐다.
+
+- **배포 블로커가 풀렸다.** 이게 이 문서에서 가장 오래 열려 있던 항목이었다.
+- 우리가 쓰는 형태(방패 1 + 활 4를 `lsrelics` jar 안에 넣어 배포)가 정확히 허락받은 범위다.
+- **그 5개는 원본 그대로 쓴다** — `tools/recolor_*.py` 는 헤카테·네메시스용이고
+  Blades of War 2 자산은 손대지 않았다(§9·§10 참조).
+
+⚠️ **허락받지 않은 것 두 가지 — 넘겨짚지 말 것**
+
+| | 상태 |
+|---|---|
+| 수정·재채색 | **확인 안 됨.** 지금은 원본 그대로라 해당 없지만, 나중에 색을 바꾸려면 다시 물어야 한다 |
+| 상업 이용 | **확인 안 됨.** 후원·유료화가 붙으면 nongko 2팩과 함께 다시 문의 (§0-A) |
+
+**증거 위치: 작성자 디스코드 DM** (서버 https://discord.gg/CdawEAH4va).
+근거를 다시 대야 할 일이 생기면 거기서 찾는다.
 
 ## 9. 🎨 헤카테·하르모니아 모델 교체 (2026-08-09)
 
