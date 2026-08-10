@@ -99,12 +99,26 @@ write("assassin", {
 #
 # ⚠️ 소리도 같이 옮겼다. 도끼처럼 휘두르는데 망치 소리가 나면 그게 더 어긋난다.
 #    무기 소리를 각자 유지하고 싶으면 sound 인자만 되돌리면 된다.
-HAM, CLA = "bettercombat:hammer_slam", "bettercombat:claymore_swing"
+#
+# ── 마무리를 둘 다 «세로 쪼개기»로 (2026-08-10 유저 결정) ──
+# 크라토스의 `two_handed_slam_heavy` 가 «별로»라는 판단. 아틀라스와 같은
+# `two_handed_slash_vertical_right` 로 맞췄다.
+#
+# ⚠️ 그래서 **둘의 콤보가 사실상 같아졌다** — 남은 차이는 좌우 순서(가로L→R vs 가로R→L)와
+#    각도(140°/100° vs 130°/100°), 그리고 소리뿐이다. 「모션 맞바꿈」의 실질은 거의 사라졌고,
+#    지금 둘을 가르는 건 **드는 자세**다(이지스 sword · 크라토스 heavy).
+#
+# ⚠️ `two_handed_slam_heavy` 는 이제 **아무도 안 쓴다.** 되살릴 자리가 생기면 여기부터 본다.
+CLA = "bettercombat:claymore_swing"
 AXE = "bettercombat:axe_slash"
 
 write("guardian", {
     "range_bonus": 0.5,
-    "pose": "bettercombat:pose_two_handed_heavy",
+    # ⚠️ 시험 중 (2026-08-10): heavy → sword.
+    #    모션을 크라토스와 맞바꿔도 «드는 자세»가 둘 다 heavy 라 여전히 비슷해 보였다.
+    #    이지스는 방패+검이니 sword 자세가 물건에도 더 맞는다.
+    #    **인게임에서 어색하면 pose_two_handed_heavy 로 되돌린다 — 이 한 줄이 전부다.**
+    "pose": "bettercombat:pose_two_handed_sword",
     "two_handed": True,
     "category": "hammer",
     "attacks": [
@@ -122,9 +136,9 @@ write("pioneer", {
     "attacks": [
         atk("two_handed_slash_horizontal_right", 0.95, angle=130, sound=CLA),
         atk("two_handed_slash_horizontal_left", 1.05, angle=130, sound=CLA),
-        atk("two_handed_slam_heavy", 1.30, hitbox="VERTICAL_PLANE", angle=90, upswing=0.55, sound=HAM),
+        atk("two_handed_slash_vertical_right", 1.30, hitbox="VERTICAL_PLANE", angle=100, upswing=0.6, sound=CLA),
     ],
-}, "이지스 동작 · 배율은 크라토스 것 (평균 1.10 유지)")
+}, "마무리는 아틀라스와 같은 세로 쪼개기 · 배율은 크라토스 것 (평균 1.10 유지)")
 
 # ── 헤스페로스(헤카테) — 2타 → 3타 ──
 # 부모 프리셋(scythe)이 가로 베기 둘뿐이라 좌우로 왔다갔다 하는 것만 보였다.

@@ -1,7 +1,7 @@
 {
   "attributes": {
     "range_bonus": 0.5,
-    "pose": "bettercombat:pose_two_handed_heavy",
+    "pose": "bettercombat:pose_two_handed_sword",
     "two_handed": true,
     "category": "hammer",
     "attacks": [
