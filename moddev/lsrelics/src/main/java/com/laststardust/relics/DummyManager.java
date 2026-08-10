@@ -138,7 +138,11 @@ public final class DummyManager {
     }
 
     // 유물 이름은 게임 내 표기(한글)를 쓴다. getHoverName() 은 서버 언어로 풀려서
-    // 번역 키나 영문이 나올 수 있어, 필요한 8종만 직접 적는다.
+    // 번역 키나 영문이 나올 수 있어, 12종을 직접 적는다.
+    //
+    // ⚠️ **유물을 새로 만들면 여기도 같이 추가할 것.** 빠뜨리면 null 이 되고 리포트에
+    //    이름이 빈칸으로 찍힌다 — 오류가 아니라 조용히 비어서 측정 로그를 나중에 읽을 때
+    //    어느 유물이었는지 알 수 없게 된다(2026-08-10 케이론 15판 측정에서 실제로 겪음).
     private static String relicName(net.minecraft.world.item.Item item) {
         if (item == LSRelics.GUNNER.get())   return "솔라리스";
         if (item == LSRelics.HUNTER.get())   return "시리우스";
@@ -151,6 +155,7 @@ public final class DummyManager {
         if (item == LSRelics.GUARDIAN.get()) return "이지스";
         if (item == LSRelics.SAGE.get())     return "셀레스티아";
         if (item == LSRelics.HEALER.get())   return "파나케이아";
+        if (item == LSRelics.CHIRON.get())   return "펠리온";
         return null;
     }
 
@@ -302,9 +307,15 @@ public final class DummyManager {
                 buffs == null ? "" : " §6[" + buffs + "]")));
         }
         // ── 스킬별 배분 ──
-        // 이름표가 하나뿐이면(=전부 평타) 줄만 늘어나므로 생략한다.
-        if (BY_SKILL.size() > 1) {
-            out.add(Component.literal("§8──── 스킬별 ────"));
+        //
+        // 이름표가 하나뿐이면(=전부 평타) 「스킬별」이라는 제목만 군더더기가 되므로 제목은
+        // 건너뛴다. **줄 자체는 반드시 낸다.**
+        //   원래는 `size() > 1` 로 절을 통째로 생략했다. 그런데 콤보 배율을 보려고
+        //   «스킬 없이 평타만» 재는 판이 바로 그 경우라, 제일 알고 싶은 타수·단타 평균이
+        //   통째로 사라졌다(2026-08-10 네메시스·스틱스 평타 측정에서 실제로 겪음).
+        //   총 DPS 만 남으면 «타수가 모자란 건지 한 대가 약한 건지»를 못 가른다.
+        if (!BY_SKILL.isEmpty()) {
+            if (BY_SKILL.size() > 1) out.add(Component.literal("§8──── 스킬별 ────"));
             List<Map.Entry<String, Float>> skills = new ArrayList<>(BY_SKILL.entrySet());
             skills.sort(Comparator.<Map.Entry<String, Float>>comparingDouble(Map.Entry::getValue).reversed());
             for (Map.Entry<String, Float> e : skills) {

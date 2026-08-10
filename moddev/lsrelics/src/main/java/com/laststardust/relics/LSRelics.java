@@ -303,7 +303,10 @@ public class LSRelics {
         ITEMS.register("nemesis",
             () -> new com.laststardust.relics.item.NemesisBlade(
                 new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(2000)
-                    .attributes(nemesisAttrs(8.0, -2.8))));
+                    // 공격력 8.0 → 9.5 (2026-08-11, 표시 48.60 → 57.30 @5성).
+                    // 「딜은 이지스보다 강하게」라는 설계를 평타에서도 받는다. 12종 중 표시
+                    // 공격력 1위가 되지만(다음이 타이탄 44.8) 1.2타/초로 제일 느린 무기다.
+                    .attributes(nemesisAttrs(9.5, -2.8))));
 
     // 펠리온 — 봉(케이론의 가호). **봉술 몽크 · 근접 하이브리드 힐러.**
     //

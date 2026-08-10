@@ -2129,7 +2129,9 @@ public final class RelicSkills {
     }
 
     // ─────────────────────────────── 추가: 하르모니아 "결속의 매듭" (추가·3성) ───────────────────────────────
-    // C 키. 발밑에 매듭 12초 — 반경 6칸 아군 받는 피해 −15% + 스킬 쿨이 초당 2%씩 당겨진다.
+    // C 키. 발밑에 매듭 12초 — 반경 6칸 아군 받는 피해 −12% + 스킬 쿨이 초당 2%씩 당겨진다.
+    //   ※ 실제 값은 `HarmonyManager.KNOT_DR` 하나다. 이 주석이 한동안 −15% 로 남아 있었는데
+    //     상수는 이미 0.12 였다 — 수치를 바꿀 때 머리말을 안 고친 자국이다.
     //       같은 자리에 **적을 태우는 지대**가 겹쳐 깔린다. 쿨 25초.
     //
     // 「여기 서 있어라」를 만드는 스킬이다. 공성 수비처럼 자리를 지켜야 하는 구간에서
@@ -2235,11 +2237,14 @@ public final class RelicSkills {
     }
 
     // ─────────────────────────────── 기본: 네메시스 "강철 발" (기본·1성) ───────────────────────────────
-    // R 키. 3초 뿌리내림 — 넉백 무효 + 받는 피해 −40% · **이동 불가** · 종료 시 반경 5칸 밀어내며 피해.
+    // R 키. 3초 뿌리내림 — 넉백 무효 + 받는 피해 **−16~41%**(기세 연동) · **이동 불가** ·
+    // 종료 시 반경 5칸 밀어내며 피해.
     //
     // ── 이게 「못 해도 탱커」의 두 번째 바닥이다 ──
-    // 패링은 타이밍을 요구하지만 이건 버튼 하나다. 초보가 잡아도 −40% 는 확실히 받는다.
+    // 패링은 타이밍을 요구하지만 이건 버튼 하나다. 초보가 잡아도 −16% 는 확실히 받는다.
     // 대신 그 3초 동안 못 움직인다 — 공짜가 아니라 «자리를 거는» 선택이 되게.
+    //   ※ 이 주석은 한동안 「−40%」로 남아 있었다. 2026-08-09 에 기세 연동으로 바뀌었는데
+    //     문구를 안 고쳐서 그랬다. 수치를 바꾸면 머리말도 같이 고칠 것.
     //
     // ── 도발을 붙였다 (2026-08-09, 유저 요청) ──
     // 「어그로를 못 끄는 탱커」였다. 앞에 서 있을 뿐 몹을 자기한테 붙이지 못하니, 아틀라스가
@@ -2249,6 +2254,12 @@ public final class RelicSkills {
     //   2026-08-09: C「불굴」이 8칸 4초를 맡으면서 이쪽은 **6칸 2초**로 내려왔다. 쿨 12초짜리가
     //      오래 붙잡으면 22초짜리 C 가 설 자리가 없다 — 짧은 쿨은 «급할 때 잠깐»을 맡는다.
     //   그만큼 종료 폭발을 9.0 → 7.0 으로 내렸다. 도발이 붙어 값어치가 오른 만큼 돌려준다.
+    //
+    // ── 종료 폭발 7.0 → 20.0 (2026-08-11) ──
+    // 실측에서 관측 단타가 35 였는데 평타 한 대가 57 이다. **누르면 평타 한 대를 버리고
+    // 35 를 얻는** 순손해였다. 실제로 「스킬을 전부 쓴 판(55.9)이 평타만 친 판(57.5)보다
+    // 낮은」 결과가 나왔다 — 탱커라도 자기 스킬이 DPS 손해면 그건 설계가 틀린 것이다.
+    // 100 으로 올려 평타를 확실히 넘긴다. (docs/CLASSES.md 「네메시스」 §4)
     public static void steelStance(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdStance", "강철 발", 240, 1)) return;
         int ticks = 60;
@@ -2293,7 +2304,7 @@ public final class RelicSkills {
         for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box,
                 en -> en != player && en.isAlive() && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
             if (e.distanceToSqr(c.x, c.y, c.z) > r * r) continue;
-            LsDamage.hit(e, src, dmg(stack, 7.0f), "강철 발");
+            LsDamage.hit(e, src, dmg(stack, 20.0f), "강철 발");
             Vec3 push = e.position().subtract(c).normalize().scale(0.9);
             e.setDeltaMovement(push.x, 0.42, push.z);
             e.hurtMarked = true;
@@ -2315,8 +2326,10 @@ public final class RelicSkills {
         if (!ready(level, player, stack, "cdRecall", "참격 인계", 180, 2)) return;
         Vec3 look = player.getViewVector(1.0f).normalize();
         Vec3 hand = muzzle(player, look);
+        // 7.5 → 23.0 (2026-08-11). 관측 단타 36 → 110. 평타 한 대(57)를 넘겨 «쓰는 게 이득»으로
+        // 만든다 — 강철 발과 같은 이유다(그쪽 머리말 참조).
         com.laststardust.relics.RecallManager.throwBlade(level, player, hand,
-            muzzleDir(player, look, hand), dmg(stack, 7.5f), 12.0);
+            muzzleDir(player, look, hand), dmg(stack, 23.0f), 12.0);
         dustBurst(level, hand, 0.6, 20, STEEL, 1.4f);
         play(level, player, SoundEvents.PLAYER_ATTACK_SWEEP, 1.0f, 0.7f);
     }
@@ -2473,7 +2486,10 @@ public final class RelicSkills {
         double reach = beamReach(level, player, eye, look, 12.0);
         Vec3 end = eye.add(look.scale(reach));
 
-        beamHurt(level, player, eye, look, 12.0, 2.2, dmg(stack, 26.0f) * boost, 0.0, false, "일도양단");
+        // 26.0 → 144.0 (2026-08-11). 궁극기가 관측 119 였는데 셀레스티아 초신성이 709 다 —
+        // 90 초 쿨짜리가 30 초 쿨짜리의 1/6 이면 «아껴서 터뜨린다»가 성립하지 않는다.
+        // 660(기세 0) / 1,023(기세 5). 기세가 이 무기의 유일한 «공격 출구»라 여기가 제일 크다.
+        beamHurt(level, player, eye, look, 12.0, 2.2, dmg(stack, 144.0f) * boost, 0.0, false, "일도양단");
 
         // 맞은 것들을 경직시키고 방어력을 절반으로 — 뒤이어 파티가 때릴 시간을 만든다.
         int hit = 0;
@@ -2581,7 +2597,10 @@ public final class RelicSkills {
             if (rel.lengthSqr() > R * R) continue;
             Vec3 relFlat = new Vec3(rel.x, 0, rel.z);
             if (relFlat.lengthSqr() > 1.0e-6 && relFlat.normalize().dot(flat) < COS) continue;
-            LsDamage.hit(e, src, dmg(stack, 8.0f), "축성");
+            // 8.0 → 15.0 (2026-08-11). 케이론은 **딜이 나오는 스킬이 이거 하나뿐**이라
+            // 평타 비중이 93% 였다(12종 중 1위, 파나케이아 81%). 여기와 V「바람 걸음」에
+            // 딜을 붙여 80% 대로 내린다. (docs/CLASSES.md 「케이론」 §5)
+            LsDamage.hit(e, src, dmg(stack, 15.0f), "축성");
             hit++;
         }
 

@@ -53,6 +53,15 @@ public final class ChironManager {
     public static final double WIND_RANGE = 4.0;
     private static final int WIND_PULSE = 10;       // 0.5초마다 한 번
     private static final float WIND_HEAL = 0.6f;    // 한 번당 (healScale 적용 · 5성 1.5)
+    /**
+     * 한 번 맥동당 반경 4칸 적에게. 6초 × 0.5초 = <b>12회</b> 이므로 한 시전에 약 48(5성),
+     * 쿨 12초 기준 <b>약 4 DPS</b> 다.
+     *
+     * <p>한 대는 작지만 <b>반경 4칸 전부</b>에 들어간다 — 더미 1기로는 4 DPS 로만 보이고
+     * 몹 6기에 둘러싸이면 24 DPS 몫이다. 수성전에서만 보이는 축이라 {@code /dummy} 숫자로
+     * 판단하지 말 것(헤카테의 낫 다중 타격과 같은 성질).
+     */
+    private static final float WIND_DMG = 0.74f;    // dmgTick 기준 (5성 관측 ≈ 4.0)
 
     /** X「펠리온의 밤」 — 10초. ⚠️ 시전자 본인은 이 효과를 안 받는다. */
     public static final int NIGHT_TICKS = 200;
@@ -237,6 +246,28 @@ public final class ChironManager {
                         level.sendParticles(ParticleTypes.HEART,
                             t.getX(), t.getY() + t.getBbHeight() * 0.75, t.getZ(), 1, 0.2, 0.2, 0.2, 0.0);
                     }
+                    // ── 지나가며 «벤다» (2026-08-11) ──
+                    // 케이론은 딜이 나오는 스킬이 R「축성」 하나뿐이라 평타 비중이 93% 였다
+                    // (12종 중 1위). V 를 순수 유틸로 두면 그 구멍이 안 메워진다.
+                    // 「지나가며 낫는다」에 「지나가며 벤다」를 얹는 건 봉술 몽크와 어긋나지 않는다.
+                    //
+                    // ⚠️ 0.5초마다 도는 장판이라 `hit` 을 쓰면 무적 프레임을 지워 피해가 폭주한다
+                    //    (LsDamage 머리말). 키를 이 스킬 전용으로 두고 `hitLimited` 로 간격을 건다 —
+                    //    키를 공유하면 다른 장판의 도장을 덮어써 «남의 피해가 사라진다».
+                    float wd = com.laststardust.relics.item.RelicSkills.dmgTick(staff, WIND_DMG);
+                    if (wd > 0) {
+                        var src = com.laststardust.relics.item.RelicSkills.relicSource(level, p);
+                        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class,
+                                p.getBoundingBox().inflate(WIND_RANGE),
+                                en -> en != p && en.isAlive() && !(en instanceof Player)
+                                      && !(en instanceof net.minecraft.world.entity.npc.AbstractVillager))) {
+                            if (SummonManager.isSummon(e)) continue;
+                            if (e.distanceToSqr(p) > WIND_RANGE * WIND_RANGE) continue;
+                            LsDamage.hitLimited(e, src, wd, "chironWind",
+                                level.getGameTime(), WIND_PULSE, "바람 걸음");
+                        }
+                    }
+
                     level.sendParticles(ParticleTypes.CLOUD,
                         p.getX(), p.getY() + 0.1, p.getZ(), 3, 0.3, 0.05, 0.3, 0.01);
                 }
