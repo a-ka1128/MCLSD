@@ -1084,16 +1084,23 @@ public final class RelicSkills {
         if (!(level instanceof ServerLevel sl)) return;
         if (!ready(sl, player, stack, "cdEvade", "회피 도약", 120, 2)) return;
         // 기본은 바라보는 반대(뒤)로, 이동 중이면 그 방향으로 — 궁수답게 거리를 벌린다
+        //
+        // ⚠️ 2026-08-11: 여기는 «무조건 뒤로»만 돌고 있었다.
+        //    원래 `player.zza` / `player.xxa`(전후·좌우 입력)를 읽었는데, 그 둘은
+        //    **클라이언트 입력 필드**다. 서버는 걸어다니는 플레이어의 WASD 를 받지 않고
+        //    위치 갱신만 받으므로 ServerPlayer 에서는 항상 0 이고, 방향 분기가 죽어 있었다.
+        //    (탈것을 탔을 때만 ServerboundPlayerInputPacket 이 온다.)
+        //    → 서버에서 «실제로 어느 쪽으로 가고 있나»를 보려면 getKnownMovement() 를 쓴다.
+        //      1.21 에서 바로 이 용도로 들어온 API 다(위치 패킷에서 역산한 이동량).
         Vec3 look = player.getViewVector(1.0f);
         Vec3 flat = new Vec3(look.x, 0, look.z).normalize();
-        Vec3 dir = flat.scale(-1); // 뒤로
-        double f = player.zza, s = player.xxa; // 전후·좌우 입력
-        if (f != 0 || s != 0) {
-            Vec3 right = new Vec3(-flat.z, 0, flat.x);
-            dir = flat.scale(f).add(right.scale(-s));
-            if (dir.lengthSqr() < 1.0E-4) dir = flat.scale(-1);
-            dir = dir.normalize();
-        }
+        Vec3 dir = flat.scale(-1); // 뒤로 (가만히 서 있을 때)
+
+        Vec3 mv = player.getKnownMovement();
+        Vec3 mvFlat = new Vec3(mv.x, 0, mv.z);
+        // 문턱 0.05 — 걷기가 약 0.13, 달리기가 약 0.17 이다. 밀려남·미끄러짐 같은
+        // 잔떨림으로 엉뚱한 쪽으로 뛰지 않게 «실제로 걷고 있을 때»만 잡는다.
+        if (mvFlat.length() > 0.05) dir = mvFlat.normalize();
         player.setDeltaMovement(dir.x * 1.5, 0.42, dir.z * 1.5);
         player.hurtMarked = true;
         player.resetFallDistance();
