@@ -29,7 +29,7 @@ import net.minecraft.world.level.Level;
 // 보조손을 못 쓰기도 한다.
 //   ⚠️ 대가: 이 무기를 들고는 상자를 못 열고 블록을 못 놓는다. 실전에서 그게 불편하면
 //      「R 로 옮기고 → 강철 발을 V 로 → 참격 인계를 버린다」 순서로 물러선다
-//      (docs/CLASS-11.md §2).
+//      (docs/CLASSES.md 「네메시스」 §2).
 public class NemesisBlade extends Item implements RelicActions {
 
     public NemesisBlade(Properties properties) {

@@ -1985,9 +1985,9 @@ public final class RelicSkills {
     //
     //  **회복이 하나도 없다.** 히기에이아가 서포트의 «회복» 절반을 갖고 이쪽이 «강화» 절반을
     //  갖는다 — 여기에 힐이나 보호막을 넣으면 두 직업이 같은 자리를 놓고 싸운다
-    //  (docs/CLASS-9-10.md §2 설계 의도 1). 그 규칙은 아래 어느 것도 안 건드린다.
+    //  (docs/CLASSES.md 「헤카테·하르모니아」 §2 설계 의도 1). 그 규칙은 아래 어느 것도 안 건드린다.
     //
-    //  ── 원거리 지원 딜러가 됐다 (2026-08-09, 유저 결정 · docs/CLASS-9-10.md §2-B) ──
+    //  ── 원거리 지원 딜러가 됐다 (2026-08-09, 유저 결정 · docs/CLASSES.md 「헤카테·하르모니아」 §2-B) ──
     //  처음엔 근접이었고 스킬 넷이 전부 아군 강화라 /dummy 로 **0 이 나왔다.** 설계로는 맞았지만
     //  실제로는 두 가지가 걸렸다: 버프를 거는 사람이 근접 사거리까지 들어가야 했고, 궁극을 눌러도
     //  내 화면엔 아무 숫자도 안 떴다.
@@ -2532,7 +2532,7 @@ public final class RelicSkills {
     }
 
     // ══════════════════════════════════════════════════════════════════
-    //  케이론 「펠리온」 — 봉술 몽크 (docs/CLASS-13.md)
+    //  케이론 「펠리온」 — 봉술 몽크 (docs/CLASSES.md 「케이론」)
     // ══════════════════════════════════════════════════════════════════
 
     /** 올리브 — 케이론의 색(가호 색과 같은 값). */
@@ -2544,7 +2544,7 @@ public final class RelicSkills {
         if (healed <= 0) return;
         com.laststardust.relics.blessing.BlessingEffects.healingBy(caster, () -> target.heal(healed));
         // 스킬 회복은 «별도 행동»이라 정상적으로 위협도를 낸다 — 패시브 전이 회복만 면제된다.
-        // 그쪽은 이미 «준 피해»로 위협도를 냈기 때문이다(docs/CLASS-13.md §4).
+        // 그쪽은 이미 «준 피해»로 위협도를 냈기 때문이다(docs/CLASSES.md 「케이론」 §4).
         com.laststardust.relics.ThreatManager.addHealThreat(level, caster, healed);
         level.sendParticles(ParticleTypes.HEART,
             target.getX(), target.getY() + target.getBbHeight() * 0.75, target.getZ(),
@@ -2617,7 +2617,7 @@ public final class RelicSkills {
     //
     // ⚠️ 다른 유물의 V 는 전부 «순간 이동»이다(천사의 발걸음·그림자 도약·질풍 돌진·참격 인계).
     //    이것만 지속 버프라 **즉발로 빠져나오지 못한다.** 34칸 몸에 탈출기가 없다는 뜻이라,
-    //    인게임에서 답답하면 앞 1초를 순간 가속으로 바꾼다(docs/CLASS-13.md §3).
+    //    인게임에서 답답하면 앞 1초를 순간 가속으로 바꾼다(docs/CLASSES.md 「케이론」 §3).
     public static void windStep(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdWind", "바람 걸음", 240, 2)) return;
         com.laststardust.relics.ChironManager.markWind(player,

@@ -27,7 +27,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
  * 이지스는 <b>태세</b>다. 켜두면 3초간 자동으로 −40% 와 반사가 붙고 타이밍이 필요 없다.
  * 이쪽은 <b>순간</b>이다. 창이 {@link #WINDOW} 틱뿐이라 맞는 박자에 눌러야 하고,
  * 빗나가면 <b>그대로 맞는다.</b> 에레보스가 「등 뒤로 돌아야 숫자가 나오는」 딜러인 것처럼
- * 이쪽은 숙련형 탱커다({@code docs/CLASS-11.md} §2).
+ * 이쪽은 숙련형 탱커다({@code docs/CLASSES.md 「네메시스」} §2).
  *
  * <p>── 그래도 「못 해도 탱커」다 ──
  * 두 번째 탱커를 넣는 이유가 「아틀라스가 없을 때 대신 설 사람」인데, 그 대체재가 숙련을
@@ -44,7 +44,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 public final class ParryManager {
     private ParryManager() {}
 
-    // ── 수치 (docs/CLASS-11.md §2·§3) ──
+    // ── 수치 (docs/CLASSES.md 「네메시스」 §2·§3) ──
     /** 패링 창. 0.4초. 「순간」이라는 정체성이 이 숫자 하나에 걸려 있다. */
     public static final int WINDOW = 8;
     /** 한 번 패링에 성공하면 이만큼은 창이 안 열린다. 자세(−25%)는 그대로 유지된다. */

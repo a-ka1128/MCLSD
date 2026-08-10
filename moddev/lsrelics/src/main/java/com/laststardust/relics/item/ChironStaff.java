@@ -22,7 +22,7 @@ import net.minecraft.world.item.ItemStack;
 //
 // 그래서 「힐러」가 아니라 **「힐도 되는 전사」**다. 파나케이아가 있으면 근접 딜로 놀고,
 // 없으면 파티가 굴러가는 최소한의 힐을 댄다. **항상 쓸 자리가 있어야 실제로 선택되고,
-// 그래야 단일 장애점이 진짜로 풀린다** (docs/CLASS-13.md §0).
+// 그래야 단일 장애점이 진짜로 풀린다** (docs/CLASSES.md 「케이론」 §0).
 public class ChironStaff extends Item implements RelicActions {
 
     public ChironStaff(Properties properties) {

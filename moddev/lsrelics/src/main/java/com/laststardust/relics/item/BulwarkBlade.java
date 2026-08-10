@@ -29,7 +29,7 @@ public class BulwarkBlade extends Item implements RelicActions {
     //
     // ⚠️ 대가: **이 무기를 들고는 상자를 못 열고 블록을 못 놓는다.**
     //    `RelicActions` 머리말의 「우클릭은 비워둔다」 원칙을 깨는 두 번째 근접 유물이다.
-    //    실전에서 불편하면 되돌릴 자리다(네메시스 `CLASS-11.md` §2 와 같은 조건).
+    //    실전에서 불편하면 되돌릴 자리다(네메시스 `CLASSES.md 「네메시스」` §2 와 같은 조건).
     @Override
     public net.minecraft.world.InteractionResultHolder<ItemStack> use(
             net.minecraft.world.level.Level level, net.minecraft.world.entity.player.Player player,

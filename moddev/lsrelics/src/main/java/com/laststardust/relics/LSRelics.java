@@ -298,7 +298,7 @@ public class LSRelics {
     //
     // ⚠️ **`/dummy` 실측 전까지 전부 가정이다.** 계산상 5성 총합 88 로 이지스와 같은 하위
     //    대역인데, 그 88 중 «패링 몫 7» 이 「5초에 한 번 성공한다」는 순수 가정 위에 있다.
-    //    총합의 8% 다 — 이 값을 근거로 다른 걸 조정하면 안 된다(`docs/CLASS-11.md` §3).
+    //    총합의 8% 다 — 이 값을 근거로 다른 걸 조정하면 안 된다(`docs/CLASSES.md 「네메시스」` §3).
     public static final DeferredItem<com.laststardust.relics.item.NemesisBlade> NEMESIS =
         ITEMS.register("nemesis",
             () -> new com.laststardust.relics.item.NemesisBlade(
@@ -313,7 +313,7 @@ public class LSRelics {
     // 계산이 깔끔하다: (1+4.6)×5.4 × 1.0 × 1.8 = **평타 DPS 약 54**.
     //
     // 방어 속성을 «일부러» 안 준다. 34칸 몸으로 앞에 서는 게 이 직업의 대가다
-    // (`docs/CLASS-13.md` §4).
+    // (`docs/CLASSES.md 「케이론」` §4).
     //
     // ⚠️ **`/dummy` 실측 전까지 전부 가정이다.** 특히 파나케이아와 «같이 서는» 판을 돌려보기
     //    전엔 회복량을 확정할 수 없다 — 10 + 4 = 14 HPS 면 수성전의 압박이 통째로 사라진다.

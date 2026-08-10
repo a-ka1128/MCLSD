@@ -37,7 +37,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 public final class ChironManager {
     private ChironManager() {}
 
-    // ── 수치 (docs/CLASS-13.md §2·§4) ──
+    // ── 수치 (docs/CLASSES.md 「케이론」 §2·§4) ──
     /** 평타 한 대당 아군 회복. {@code healScale} 이 곱해져 5성 2.2 가 된다. */
     public static final float HEAL_PER_HIT = 0.9f;
     /** 회복 대상을 찾는 반경. */
@@ -164,7 +164,7 @@ public final class ChironManager {
         // ⚠️ 위협도를 «일부러» 안 올린다.
         // 이 회복은 «준 피해»에서 나온 것이고, 그 피해가 이미 ThreatManager 에 올라갔다.
         // 여기서 또 올리면 두 번 세는 셈이고, 근접이라 그대로 두면 탱커보다 어그로를 끈다
-        // (docs/CLASS-13.md §4). R·C·X 의 회복은 별도 행동이므로 정상적으로 위협도를 낸다.
+        // (docs/CLASSES.md 「케이론」 §4). R·C·X 의 회복은 별도 행동이므로 정상적으로 위협도를 낸다.
 
         level.sendParticles(ParticleTypes.HEART,
             t.getX(), t.getY() + t.getBbHeight() * 0.75, t.getZ(), 1, 0.25, 0.25, 0.25, 0.0);
@@ -182,7 +182,7 @@ public final class ChironManager {
      * 궁극이 소모된 것처럼 보인다.
      *
      * <p>⚠️ <b>시전자 본인은 제외한다.</b> 여기서 자기를 포함시키면 10초 완전 무적이 되고,
-     * 이 스킬의 유일한 대가가 사라진다({@code docs/CLASS-13.md} §3).
+     * 이 스킬의 유일한 대가가 사라진다({@code docs/CLASSES.md 「케이론」} §3).
      */
     @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOW)
     public static void onPelionNight(LivingIncomingDamageEvent event) {

@@ -33,13 +33,13 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  * <p>── 회복을 하나도 안 넣었다 ──
  * 히기에이아가 서포트의 «회복» 절반을 갖고, 하르모니아는 «강화» 절반을 갖는다.
  * 여기에 힐이나 보호막을 넣는 순간 두 직업이 같은 자리를 놓고 싸운다
- * ({@code docs/CLASS-9-10.md} §2 설계 의도 1).
+ * ({@code docs/CLASSES.md 「헤카테·하르모니아」} §2 설계 의도 1).
  */
 @EventBusSubscriber(modid = LSRelics.MODID)
 public final class HarmonyManager {
     private HarmonyManager() {}
 
-    // ── 수치 (docs/CLASS-9-10.md §2·§2-B) ──
+    // ── 수치 (docs/CLASSES.md 「헤카테·하르모니아」 §2·§2-B) ──
     //
     // ⚠️ 2026-08-09 에 «자기 피해»가 붙으면서 «남에게 주는 버프»를 한 차례 깎았다.
     //    이 직업은 원래 화력이 0에 가까운 대신 버프가 컸는데, 원거리 지원 딜러(총합 78)가 되면서

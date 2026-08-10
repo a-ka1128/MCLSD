@@ -36,7 +36,7 @@ public final class FateCatalog {
         new Fate("hecate",   LSRelics.HECATE,   0x17A2A2), // 녹청 — 어느 색과도 안 겹친다
         new Fate("harmonia", LSRelics.HARMONIA, 0xE86A9A), // 로즈 — 히기에이아(에메랄드)와 한눈에 갈린다
         // 강철 — 색상(hue)은 아틀라스(214도)·오리온(216도)과 사실상 같다. 채도 23% · 명도 43% 로만
-        // 갈린다(밝은 하늘빛 / 선명한 파랑 / 어둡고 탁한 강철). docs/CLASS-11.md §1 참조.
+        // 갈린다(밝은 하늘빛 / 선명한 파랑 / 어둡고 탁한 강철). docs/CLASSES.md 「네메시스」 §1 참조.
         new Fate("nemesis",  LSRelics.NEMESIS,  0x55668A),
         new Fate("chiron",   LSRelics.CHIRON,   0x8DA764)
     );
