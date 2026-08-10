@@ -325,6 +325,14 @@ public final class RelicEventHandlers {
     // 이 방식은 성급·스킬트리·장비가 무엇이든 **상쇄된다.** 실제로 08-11 측정에서
     // 파나케이아가 88.0 으로 나왔는데, 「미측정 유지」로 오래 남아 있던 87.8 과 0.2% 차이였다.
     // 그게 이 규약이 맞다는 증거다.
+    //
+    // ── 판을 읽을 때 «회전»을 먼저 볼 것 ──
+    // 총 DPS 만 보면 같은 유물의 두 판이 12% 벌어지는데, 원인이 밸런스가 아니라
+    // 「그 판에 궁을 몇 번 썼나」인 경우가 있다. 08-11 시리우스가 122.5 / 109.4 였고
+    // 차이는 전부 별빛 폭풍의 22타 대 11타 — <b>시전당 11타이므로 2회 대 1회</b>였다.
+    // 쿨이 45초라 60초 창에서는 2회가 정상 회전이므로 122.5 쪽이 기준값이다.
+    //   · 스킬별 표의 «타수»를 먼저 읽고, 쿨로 나눠 시전 횟수를 확인한 뒤에 총합을 비교할 것.
+    //   · 반대로 스틱스는 세 판(정면·백어택·백어택+크리)이 «다른 조건»이라 애초에 평균 낼 값이 아니다.
     private static float relicScale(ItemStack stack) {
         Item i = stack.getItem();
         // 이지스만 3차 보정 — 나머지 셋은 2차에서 ±2% 안에 들어와 그대로 둔다(건드리면 과적합).
@@ -336,21 +344,25 @@ public final class RelicEventHandlers {
         // 새 값 = 기존 배수 × (목표 ÷ 실측). 실측은 아래 두 갈래다:
         //   · 8종 — 2026-08-05 교정 실측(2판 이상, ±2.2%)
         //   · 4종 — 2026-08-11 「게볼그 앵커」 실측 (아래 ⚠️ 참조)
-        if (i == LSRelics.GUNNER.get())   return 1.086f;   // 솔라리스  102.2 → 110
-        if (i == LSRelics.SAGE.get())     return 1.099f;   // 셀레스티아 100.5 → 110
-        if (i == LSRelics.HUNTER.get())   return 1.120f;   // 시리우스   98.2 → 110
-        if (i == LSRelics.PIONEER.get())  return 1.086f;   // 타이탄     97.4 → 104
-        if (i == LSRelics.LANCER.get())   return 1.164f;   // 게볼그     95.7 → 104
-        if (i == LSRelics.ASSASSIN.get()) return 1.422f;   // 스틱스 풀딜 112.1 → 114 (정면 93.5·백어택 108.4)
-        if (i == LSRelics.GUARDIAN.get()) return 1.131f;   // 이지스     88.8 → 90
-        if (i == LSRelics.HEALER.get())   return 1.025f;   // 파나케이아  87.8 → 90
-        if (i == LSRelics.HECATE.get())   return 1.310f;   // 헤스페로스  73.3 → 96
-        if (i == LSRelics.HARMONIA.get()) return 1.232f;   // 바르비톤    77.9 → 96
-        // 네메시스·케이론은 배수만으로 가면 안 됐다. ×1.49 / ×1.46 을 통째로 걸면
-        // 「스킬을 쓰면 DPS 손해」(네메시스)와 「딜 스킬이 R 하나뿐」(케이론)이 그대로 남는다.
-        // 스킬 기본치로 바닥을 먼저 만들고(ParryManager · RelicSkills), 남은 몫만 여기서 맞춘다.
-        if (i == LSRelics.NEMESIS.get())  return 1.089f;   // 구조 개편 후 90 → 98 (기세 0 기준)
-        if (i == LSRelics.CHIRON.get())   return 1.290f;   // 구조 개편 후 ~70 → 90
+        // ── 08-11 검산 (적용 후 12종 전부 다시 잼) ──
+        // 여섯 종이 ±2.5% 로 착지했다 — 그건 «측정 노이즈» 대역이라 건드리지 않는다.
+        // 「매 측정마다 맞추려 들면 영원히 수렴하지 않는다」(1-B 마무리)를 이번엔 지킨다.
+        if (i == LSRelics.HECATE.get())   return 1.310f;   // 헤스페로스  96.6 (목표 96, +0.6%)  ✅
+        if (i == LSRelics.SAGE.get())     return 1.099f;   // 셀레스티아 109.0 (목표 110, −0.9%) ✅
+        if (i == LSRelics.GUARDIAN.get()) return 1.131f;   // 이지스      91.4 (목표 90, +1.6%)  ✅
+        if (i == LSRelics.HARMONIA.get()) return 1.232f;   // 바르비톤    94.3 (목표 96, −1.8%)  ✅
+        if (i == LSRelics.PIONEER.get())  return 1.086f;   // 타이탄     102.0 (목표 104, −1.9%) ✅
+        if (i == LSRelics.GUNNER.get())   return 1.086f;   // 솔라리스   107.3 (목표 110, −2.5%) ✅
+
+        // ⚠️ 한 판씩이라 아직 못 닫은 둘. 다음 세션에서 게볼그 앞뒤 2판을 채우면 같이 판정된다.
+        if (i == LSRelics.LANCER.get())   return 1.164f;   // 게볼그     109.2 (목표 104, +5.0%) ⚠ 앵커인데 1판
+        if (i == LSRelics.HEALER.get())   return 1.025f;   // 파나케이아  94.2 (목표 90, +4.7%)  ⚠
+
+        // ── 초과분 되잡기 (08-11 2차) ──
+        if (i == LSRelics.HUNTER.get())   return 1.006f;   // 시리우스 122.5 → 110
+        if (i == LSRelics.ASSASSIN.get()) return 1.262f;   // 스틱스 풀딜 128.5 → 114
+        if (i == LSRelics.NEMESIS.get())  return 0.949f;   // 아드라스테이아 112.5 → 98
+        if (i == LSRelics.CHIRON.get())   return 1.374f;   // 펠리온      84.5 → 90
         return 1.0f;
     }
 
