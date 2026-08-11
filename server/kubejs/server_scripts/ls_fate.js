@@ -237,9 +237,11 @@ function ftChoose(server, player, key) {
   const f = FATES[key]
   LS.setFate(server, player.username, key)
   ftApply(server, player, key)
-  // ※ 각성 체력은 **여기서 안 붙는다.** 가호는 직업을 정할 뿐이고, 체력은 유물의 값이다
-  //   (ls_ascend.js asHealth 의 hasRelic 검사). 붙는 건 ls_relic.js 가 유물을 줄 때다.
-  //   가호만 받은 사람은 10칸 그대로다 — 의도된 순서다.
+  // ── 각성 체력은 **여기서 정해진다** (2026-08-11, 유저 결정) ──
+  // 체력은 직업의 값이지 무기의 값이 아니다. 가호를 고르는 순간 1성 값이 붙고,
+  // 유물을 받아도(0성 → 1성) 숫자는 그대로다 — 그 사이는 「같은 직업인데 아직 무기가
+  // 없는」 구간이지 「더 약한 사람」인 구간이 아니다.  (ls_ascend.js asHealth)
+  try { asHealth(server, player.username) } catch (e) { lsWarn('ls_fate:choose-hp', e) }
   lsAdv(server, player.username, 'root')   // 도전과제 뿌리 — 여기서부터 나무가 열린다
   // 시작 키트
   STARTER_KIT.concat(dyedArmor(f.color)).forEach(it => { server.runCommandSilent(`give ${player.username} ${it[0]} ${it[1]}`) })
@@ -335,9 +337,8 @@ ServerEvents.commandRegistry(event => {
       const target = Arguments.STRING.getResult(ctx, 'target')
       const gone = ftClear(s, target)
       if (!gone) { ctx.source.sendSystemMessage(Text.of('§7해당 플레이어는 가호가 없습니다.')); return 0 }
-      // 각성 체력은 «직업별» 표에서 나온다(ls_ascend.js AS_HEALTH_BY_FATE) — 가호가 바뀌면
-      // 같이 다시 계산해야 한다. 1성 보너스가 0 이던 동안은 안 불러도 티가 안 났지만,
-      // 1성이 12~20 HP 가 된 지금은 **옛 직업의 체력이 그대로 남는다**(재접속 전까지).
+      // 각성 체력은 «직업별» 표에서 나온다(ls_ascend.js AS_HEALTH_BY_FATE) — 가호가 사라지면
+      // 같이 떼야 한다. 안 부르면 옛 직업의 체력이 재접속 전까지 그대로 남는다.
       try { asHealth(s, target) } catch (e) { lsWarn('ls_fate:reset-hp', e) }
       ctx.source.sendSystemMessage(Text.of(`§a${target}의 가호(${FATES[gone].name}) 해제 — 재선택 가능`))
       return 1
