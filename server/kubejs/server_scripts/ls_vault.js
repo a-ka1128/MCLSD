@@ -71,6 +71,11 @@ function vtAdd(server, name, slot, n) {
       var p2 = lsPlayerByName(server, name)
       if (p2) p2.tell(Text.of(`§8✦ 금고 ${r.label} ${have}/${need}`))
     }
+    // ── 로그를 남긴다 ──
+    // 초판엔 `vtClaim` 에만 로그가 있었다. 그래서 관문 훅을 시험했을 때 **서약 쪽은
+    // 로그로 확인됐는데 금고 쪽은 인게임에서 `/vault` 를 쳐 봐야만 알 수 있었다.**
+    // 같은 이벤트에서 도는 둘 중 하나만 관측 가능하면, 어긋났을 때 어느 쪽인지 못 가린다.
+    console.log(`[LS-VAULT] ${name} slot${slot} +${n | 0} -> ${have}/${need}`)
   } catch (e) { lsWarn('ls_vault:add', e) }
 }
 

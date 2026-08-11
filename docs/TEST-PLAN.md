@@ -414,7 +414,20 @@ R·V·C·X 를 각각. **여기서 보는 건 「도는가」이지 수치가 �
 | 실행 경로 | `Commands.performPrefixedCommand(gateway.createCommandSourceStack(), cmd)` — 앞의 `/` 는 있어도 없어도 된다 |
 | 권한 | `GatewayEntity.getPermissionLevel()` → **`iconst_2` = 2** — `requires(hasPermission(2))` 를 정확히 통과한다 |
 
-남은 진짜 미지수는 **「보상이 클리어 시점에 실제로 불리는가」** 하나뿐이다.
+**그리고 그 마지막 미지수도 닫혔다 (2026-08-11 실측).** 한 판 돌린 로그:
+
+```
+22:40:57  [LS-OATH] a_ka1128 began with [frail,steel]
+22:40:57  [LS-KEYS] a_ka1128 opened last_stardust:rift_trial
+22:42:29  [LS-OATH] a_ka1128 cleared with 2 affixes (+6 dust, +80 ducat)
+```
+
+**`gateways:command` 보상은 클리어 시점에 실제로 돈다.** 3웨이브에 92초.
+
+> 💡 **계측 구멍이 하나 드러났다.** 같은 보상 배열에서 도는 명령이 둘인데
+> 로그는 서약 쪽에만 있었다 — 금고 쪽은 `/vault` 를 쳐 봐야만 알 수 있었다.
+> 둘 중 하나만 관측 가능하면 어긋났을 때 **어느 쪽인지 못 가린다.**
+> `vtAdd` 에 `[LS-VAULT]` 한 줄을 넣었다.
 참고: `desc` 는 `Component.translatable()` 로 읽히므로 **번역 키**다. 우리는 한국어 문장을
 그대로 넣었는데, 없는 키는 키 자체가 표시되므로 결과적으로 잘 나온다.
 
