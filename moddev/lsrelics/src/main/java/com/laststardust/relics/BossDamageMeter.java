@@ -59,6 +59,7 @@ public final class BossDamageMeter {
         public double raw;      // 감쇄 전 총합 (방어도·저항이 깎기 전)
         public double taken;    // 실제 총합
         public double maxHit;   // 실제 기준 한 방 최대
+        public String maxType = "";   // 그 한 방이 «무슨» 피해였나 — 조율의 핵심 질문이다
         public int hits;
         public int deaths;
         public String label = "보스";
@@ -140,10 +141,11 @@ public final class BossDamageMeter {
         Meter m = of(attackerId(event.getSource()));
         if (m == null) return;
         float a = event.getAmount();
+        String key = typeKey(event.getSource());
         m.taken += a;
         m.hits++;
-        if (a > m.maxHit) m.maxHit = a;
-        Bucket b = m.bucket(typeKey(event.getSource()));
+        if (a > m.maxHit) { m.maxHit = a; m.maxType = key; }
+        Bucket b = m.bucket(key);
         b.taken += a;
         b.hits++;
         if (a > b.maxHit) b.maxHit = a;
@@ -208,8 +210,8 @@ public final class BossDamageMeter {
         double cut = avgRaw - avgTaken;   // 방어도·저항이 «한 대에서 빼는 몫»
 
         p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
-            "§6▣ %s §7받은 피해%s — §f%d대 §7· 감쇄 전 §f%.0f §7→ 실제 §c%.0f §8(한 대 평균 %.1f · 최대 %.1f)",
-            m.label, done ? "" : " §8(진행 중)", m.hits, m.raw, m.taken, avgTaken, m.maxHit)));
+            "§6▣ %s §7받은 피해%s — §f%d대 §7· 감쇄 전 §f%.0f §7→ 실제 §c%.0f §8(한 대 평균 %.1f · 최대 §f%.1f §8[%s])",
+            m.label, done ? "" : " §8(진행 중)", m.hits, m.raw, m.taken, avgTaken, m.maxHit, m.maxType)));
         if (m.deaths > 0) {
             p.sendSystemMessage(Component.literal(
                 String.format(Locale.ROOT, "§c  사망 %d회", m.deaths)));
@@ -224,7 +226,12 @@ public final class BossDamageMeter {
         // ── 종류별 ──
         // 「87 은 무엇인가」에 답하는 자리다. 실제 피해가 큰 순으로, 흔적만 남긴 종류까지 전부.
         // 상위 몇 개로 자르지 않는다 — 잘라 놓고 「나머지」로 뭉치면 그 안에 답이 숨는다.
-        if (m.byType.size() > 1) {
+        //
+        // ⚠️ **종류가 하나여도 찍는다.** 초판은 `size() > 1` 일 때만 찍었는데, 그러면
+        // 「전부 한 종류다」인 판에서 **아무것도 안 나온다** — 그런데 그 «한 종류가 무엇인가»가
+        // 정확히 알고 싶은 것이다. 이그니스를 재고 나서 화면에 종류 줄이 통째로 없어서
+        // 판을 한 번 버렸다. **계기가 답을 가지고 있으면서 안 보여준 것이다.**
+        if (!m.byType.isEmpty()) {
             List<Map.Entry<String, Bucket>> rows = new ArrayList<>(m.byType.entrySet());
             rows.sort(Comparator.comparingDouble((Map.Entry<String, Bucket> e) -> -e.getValue().taken));
             p.sendSystemMessage(Component.literal("§7  종류별 §8(실제 피해 순)"));
