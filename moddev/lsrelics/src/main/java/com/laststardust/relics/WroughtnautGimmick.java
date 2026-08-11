@@ -120,6 +120,44 @@ public final class WroughtnautGimmick {
         return new float[][] { { 110f, t }, { 185f, 250f } };  // 가운데가 뚫린다
     }
 
+    // ── 뒤쪽에서는 «언제나» 들어가게 한다 (2026-08-11, 유저 결정) ──
+    //
+    // 원래 모드는 ① 창(2.9초) **과** ② 각도(뒤쪽 140°)를 **둘 다** 요구했다. 그래서
+    // 「등 뒤에 제대로 서 있는데도 대부분의 시간 동안 튕기는」 보스였고, 실제로 08-11 에
+    // 혼자 붙어 8분에 10번 죽었다. 창이 열리는 주기가 2.9초 창보다 훨씬 길면 딜을 넣을
+    // 시간이 거의 없다 — `ls_config.js` 가 가정한 딜 유지율 0.45 도 그 위에서 무너진다.
+    //
+    // 규칙을 «둘 다»에서 **«등 뒤면 언제든»** 으로 바꾼다. 뒤에 선 사람이 있으면 그 필드를
+    // 켜 두는 것으로 끝난다 — 각도 게이트는 그대로 살아 있으므로 **정면은 여전히 막힌다.**
+    // 결과적으로 규칙이 한 줄이 된다: 「정면은 갑옷이 막는다. 등 뒤로 돌아라.」
+    //
+    // ── 왜 «정면 + 내려찍기» 는 안 넣었나 ──
+    // 각도는 `hurt()` 안에서 **공격자 좌표로 그 자리에서 계산**되므로 뒤집을 필드가 없다.
+    // 넣으려면 `AttackEntityEvent` 를 취소하고 피해를 우리가 직접 만들어 넣어야 하는데,
+    // 그러면 무기·마법부여·크리·Better Combat 배율·relicScale 을 전부 다시 구현하는 셈이라
+    // **08-11 에 닫은 12종 밸런스가 그대로 깨진다.** 얻는 것에 비해 대가가 너무 크다.
+    //
+    // ⚠️ 한 번 켜면 모드가 스스로 끄기 전까지 남는다. 그래도 안전하다 — 각도 게이트가
+    //    독립적으로 살아 있어서, 이 필드가 계속 true 여도 «정면은 못 때린다» 는 안 변한다.
+    //    초록 띠가 상시로 뜨는 것도 이제는 맞는 표시다(뒤쪽이면 언제나 들어가니까).
+    private static void openIfFlanked(ServerLevel level, Mob boss) {
+        if (vulnBroken) return;
+        // 필드 해석은 isOpen 이 하지만, 첫 틱에는 아직 null 이라 한 번 불러 잡아둔다.
+        if (VULNERABLE == null) isOpen(boss);
+        if (vulnBroken || VULNERABLE == null) return;   // 못 읽으면 원래 규칙 그대로 둔다
+        for (ServerPlayer p : level.players()) {
+            if (p.distanceToSqr(boss) > RANGE * RANGE) continue;
+            if (!canHit(boss, p)) continue;
+            try {
+                VULNERABLE.setBoolean(boss, true);
+            } catch (Exception e) {
+                vulnBroken = true;
+                LOG.warn("[강철거인] vulnerable 필드에 못 쓴다 — 뒤쪽 상시 타격이 꺼진다.", e);
+            }
+            return;
+        }
+    }
+
     // 위 판정을 그대로 옮긴 것. 그리는 각도와 안내 문구가 갈리면 안 되므로 한 규칙만 쓴다.
     private static boolean canHit(Mob boss, ServerPlayer p) {
         double a = Math.toDegrees(Math.atan2(p.getZ() - boss.getZ(), p.getX() - boss.getX())) - 90.0;
@@ -155,6 +193,8 @@ public final class WroughtnautGimmick {
             public void onTickAlways(ServerLevel level, BossFightTracker.Fight f) {
                 Window w = win(f);
                 long tick = level.getServer().getTickCount();
+                // 먼저 «뒤에 사람이 있으면 연다». isOpen 보다 앞이어야 이번 틱의 띠에 바로 반영된다.
+                openIfFlanked(level, f.boss);
                 boolean open = isOpen(f.boss) || tick < w.forcedUntil;
                 if (open != w.wasOpen) {
                     w.wasOpen = open;
@@ -224,8 +264,11 @@ public final class WroughtnautGimmick {
         long now = p.level().getGameTime();
         if (now - p.getPersistentData().getLong("lsWnHint") < 40) return;
         p.getPersistentData().putLong("lsWnHint", now);
+        // 뒤쪽 상시 타격을 넣은 뒤로 rear 쪽 문구는 사실상 안 뜬다(뒤에 서면 곧 열린다).
+        // 그래도 남겨둔다 — 추적이 아직 안 붙은 개체나 한 틱 차이로는 여전히 튕길 수 있고,
+        // 그때 «아무 말도 없는» 게 이 파일이 없애려던 바로 그 상태다.
         p.displayClientMessage(Component.literal(rear
-            ? "§7도끼가 땅에 박히기 전에는 튕긴다. §8초록이 뜨면 그때."
+            ? "§7아직 안 열렸다. §8한 박자만 더."
             : "§7정면은 갑옷이 막는다. §8등 뒤로 돌아라."), true);
     }
 

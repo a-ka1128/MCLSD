@@ -327,7 +327,7 @@ R·V·C·X 를 각각. **여기서 보는 건 「도는가」이지 수치가 �
 
 | 보스 | 명령 | 봐야 할 것 |
 |---|---|---|
-| T1 강철거인 | `/lsgimmick summon` → `window` → `now` | 초록(취약 창 2.9초) · 빨강 장판 반경 4.5 |
+| T1 강철거인 | `/lsgimmick summon` → `window` → `now` | **초록(등 뒤 140°) 상시** · 빨강 장판 반경 4.5 |
 | T2 이그니스 | `/lsgimmick ignis summon` → `now` | 노랑 결계 **바깥만** 피해. 계속 때려 반격 구간(파랑) |
 | T4 괴물 | `/lsgimmick monstrosity summon` → `now` | 보라 → 2.5초 뒤 노랑. **두 어휘가 정반대** |
 | 최종 리치 | `/lsgimmick lich summon` → `now` | 파랑(삼킴 무적) + 노랑 |
