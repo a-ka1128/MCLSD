@@ -396,10 +396,11 @@ public final class DummyManager {
 
         // ── 회복·흡수 ── 축복 넷(생명흡수·치유·범람·재생)은 여기서만 보인다.
         // 0 이면 줄을 안 낸다 — 회복이 없는 유물이 대부분이라 늘 0 이면 눈이 무시하게 된다.
-        if (healed > 0.05f || shielded > 0.05f || natural > 0.05f) {
+        float shielded = com.laststardust.relics.blessing.BlessingEffects.shieldGiven();
+        if (healed > 0.05f || shielded > 0.05f || natural > 0.05f || taken > 0.05f) {
             out.add(Component.literal("§8──────────────"));
             out.add(Component.literal(String.format(
-                "§d회복 §f%,.0f §8(%.1f HPS)§7 · 흡수 §f%,.0f §8(%.1f/s)",
+                "§d회복 §f%,.0f §8(%.1f HPS)§7 · 보호막 §f%,.0f §8(%.1f/s)",
                 healed, healed / secs, shielded, shielded / secs)));
             // 자연 회복은 «우리 것이 아니다». 따로 내되 지우지는 않는다 —
             // 0 이면 「되받아치기가 안 맞고 있다」는 신호라 그것대로 값어치가 있다.
@@ -412,9 +413,8 @@ public final class DummyManager {
         // 되받아친 판이면 조건을 같이 남긴다 — 안 남기면 나중에 「왜 이 판만 보호막이 떴지」가 된다.
         if (retaliateDmg > 0) {
             out.add(Component.literal(String.format(
-                "§8되받아치기 %.0f × %.1f초 주기 §7(받은 피해 총 %,.0f)",
-                retaliateDmg, retaliateEvery / 20.0f,
-                retaliateDmg * Math.floor(secs * 20 / retaliateEvery))));
+                "§8되받아치기 %.0f × %.1f초 주기 §7— 실제로 받은 피해 §f%,.0f §7· 내 최대 체력 §f%,.0f",
+                retaliateDmg, retaliateEvery / 20.0f, taken, maxHpOfFirstPlayer())));
         }
 
         out.add(Component.literal("§8──────────────"));
@@ -471,10 +471,25 @@ public final class DummyManager {
     // 것이 구분이 안 된다.
     private static float healed = 0f;
     private static float natural = 0f;
-    private static float shielded = 0f;
-    private static float lastAbsorb = 0f;
+    private static float taken = 0f;
 
-    static void resetVitals() { healed = 0f; natural = 0f; shielded = 0f; lastAbsorb = 0f; }
+    static void resetVitals() {
+        healed = 0f; natural = 0f; taken = 0f;
+        com.laststardust.relics.blessing.BlessingEffects.resetShieldGiven();
+    }
+
+    /**
+     * <b>내가 실제로 받은 피해.</b> 「가시 갑주」처럼 «받은 피해의 몇 %» 인 축복은 이게 없으면
+     * 못 읽는다 — 2026-08-11 ⑤ 묶음에서 가시 10.3 이 나왔는데 분모를 몰라 해석이 막혔다.
+     * 그때 리포트가 찍던 「받은 피해 120」은 <b>되받아치기 설정값으로 계산한 추정</b>이었지
+     * 실측이 아니었다.
+     */
+    @SubscribeEvent
+    public static void onPlayerHurt(LivingDamageEvent.Post event) {
+        if (!measuring) return;
+        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        taken += event.getNewDamage();
+    }
 
     /**
      * <b>축복·유물이 넣은 회복</b>과 <b>그 밖의 회복</b>을 갈라 센다 (2026-08-11).
@@ -499,16 +514,6 @@ public final class DummyManager {
         else natural += event.getAmount();
     }
 
-    /** 흡수는 이벤트가 없다 — 매 틱 값을 보고 «늘어난 만큼»만 더한다(줄어든 건 소모다). */
-    private static void sampleAbsorb(MinecraftServer sv) {
-        float now = 0f;
-        for (ServerPlayer p : sv.getPlayerList().getPlayers()) {
-            if (p.isSpectator()) continue;
-            now += p.getAbsorptionAmount();
-        }
-        if (now > lastAbsorb) shielded += now - lastAbsorb;
-        lastAbsorb = now;
-    }
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
@@ -543,7 +548,6 @@ public final class DummyManager {
 
         if (!measuring) return;
         MinecraftServer server = event.getServer();
-        sampleAbsorb(server);
 
         // 정해둔 시간이 되면 스스로 멈추고 결과를 전원에게 알린다.
         // 손으로 stop 을 치면 그 반응 시간이 그대로 측정 창에 섞여서, 매번 다른 길이로 재게 된다
@@ -610,6 +614,20 @@ public final class DummyManager {
 
     // 죽은 참조를 걷어내고, 월드에 남아 있는 더미를 다시 주워 온다.
     // 재시작 후에는 리스트가 비어 있으므로 이 rescan 이 유일한 복구 경로다.
+
+    /**
+     * 재는 사람의 최대 체력. 「별빛 보호막(최대 체력 8%)」·「재생(최대 체력 4%)」처럼
+     * <b>최대 체력 비례</b> 인 축복은 이 값이 없으면 기대치를 못 세운다 — 2026-08-11 ⑤ 묶음에서
+     * 재생 27 이 나왔는데 최대 체력을 몰라 「4배 빠른 버그인가」로 헛짚을 뻔했다.
+     */
+    private static float maxHpOfFirstPlayer() {
+        if (server == null) return 0f;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (!p.isSpectator()) return p.getMaxHealth();
+        }
+        return 0f;
+    }
+
     private static void prune() {
         Iterator<LivingEntity> it = DUMMIES.iterator();
         while (it.hasNext()) {

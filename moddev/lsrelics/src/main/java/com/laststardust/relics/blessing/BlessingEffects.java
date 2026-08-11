@@ -385,8 +385,25 @@ public final class BlessingEffects {
     /** 흡수 하트를 더한다. 상한은 최대 체력 대비 비율 — 계속 쌓여 무적이 되는 걸 막는다. */
     private static void addAbsorption(Player p, float add, float capFraction) {
         float cap = p.getMaxHealth() * capFraction;
-        p.setAbsorptionAmount(Math.min(cap, p.getAbsorptionAmount() + add));
+        float before = p.getAbsorptionAmount();
+        float after = Math.min(cap, before + add);
+        p.setAbsorptionAmount(after);
+        shieldGiven += Math.max(0f, after - before);
     }
+
+    /**
+     * 이번 측정 동안 <b>실제로 깔린</b> 보호막 총량. {@code DummyManager} 가 읽는다.
+     *
+     * <p>⚠️ <b>흡수량을 밖에서 관찰해서는 못 잰다.</b> 「별빛 보호막」은 피해가 들어오기
+     * <b>직전</b>에 흡수를 까는데, 그 흡수가 <b>같은 틱 안에서 그 피해에 바로 소모된다.</b>
+     * 틱 끝에 값을 보고 증가분을 세면 순증이 0 이라 아무것도 안 잡힌다 —
+     * 2026-08-11 ⑤ 묶음에서 「흡수 0」이 나온 게 그래서였다(축복은 멀쩡히 돌고 있었다).
+     * 그래서 <b>까는 자리에서</b> 센다.
+     */
+    private static float shieldGiven;
+
+    public static float shieldGiven() { return shieldGiven; }
+    public static void resetShieldGiven() { shieldGiven = 0f; }
 
     // ══════════════════════════════════════════════════════════════════
     //  ④ 처치
