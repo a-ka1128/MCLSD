@@ -59,6 +59,12 @@ public final class DummyManager {
     public static double hp() { return dummyHp; }
     public static boolean hpFixed() { return dummyHpFixed; }
 
+    /** 지금 실제로 남아 있는 체력(첫 더미 기준). 「깎았는데 다시 찼나」를 눈으로 보려고 있다. */
+    public static double currentHp() {
+        prune();
+        return DUMMIES.isEmpty() ? 0 : DUMMIES.get(0).getHealth();
+    }
+
     /** 값이 0 이하면 기본값(100만)으로 되돌리고 자동 보충도 다시 켠다. */
     public static void setHp(double v) {
         dummyHpFixed = v > 0;

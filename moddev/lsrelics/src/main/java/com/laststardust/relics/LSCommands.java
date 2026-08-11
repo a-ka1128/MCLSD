@@ -137,8 +137,23 @@ public final class LSCommands {
                             : "§8대기")), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(String.format(
                         "§7표적 방어도 §e%.0f§7 · 견고함 §e%.0f", DummyManager.armor(), DummyManager.toughness())), false);
+                    // ── 체력·되받아치기 상태를 보여준다 (2026-08-11) ──
+                    // 이게 없어서 「측정 시작하니 풀피가 된다」를 코드만 보고는 못 짚었다.
+                    // 손잡이를 만들면 **그 손잡이가 지금 어느 위치인지도 같이 보여야 한다.**
+                    ctx.getSource().sendSuccess(() -> Component.literal(String.format(
+                        "§7체력 §e%,.0f§7 · %s§7 · 지금 §e%,.0f",
+                        DummyManager.hp(),
+                        DummyManager.hpFixed()
+                            ? "§a고정 (자동 보충·시작 시 회복 §l꺼짐§a)"
+                            : "§8기본 (자동 보충·시작 시 회복 켜짐)",
+                        DummyManager.currentHp())), false);
+                    if (DummyManager.retaliateDamage() > 0) {
+                        ctx.getSource().sendSuccess(() -> Component.literal(String.format(
+                            "§7되받아치기 §e%.0f §7× §e%.1f초", DummyManager.retaliateDamage(),
+                            DummyManager.retaliateInterval() / 20.0f)), false);
+                    }
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§8/dummy spawn · start [초] · stop · clear · armor <값> [견고함] · calc <피해>"), false);
+                        "§8/dummy spawn · start [초] · stop · clear · armor <값> [견고함] · hp <값> · hit <피해> [주기] · calc <피해>"), false);
                     return 1;
                 }));
 
