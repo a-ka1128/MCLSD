@@ -34,6 +34,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class LSCommands {
     private LSCommands() {}
 
+    /** 측정 결과를 콘솔에도 남기려고 둔다 — 채팅만 가면 나중에 기록을 다시 못 읽는다. */
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
@@ -80,8 +83,13 @@ public final class LSCommands {
                         ctx.getSource().sendFailure(Component.literal("측정 중이 아니다. 먼저 /dummy start"));
                         return 0;
                     }
+                    // ⚠️ **콘솔에도 남긴다.** 자동 종료(autoStopTicks)는 처음부터 LOG.info 를
+                    //    찍고 있었는데 이 손 종료 경로만 안 찍어서, `/dummy stop` 으로 끝낸 판은
+                    //    서버 로그에 **한 줄도 안 남았다.** 나중에 결과를 다시 읽을 방법이 없다
+                    //    — 2026-08-11 「수확」 측정에서 더미가 죽어 손으로 끊었더니 그렇게 됐다.
                     for (Component line : DummyManager.stop()) {
                         ctx.getSource().sendSuccess(() -> line, true);
+                        LOG.info("[DPS] {}", line.getString());
                     }
                     return 1;
                 }))
