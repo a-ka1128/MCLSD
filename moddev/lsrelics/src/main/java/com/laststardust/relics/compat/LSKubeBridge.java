@@ -1283,5 +1283,52 @@ public class LSKubeBridge implements KubeJSPlugin {
             data.vault().reset(name);
             data.dirty();
         }
+
+        // ══════════════════════════════════════════════════════════════
+        //  균열 서약 (OathData) — 자발적 난이도 상향
+        //
+        //  어픽스의 이름·배율·보상 카탈로그는 `ls_keys.js` 에 있다. 여기는
+        //  «누가 무엇을 걸어 뒀나»만 안다 — 모르는 id 도 그대로 받는다.
+        // ══════════════════════════════════════════════════════════════
+
+        public String[] oathList(MinecraftServer server, String name) {
+            return server == null ? new String[0] : LSData.get(server).oath().list(name);
+        }
+
+        public int oathCount(MinecraftServer server, String name) {
+            return server == null ? 0 : LSData.get(server).oath().count(name);
+        }
+
+        public int oathMax() {
+            return com.laststardust.relics.data.OathData.MAX;
+        }
+
+        public boolean hasOath(MinecraftServer server, String name, String id) {
+            return server != null && LSData.get(server).oath().has(name, id);
+        }
+
+        /** 건다. 이미 걸렸거나 상한을 넘으면 false. */
+        public boolean addOath(MinecraftServer server, String name, String id) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.oath().add(name, id)) return false;
+            data.dirty();
+            return true;
+        }
+
+        public boolean removeOath(MinecraftServer server, String name, String id) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.oath().remove(name, id)) return false;
+            data.dirty();
+            return true;
+        }
+
+        public void clearOath(MinecraftServer server, String name) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.oath().clear(name);
+            data.dirty();
+        }
     }
 }
