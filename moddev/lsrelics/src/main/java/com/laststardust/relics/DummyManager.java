@@ -95,6 +95,19 @@ public final class DummyManager {
     private static long retaliateNext = 0;
     /** 이번 측정에서 내가 실제로 넣은 되받아치기 횟수. 「원본」과 갈라 보려고 센다. */
     private static int retaliateHits = 0;
+    /**
+     * 되받아치기가 <b>실제로 도착시킨</b> 원본 피해 합.
+     *
+     * <p>⚠️ <b>넣은 값과 도착한 값이 다르다.</b> `mobAttack` 은 damage type 의
+     * {@code scaling: when_caused_by_living_non_player} 을 타므로 <b>난이도 배수</b>가 붙는다
+     * (Hard = ×1.5). {@code /dummy hit 20} 이 30 이 되어 도착한다.
+     *
+     * <p>이걸 몰라서 2026-08-11 에 크게 헤맸다 — 「설정값 × 횟수」로 계산한 몫을 빼서
+     * 「그 밖의 피해 60」을 만들어내고, 「6번이어야 하는데 9번 맞았다」는 있지도 않은 현상을
+     * 두 번 보고했다. <b>실제로는 6번 × 30 이었다.</b> 그리고 그 잘못된 분모로 가시 갑주를
+     * 「설계의 2.2배」로 읽어 멀쩡한 코드를 고칠 뻔했다.
+     */
+    private static float retaliateRaw = 0f;
 
     public static float retaliateDamage() { return retaliateDmg; }
     public static int retaliateInterval() { return retaliateEvery; }
@@ -424,10 +437,12 @@ public final class DummyManager {
             //    나와 「되받아치기가 자주 때리나」를 의심했는데, 가시가 정확히 6타(=6회)였다.
             //    즉 되받아치기는 맞고 «공격자 없는 다른 피해» 가 섞인 것이다 — 그 둘을 눈으로
             //    가르지 못하면 「받은 피해의 몇 %」인 축복(가시)의 분모를 영영 못 믿는다.
-            float mine = retaliateDmg * retaliateHits;
             out.add(Component.literal(String.format(
-                "§8  ├ 되받아치기 §f%d회 §8× %.0f = §f%,.0f", retaliateHits, retaliateDmg, mine)));
-            float other = rawFirst - mine;
+                "§8  ├ 되받아치기 §f%d회 §8· 넣은 값 %.0f → §f도착 %,.0f §8(한 대 %.1f · 난이도 배수 §f×%.2f§8)",
+                retaliateHits, retaliateDmg, retaliateRaw,
+                retaliateHits > 0 ? retaliateRaw / retaliateHits : 0f,
+                retaliateHits > 0 && retaliateDmg > 0 ? retaliateRaw / retaliateHits / retaliateDmg : 1f)));
+            float other = rawFirst - retaliateRaw;
             out.add(Component.literal(other > 0.5f
                 ? String.format("§c  └ 그 밖의 피해 %,.0f §8— 공격자 없는 피해가 섞였다", other)
                 : "§8  └ 그 밖의 피해 없음"));
@@ -490,7 +505,8 @@ public final class DummyManager {
     private static float taken = 0f;
 
     static void resetVitals() {
-        healed = 0f; natural = 0f; taken = 0f; rawFirst = 0f; rawLast = 0f; retaliateHits = 0;
+        healed = 0f; natural = 0f; taken = 0f; rawFirst = 0f; rawLast = 0f;
+        retaliateHits = 0; retaliateRaw = 0f;
         com.laststardust.relics.blessing.BlessingEffects.resetShieldGiven();
     }
 
@@ -525,6 +541,10 @@ public final class DummyManager {
         if (!measuring) return;
         if (!(event.getEntity() instanceof ServerPlayer)) return;
         rawFirst += event.getAmount();
+        // 더미가 때린 것만 따로 센다 — 「내가 넣은 몫」을 추정이 아니라 실측으로 잡는다.
+        if (event.getSource().getEntity() instanceof LivingEntity src && isDummy(src)) {
+            retaliateRaw += event.getAmount();
+        }
     }
 
     @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
