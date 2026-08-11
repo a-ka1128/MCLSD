@@ -362,10 +362,14 @@ public final class BlessingEffects {
 
         // 가시 갑주 — 반사. inSplash 로 감싸는 이유는 연쇄와 같다: 반사 피해가 다시
         // 이 클래스를 지나면 상대의 가시 갑주와 무한 왕복이 된다.
+        // ⚠️ 이름표를 단다 — 연쇄와 같은 이유다(2026-08-11). 맨 `hurt` 면 계측 리포트에서
+        //    **평타 칸에 섞인다.** 반사 피해원은 플레이어가 주인이라 「내가 준 피해」로 잡히는데,
+        //    그러면 「평타가 세진 건지 반사가 붙은 건지」를 못 가른다.
         float thorns = v(p, "thorns");
         if (thorns > 0f && event.getSource().getEntity() instanceof LivingEntity foe
             && foe != p && foe.isAlive()) {
-            derived(() -> foe.hurt(level.damageSources().thorns(p), raw * thorns));
+            derived(() -> com.laststardust.relics.LsDamage.hit(
+                foe, level.damageSources().thorns(p), raw * thorns, "가시"));
         }
     }
 
