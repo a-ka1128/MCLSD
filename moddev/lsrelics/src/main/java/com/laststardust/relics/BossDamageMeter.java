@@ -1,6 +1,9 @@
 package com.laststardust.relics;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import java.util.Locale;
@@ -59,6 +62,26 @@ public final class BossDamageMeter {
         public int hits;
         public int deaths;
         public String label = "보스";
+
+        /**
+         * 피해 «종류»별로 따로 센다. 총합만으로는 답할 수 없는 질문이 하나 있어서다 —
+         * <b>「평균 18.7 인데 최대가 87 이면, 그 87 은 무엇인가?」</b>
+         *
+         * <p>이걸 모르면 전역 배수를 못 올린다. 87 이 예고 있는 큰 기술이면 원콤이 설계일 수
+         * 있지만 평타에 섞인 것이면 그건 버그에 가깝고, 둘의 처방이 정반대다.
+         * (별의 축복 때 얻은 것과 같은 교훈이다 — <b>파생 피해는 이름표를 달아 같은 판 안에서
+         * 비교한다.</b> 따로 재서 빼면 판간 흔들림이 값을 통째로 삼킨다.)
+         */
+        public final Map<String, Bucket> byType = new HashMap<>();
+
+        Bucket bucket(String key) { return byType.computeIfAbsent(key, k -> new Bucket()); }
+    }
+
+    public static final class Bucket {
+        public double raw;
+        public double taken;
+        public double maxHit;
+        public int hits;
     }
 
     private static final Map<Integer, Meter> METERS = new HashMap<>();
@@ -83,6 +106,16 @@ public final class BossDamageMeter {
      * 때린 «놈»을 찾는다. 화살·마법은 {@code getDirectEntity} 가 투사체라 그걸 세면
      * 보스마다 id 가 흩어진다 — 주인을 본다.
      */
+    /**
+     * 피해 종류의 등록 id. 없으면 메시지 id 로 떨어진다 —
+     * 모드 damage type 중에는 레지스트리에 안 올라온 즉석 소스가 있다.
+     */
+    private static String typeKey(DamageSource src) {
+        return src.typeHolder().unwrapKey()
+            .map(k -> k.location().toString())
+            .orElseGet(src::getMsgId);
+    }
+
     private static int attackerId(DamageSource src) {
         Entity e = src.getEntity();
         if (!(e instanceof LivingEntity) || e instanceof Player) return -1;
@@ -98,6 +131,7 @@ public final class BossDamageMeter {
         Meter m = of(attackerId(event.getSource()));
         if (m == null) return;
         m.raw += event.getAmount();
+        m.bucket(typeKey(event.getSource())).raw += event.getAmount();
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -109,6 +143,10 @@ public final class BossDamageMeter {
         m.taken += a;
         m.hits++;
         if (a > m.maxHit) m.maxHit = a;
+        Bucket b = m.bucket(typeKey(event.getSource()));
+        b.taken += a;
+        b.hits++;
+        if (a > b.maxHit) b.maxHit = a;
     }
 
     // ── 죽은 «순간»에 보고한다 ──
@@ -139,6 +177,18 @@ public final class BossDamageMeter {
             String.format(Locale.ROOT, "%.0f", m.taken),
             String.format(Locale.ROOT, "%.1f", m.taken / m.hits),
             String.format(Locale.ROOT, "%.1f", m.maxHit), m.deaths);
+        // 종류별도 로그에. 화면 줄이 길어 스크롤에 밀리는 판일수록 여기가 유일한 기록이 된다.
+        List<Map.Entry<String, Bucket>> rows = new ArrayList<>(m.byType.entrySet());
+        rows.sort(Comparator.comparingDouble((Map.Entry<String, Bucket> e) -> -e.getValue().taken));
+        for (Map.Entry<String, Bucket> e : rows) {
+            Bucket b = e.getValue();
+            if (b.hits <= 0) continue;
+            LOG.info("[전투 피해]   {} · {}대 · 실제={} 평균={} 최대={}",
+                e.getKey(), b.hits,
+                String.format(Locale.ROOT, "%.0f", b.taken),
+                String.format(Locale.ROOT, "%.1f", b.taken / b.hits),
+                String.format(Locale.ROOT, "%.1f", b.maxHit));
+        }
     }
 
     /**
@@ -169,6 +219,23 @@ public final class BossDamageMeter {
             p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                 "§7  내 최대 체력 §f%.0f §7→ §e%.1f§7대에 죽는다 §8(한 대 = 최대 체력의 %.0f%%)",
                 hp, hp / avgTaken, avgTaken / hp * 100)));
+        }
+
+        // ── 종류별 ──
+        // 「87 은 무엇인가」에 답하는 자리다. 실제 피해가 큰 순으로, 흔적만 남긴 종류까지 전부.
+        // 상위 몇 개로 자르지 않는다 — 잘라 놓고 「나머지」로 뭉치면 그 안에 답이 숨는다.
+        if (m.byType.size() > 1) {
+            List<Map.Entry<String, Bucket>> rows = new ArrayList<>(m.byType.entrySet());
+            rows.sort(Comparator.comparingDouble((Map.Entry<String, Bucket> e) -> -e.getValue().taken));
+            p.sendSystemMessage(Component.literal("§7  종류별 §8(실제 피해 순)"));
+            for (int i = 0; i < rows.size(); i++) {
+                Bucket b = rows.get(i).getValue();
+                if (b.hits <= 0) continue;
+                p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
+                    "§8   %s §f%-28s §7%3d대 · 실제 §c%.0f §8(평균 %.1f · 최대 §f%.1f§8) · %.0f%%",
+                    i == rows.size() - 1 ? "└" : "├", rows.get(i).getKey(), b.hits, b.taken,
+                    b.taken / b.hits, b.maxHit, b.taken / m.taken * 100)));
+            }
         }
 
         // ── 여기가 이 계기를 만든 이유다 ──
