@@ -184,6 +184,10 @@ public final class LSCommands {
                         return 0;
                     }
                     BossDamageMeter.print(p, m, false);
+                    // 로그에도. 화면에만 찍으면 **내가 못 읽는다** — 조율은 로그를 뒤져서
+                    // 하는데(`docs/BLESSING.md`), 이 경로만 그게 빠져 있었다.
+                    // 처치·사망은 남기면서 「그냥 조회」만 안 남기는 건 일관성도 없다.
+                    BossDamageMeter.log(m, "조회");
                     return 1;
                 }))
                 .then(Commands.literal("summon").executes(ctx -> {
