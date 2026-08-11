@@ -118,7 +118,18 @@ public final class BoltManager {
             lv.sendParticles(ParticleTypes.ENCHANTED_HIT, at.x, at.y, at.z, 8, 0.2, 0.2, 0.2, 0.1);
             // 패시브 별빛 충전
             ItemStack held = b.owner.getMainHandItem();
-            if (held.getItem() == LSRelics.SAGE.get()) RelicSkills.starCharge(lv, held);
+            if (held.getItem() == LSRelics.SAGE.get()) {
+                RelicSkills.starCharge(lv, held);
+                // ── 5성 2단 「별빛 방벽」 ──
+                // 충전이 돌 때마다 흡수 2 (상한 8, 4초). 쿨 감소량을 올리면 스킬 회전이
+                // 빨라져 목표선(110)이 그대로 올라가므로, 같은 «맞힌다»에 다른 값을 매단다.
+                // 셀레스티아는 26칸짜리 유리대포다 — 마지막 계단이 얇은 막인 게 맞다.
+                // 계속 맞혀야 유지되니 «뒤에 숨는 대가»가 아니라 «앞을 보는 대가»로 남는다.
+                if (Passive2.is(held, LSRelics.SAGE.get())) {
+                    ShieldManager.add(b.owner, Passive2.SAGE_SHIELD,
+                        Passive2.SAGE_SHIELD_CAP, Passive2.SAGE_SHIELD_TCK);
+                }
+            }
         }
         lv.sendParticles(ParticleTypes.END_ROD, at.x, at.y, at.z, 18, 0.18, 0.18, 0.18, 0.06);
         lv.sendParticles(ParticleTypes.FIREWORK, at.x, at.y, at.z, 8, 0.15, 0.15, 0.15, 0.05);

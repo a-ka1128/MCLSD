@@ -157,8 +157,16 @@ public final class ChironManager {
         if (amount <= 0) return;
 
         // ⚠️ 자기 자신은 대상이 아니다 — 「가르침」 창이 열려 있을 때만 풀린다.
+        //
+        // ── 5성 2단 「제 상처를 보다」 ──
+        // 자기 체력이 30% 아래로 떨어지면 그때만 자신도 대상이 된다.
+        // 케이론의 알려진 약점은 «자기 회복이 C「가르침」 8초뿐»이라는 것이고, 그건
+        // 근접 힐러라는 자리값이라 없애면 안 된다. 그래서 규칙을 깨지 않고 **위기에서만**
+        // 푼다 — 평시엔 여전히 남만 낫고, 팀 힐 총량은 그대로다(4인 HPS 예산 무관).
+        boolean crisis = Passive2.on(caster, LSRelics.CHIRON.get())
+            && caster.getHealth() <= caster.getMaxHealth() * Passive2.CHIRON_SELF_HP;
         Player target = com.laststardust.relics.item.RelicSkills.weakestAlly(
-            level, origin, HEAL_RANGE, teachingActive(caster) ? null : caster);
+            level, origin, HEAL_RANGE, (teachingActive(caster) || crisis) ? null : caster);
         if (target == null) return;
 
         float missing = Math.max(0, target.getMaxHealth() - target.getHealth());

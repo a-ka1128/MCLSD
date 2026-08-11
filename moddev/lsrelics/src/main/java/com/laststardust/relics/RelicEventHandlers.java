@@ -252,16 +252,32 @@ public final class RelicEventHandlers {
     }
 
     // ── 방벽의 수호자: 근처(8칸)에 방패를 든 아군이 있으면 받는 피해 -5% ──
+    //
+    // ── 5성 2단 「불굴의 방벽」 ──
+    // 감소가 8% 로 오르고, 수호자가 **막고 있는 동안**에는 16% 가 된다.
+    // 이지스의 우클릭은 원래 자기 앞만 지킨다(ParryManager AEGIS_BLOCK_DR −25%).
+    // 2단은 그 «막는 행위»를 팀 전체로 번지게 한다 — 서 있기만 해도 오르는 수치가
+    // 아니라, 방패를 드는 순간에만 두 배가 되므로 «지킨다»가 조작으로 남는다.
+    //
+    // 여럿이 겹쳐도 가장 센 하나만 먹는다(아래 break). 이지스 둘이 서면 −16% 가
+    // 두 번 곱해져 −29% 가 되는데, 그건 탱커 둘의 값이 아니라 버그로 읽힌다.
     @SubscribeEvent
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
         LivingEntity victim = event.getEntity();
         if (!(victim instanceof Player) || victim.level().isClientSide) return;
+        float best = 0f;
         for (Player guard : victim.level().players()) {
-            if (guard.getMainHandItem().getItem() != LSRelics.GUARDIAN.get()) continue;
+            ItemStack held = guard.getMainHandItem();
+            if (held.getItem() != LSRelics.GUARDIAN.get()) continue;
             if (guard.distanceToSqr(victim) > 64.0) continue; // 8칸
-            event.setAmount(event.getAmount() * 0.95f);
-            return;
+            float dr = 0.05f;
+            if (Passive2.is(held, LSRelics.GUARDIAN.get())) {
+                boolean guarding = guard.isUsingItem() && guard.getUseItem() == held;
+                dr = guarding ? Passive2.AEGIS_GUARD_DR : Passive2.AEGIS_AURA_DR;
+            }
+            if (dr > best) best = dr;
         }
+        if (best > 0f) event.setAmount(event.getAmount() * (1f - best));
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -414,10 +430,31 @@ public final class RelicEventHandlers {
         } else if (s < 4) {
             event.getToolTip().add(Component.literal("§8  4성 — 궁극기 해금 §7(X)"));
         } else if (s < 5) {
-            event.getToolTip().add(Component.literal("§8  5성 — 모든 스킬이 최대 위력에 이른다"));
+            event.getToolTip().add(Component.literal("§8  5성 — 최대 위력 + §7패시브 2단 §8해금"));
         } else {
+            // 5성은 새 «버튼»이 없다. 그래서 무엇이 깨어났는지 한 줄로 말해주지 않으면
+            // 툴팁만 보고는 4성과 구분이 안 된다 — 실제로 그게 5성이 심심했던 이유였다.
             event.getToolTip().add(Component.literal("§8  모든 힘이 깨어났다"));
+            String t2 = tier2Line(stack.getItem());
+            if (t2 != null) event.getToolTip().add(Component.literal("§5  ✦ " + t2));
         }
+    }
+
+    /** 5성 패시브 2단 한 줄 설명. 수치는 {@link Passive2} 가 원본이다. */
+    private static String tier2Line(Item i) {
+        if (i == LSRelics.GUARDIAN.get()) return "불굴의 방벽 §7— 아군 −8% · 막는 중엔 −16%";
+        if (i == LSRelics.PIONEER.get())  return "거인의 발판 §7— 거인을 치면 3초간 −12%";
+        if (i == LSRelics.LANCER.get())   return "제압 §7— 3칸 밖에서 맞히면 2초 둔화 II";
+        if (i == LSRelics.HEALER.get())   return "생명의 샘 §7— 넘친 보호막이 아군 하나에게 더";
+        if (i == LSRelics.ASSASSIN.get()) return "망자의 발걸음 §7— 연쇄 중첩당 −8% (최대 −24%)";
+        if (i == LSRelics.HECATE.get())   return "저주의 전이 §7— 죽은 적의 낙인 절반이 주변 5칸으로";
+        if (i == LSRelics.HARMONIA.get()) return "울림 §7— 공명 오라 8칸 +10% → 11칸 +15%";
+        if (i == LSRelics.NEMESIS.get())  return "강철의 잔향 §7— 받아넘긴 뒤 3초간 −15%";
+        if (i == LSRelics.CHIRON.get())   return "제 상처를 보다 §7— 체력 30% 이하면 자신도 회복 대상";
+        if (i == LSRelics.GUNNER.get())   return "밀어내기 §7— 저격 거리에 비례한 넉백";
+        if (i == LSRelics.HUNTER.get())   return "바람을 타다 §7— 처치 시 도약 II 4초";
+        if (i == LSRelics.SAGE.get())     return "별빛 방벽 §7— 충전마다 흡수 2 (상한 8)";
+        return null;
     }
 
     // ── 각성이 평타도 올린다 ──
@@ -596,6 +633,45 @@ public final class RelicEventHandlers {
             sl.sendParticles(ParticleTypes.CRIT, victim.getX(), victim.getY() + victim.getBbHeight() * 0.6,
                 victim.getZ(), 8, 0.3, 0.3, 0.3, 0.2);
         }
+
+        // ── 5성 2단 「거인의 발판」 ──
+        // 거인을 때리면 3초간 내가 −12% 로 단단해진다.
+        //
+        // 보너스(+15%)를 올리는 쪽이 자연스러워 보이지만 그건 안 된다 — `/dummy` 더미는
+        // 최대 체력이 100만이라 **거인 살해자가 이미 걸린 채로 12종을 쟀다.** 여기 배수를
+        // 만지면 타이탄만 목표선(104)에서 떨어져 나간다.
+        // 대신 방향을 튼다. 타이탄은 근접 탱커고, 거인 앞에 서는 값은 딜이 아니라 «버팀»이다.
+        if (attacker instanceof ServerPlayer sp && Passive2.on(sp, LSRelics.PIONEER.get())) {
+            Passive2.guard(sp, Passive2.TITAN_DR, Passive2.TITAN_TICKS);
+        }
+    }
+
+    // ── 게볼그 5성 2단 「제압」 ──
+    // 3칸 밖에서 맞힌 적을 2초간 둔화 II(−30%). 1단 「긴 창」(사거리 +1.5)이
+    // «닿는다»만 주고 끝났던 것을, 「거리를 **유지한다**」까지 밀어준다.
+    // 붙어서 때리면 안 걸린다 — 창의 값어치를 쓴 대가로만 나온다.
+    @SubscribeEvent
+    public static void onLancerSuppress(LivingIncomingDamageEvent event) {
+        LivingEntity victim = event.getEntity();
+        if (victim.level().isClientSide || victim instanceof Player) return;
+        if (!(event.getSource().getEntity() instanceof ServerPlayer p)) return;
+        if (event.getSource().getDirectEntity() != p) return;   // 근접 타격만 (투사체 제외)
+        if (!Passive2.on(p, LSRelics.LANCER.get())) return;
+        if (p.distanceTo(victim) < Passive2.LANCER_MIN_DIST) return;
+        victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,
+            Passive2.LANCER_SLOW_TCK, Passive2.LANCER_SLOW_LV, false, true));
+    }
+
+    /**
+     * 연쇄 살상이 지금 몇 중첩인가 (0~3). 스틱스 2단이 이 값을 피해 감소로 되읽는다.
+     * 별도 장부 대신 «붙어 있는 모디파이어»를 세는 이유는 {@link Passive2#onIncoming} 주석 참고.
+     */
+    public static int frenzyStacks(ServerPlayer p) {
+        var inst = p.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (inst == null) return 0;
+        var m = inst.getModifier(FRENZY_SPD);
+        if (m == null) return 0;
+        return Math.round((float) (m.amount() / 0.15));
     }
 
     // ── 바람의 발걸음: 활로 처치 시 이동속도 추가 상승 ──
@@ -624,7 +700,22 @@ public final class RelicEventHandlers {
         // 자기가 잡아야 오르면 「지휘」가 아니라 그냥 자기 버프가 된다.
         if (player instanceof ServerPlayer sp) HarmonyManager.onAllyKill(sp);
 
+        // ── 헤스페로스 5성 2단 「저주의 전이」 ──
+        // 죽은 자에게 쌓인 낙인의 절반이 주변 5칸으로 옮겨간다. 단일 표적 DPS 는 정확히 0 —
+        // 표적이 죽어야 발동하니까. 난전에서만 값이 나오고, 그게 저주를 쌓는 유물의 결이다.
+        if (player instanceof ServerPlayer sp2 && player.level() instanceof ServerLevel sl2) {
+            Passive2.spreadCurse(sl2, event.getEntity(), sp2);
+        }
+
         if (player.getMainHandItem().getItem() != LSRelics.HUNTER.get()) return;
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 80, 0, false, true)); // +20% 4초
+
+        // ── 시리우스 5성 2단 「바람을 타다」 ──
+        // 이속에 도약이 얹힌다. 화살 피해는 안 건드린다(목표선 110) — 대신 «어디에 설 수
+        // 있는가»가 바뀐다. 사수의 값은 각도이고, 도약은 각도를 사는 유일한 수단이다.
+        if (player instanceof ServerPlayer sp3 && Passive2.on(sp3, LSRelics.HUNTER.get())) {
+            sp3.addEffect(new MobEffectInstance(MobEffects.JUMP, Passive2.HUNTER_JUMP_TCK,
+                Passive2.HUNTER_JUMP_LV, false, true));
+        }
     }
 }

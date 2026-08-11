@@ -280,6 +280,16 @@ public final class ParryManager {
         // ── 성공 ──
         event.setCanceled(true);
         addMomentum(guard);
+
+        // ── 5성 2단 「강철의 잔향」 ──
+        // 받아넘긴 뒤 3초간 −15%. **기세 획득량은 안 건드린다** — 기세는 일도양단의
+        // 배수로 들어가므로(MOMENTUM_PER = 0, 값이 전부 X 에 몰려 있다) 획득을 두 배로
+        // 하면 네메시스만 목표선(98)에서 튀어나간다.
+        // 대신 패링의 «다음 한 박자»를 준다. 한 번 맞춘 사람이 곧바로 다음 것도 노릴 수
+        // 있어야 「컨트롤이 어렵지만 잘하면 단단하다」는 설계가 실제로 성립한다.
+        if (Passive2.on(guard, LSRelics.NEMESIS.get())) {
+            Passive2.guard(guard, Passive2.NEMESIS_DR, Passive2.NEMESIS_TICKS);
+        }
         sl.sendParticles(ParticleTypes.CRIT, guard.getX(), guard.getY() + 1.1, guard.getZ(),
             24, 0.4, 0.35, 0.4, 0.25);
         sl.playSound(null, guard.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.4f, 0.6f);

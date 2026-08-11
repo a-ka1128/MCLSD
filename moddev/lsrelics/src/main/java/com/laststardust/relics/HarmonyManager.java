@@ -162,18 +162,25 @@ public final class HarmonyManager {
 
         for (ServerLevel level : event.getServer().getAllLevels()) {
             // 오라 — 하르모니아를 든 사람 주변
-            java.util.Set<UUID> inAura = new java.util.HashSet<>();
+            // ── 5성 2단 「울림」 ──
+            // 오라가 8칸 +10% → 11칸 +15% 가 된다. 자기 딜은 1 도 안 오른다(목표선 96 유지).
+            // 하르모니아의 값은 «내가 세지는 것»이 아니라 «내가 서 있는 자리가 넓어지는 것»이라,
+            // 마지막 계단이 반경으로 오는 게 맞다. 11칸이면 결속의 매듭(6칸) 밖의 원거리
+            // 아군까지 닿아서, 처음으로 파티 전원을 한 오라에 담을 수 있다.
+            java.util.Map<UUID, Float> aura = new java.util.HashMap<>();
             for (ServerPlayer h : level.players()) {
                 if (h.getMainHandItem().getItem() != LSRelics.HARMONIA.get()) continue;
-                for (ServerPlayer a : nearbyAllies(level, h.position(), AURA_RANGE, null)) {
-                    inAura.add(a.getUUID());
+                boolean t2 = Passive2.on(h, LSRelics.HARMONIA.get());
+                double range = t2 ? Passive2.HARMONIA_RANGE : AURA_RANGE;
+                float speed = t2 ? Passive2.HARMONIA_SPEED : AURA_SPEED;
+                for (ServerPlayer a : nearbyAllies(level, h.position(), range, null)) {
+                    aura.merge(a.getUUID(), speed, Math::max);   // 둘이 겹쳐도 센 쪽 하나만
                 }
             }
 
             for (ServerPlayer p : level.players()) {
                 long t = level.getGameTime();
-                mod(p, Attributes.MOVEMENT_SPEED, M_AURA,
-                    inAura.contains(p.getUUID()) ? AURA_SPEED : 0f);
+                mod(p, Attributes.MOVEMENT_SPEED, M_AURA, aura.getOrDefault(p.getUUID(), 0f));
 
                 int[] k = KILLS.get(p.getUUID());
                 float atk = (k != null && k[1] > t) ? KILL_ATK * k[0] : 0f;

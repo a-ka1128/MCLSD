@@ -128,6 +128,15 @@ public class PanaceaStaff extends Item implements RelicActions {
         boolean shielded = false;
         if (overflow > 0) {
             ShieldManager.add(ally, overflow, SHIELD_CAP, SHIELD_TICKS);
+            // ── 5성 2단 「생명의 샘」 ──
+            // 넘친 몫이 «가장 약한 다른 아군»에게도 같은 양으로 한 번 더 간다.
+            // 상한(6)은 그대로다 — 위 주석대로 5성에서 전원이 두꺼워지면 수성전이 무너진다.
+            // 늘어나는 건 두께가 아니라 **닿는 사람 수**다. 만피 아군 하나를 조준하는 동작이
+            // 둘을 덮으므로, 저녁에 파티를 한 명씩 돌던 일이 절반으로 준다.
+            if (com.laststardust.relics.Passive2.on(caster, com.laststardust.relics.LSRelics.HEALER.get())) {
+                Player second = RelicSkills.weakestAlly(level, caster, RANGE, ally);
+                if (second != null) ShieldManager.add(second, overflow, SHIELD_CAP, SHIELD_TICKS);
+            }
             shielded = true;
         }
 
