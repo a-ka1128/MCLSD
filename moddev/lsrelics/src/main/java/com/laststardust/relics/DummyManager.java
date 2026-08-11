@@ -93,6 +93,8 @@ public final class DummyManager {
     private static float retaliateDmg = 0f;      // 0 = 꺼짐
     private static int retaliateEvery = 30;      // 기본 1.5초
     private static long retaliateNext = 0;
+    /** 이번 측정에서 내가 실제로 넣은 되받아치기 횟수. 「원본」과 갈라 보려고 센다. */
+    private static int retaliateHits = 0;
 
     public static float retaliateDamage() { return retaliateDmg; }
     public static int retaliateInterval() { return retaliateEvery; }
@@ -418,6 +420,17 @@ public final class DummyManager {
             out.add(Component.literal(String.format(
                 "§8받은 피해 §7— 원본 §f%,.0f §8→ 감쇄 전 §f%,.0f §8→ 실제 §f%,.0f",
                 rawFirst, rawLast, taken)));
+            // ⚠️ 내가 넣은 몫과 «그 밖» 을 갈라 보인다. 2026-08-11 에 원본이 설정값의 1.5배로
+            //    나와 「되받아치기가 자주 때리나」를 의심했는데, 가시가 정확히 6타(=6회)였다.
+            //    즉 되받아치기는 맞고 «공격자 없는 다른 피해» 가 섞인 것이다 — 그 둘을 눈으로
+            //    가르지 못하면 「받은 피해의 몇 %」인 축복(가시)의 분모를 영영 못 믿는다.
+            float mine = retaliateDmg * retaliateHits;
+            out.add(Component.literal(String.format(
+                "§8  ├ 되받아치기 §f%d회 §8× %.0f = §f%,.0f", retaliateHits, retaliateDmg, mine)));
+            float other = rawFirst - mine;
+            out.add(Component.literal(other > 0.5f
+                ? String.format("§c  └ 그 밖의 피해 %,.0f §8— 공격자 없는 피해가 섞였다", other)
+                : "§8  └ 그 밖의 피해 없음"));
         }
 
         out.add(Component.literal("§8──────────────"));
@@ -477,7 +490,7 @@ public final class DummyManager {
     private static float taken = 0f;
 
     static void resetVitals() {
-        healed = 0f; natural = 0f; taken = 0f; rawFirst = 0f; rawLast = 0f;
+        healed = 0f; natural = 0f; taken = 0f; rawFirst = 0f; rawLast = 0f; retaliateHits = 0;
         com.laststardust.relics.blessing.BlessingEffects.resetShieldGiven();
     }
 
@@ -573,6 +586,7 @@ public final class DummyManager {
                     // 재는 경우(보호막 재충전 확인 등)에 «가끔 안 들어오는» 게 섞이면 안 된다.
                     p.invulnerableTime = 0;
                     p.hurt(d.level().damageSources().mobAttack(d), retaliateDmg);
+                    retaliateHits++;
                 }
             }
         }
