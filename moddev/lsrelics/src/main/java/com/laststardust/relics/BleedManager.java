@@ -34,8 +34,8 @@ public final class BleedManager {
     private static final class Bleed {
         final ServerLevel level;
         final LivingEntity victim;
-        final ServerPlayer source;
-        final float perTick; // INTERVAL 마다 주는 피해
+        ServerPlayer source;
+        float perTick;       // INTERVAL 마다 주는 피해
         int ticksLeft;
         Bleed(ServerLevel level, LivingEntity victim, ServerPlayer source, float perTick, int ticks) {
             this.level = level; this.victim = victim; this.source = source;
@@ -44,10 +44,29 @@ public final class BleedManager {
     }
 
     // perSecond: 초당 총 출혈 피해. durationTicks 동안 지속.
+    //
+    // ── 다시 걸면 «남은 몫 + 새 몫» 을 합쳐 다시 나눈다 (2026-08-11) ──
+    //
+    // 예전에는 이미 걸려 있으면 **지속시간만 늘리고 새 피해량을 통째로 버렸다.**
+    // 「중첩 없음」이 「나중 타격은 아무것도 안 한다」로 구현돼 있었던 셈이다.
+    //
+    // 스킬로 거는 둘(스틱스 급소 가르기·게볼그 투창)은 시전 간격이 지속시간보다 길어
+    // 겹칠 일이 거의 없었고, 그래서 이 결함이 오래 안 보였다. 그런데 별의 축복 「출혈」은
+    // **평타마다** 건다 — 초당 1.1회 × 4초 지속이라 상시로 겹치고, 그 결과 **첫 타격의
+    // 세기가 60초 내내 고정되고 나머지가 전부 사라졌다.**
+    //   2026-08-11 실측: 설계 「준 피해의 16%」 → 1,034 가 나와야 하는데 **114**(1/9).
+    //
+    // 남은 몫을 합쳐 다시 분배하면 «한 번에 하나»(중첩 없음)는 지키면서 피해는 안 버린다.
     public static void apply(ServerLevel level, LivingEntity victim, ServerPlayer source,
                              float perSecond, int durationTicks) {
+        float incoming = perSecond * durationTicks / 20.0f;   // 이번에 넣으려던 총량
         for (Bleed b : ACTIVE) {
-            if (b.victim == victim) { b.ticksLeft = Math.max(b.ticksLeft, durationTicks); return; }
+            if (b.victim != victim) continue;
+            float leftover = b.perTick * (b.ticksLeft / (float) INTERVAL);
+            b.perTick = (leftover + incoming) * INTERVAL / (float) durationTicks;
+            b.ticksLeft = durationTicks;
+            b.source = source;   // 마지막에 건 사람이 위협도·처치를 가져간다
+            return;
         }
         ACTIVE.add(new Bleed(level, victim, source, perSecond * INTERVAL / 20.0f, durationTicks));
     }
