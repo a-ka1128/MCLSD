@@ -413,8 +413,11 @@ public final class DummyManager {
         // 되받아친 판이면 조건을 같이 남긴다 — 안 남기면 나중에 「왜 이 판만 보호막이 떴지」가 된다.
         if (retaliateDmg > 0) {
             out.add(Component.literal(String.format(
-                "§8되받아치기 %.0f × %.1f초 주기 §7— 실제로 받은 피해 §f%,.0f §7· 내 최대 체력 §f%,.0f",
-                retaliateDmg, retaliateEvery / 20.0f, taken, maxHpOfFirstPlayer())));
+                "§8되받아치기 %.0f × %.1f초 주기 §7· 내 최대 체력 §f%,.0f",
+                retaliateDmg, retaliateEvery / 20.0f, maxHpOfFirstPlayer())));
+            out.add(Component.literal(String.format(
+                "§8받은 피해 §7— 원본 §f%,.0f §8→ 감쇄 전 §f%,.0f §8→ 실제 §f%,.0f",
+                rawFirst, rawLast, taken)));
         }
 
         out.add(Component.literal("§8──────────────"));
@@ -474,7 +477,7 @@ public final class DummyManager {
     private static float taken = 0f;
 
     static void resetVitals() {
-        healed = 0f; natural = 0f; taken = 0f;
+        healed = 0f; natural = 0f; taken = 0f; rawFirst = 0f; rawLast = 0f;
         com.laststardust.relics.blessing.BlessingEffects.resetShieldGiven();
     }
 
@@ -489,6 +492,34 @@ public final class DummyManager {
         if (!measuring) return;
         if (!(event.getEntity() instanceof ServerPlayer)) return;
         taken += event.getNewDamage();
+    }
+
+    // ── 「내가 넣은 값」이 「축복이 보는 값」으로 오는 사이를 본다 (2026-08-11) ──
+    //
+    // 가시 갑주가 설계(받은 피해의 25%)의 2.24배로 나왔는데, 원인을 코드만 보고 못 짚었다.
+    // 후보를 셋(amplify · onGiantSlayer · ls_mobscale) 짚었다가 셋 다 틀렸다.
+    // 그래서 **추측을 그만두고 잰다** — 같은 이벤트를 맨 앞(HIGHEST)과 맨 뒤(LOWEST)에서
+    // 각각 잡으면, 그 사이에 누가 값을 건드렸는지가 뺄셈 없이 그대로 보인다.
+    //   · rawFirst  = 아무도 안 건드린 원본 (내가 /dummy hit 으로 넣은 값이어야 한다)
+    //   · rawLast   = 방어도 감쇄 «직전» 값 (축복·유물 핸들러가 다 지난 뒤)
+    //   · taken     = 실제로 체력에서 깎인 값
+    private static float rawFirst = 0f;
+    private static float rawLast = 0f;
+
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGHEST)
+    public static void onPlayerIncomingFirst(
+            net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
+        if (!measuring) return;
+        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        rawFirst += event.getAmount();
+    }
+
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+    public static void onPlayerIncomingLast(
+            net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
+        if (!measuring) return;
+        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        rawLast += event.getAmount();
     }
 
     /**
