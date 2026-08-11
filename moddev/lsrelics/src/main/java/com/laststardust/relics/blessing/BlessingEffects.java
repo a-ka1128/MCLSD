@@ -139,6 +139,15 @@ public final class BlessingEffects {
         try { body.run(); } finally { healingBy = prev; }
     }
 
+    /**
+     * 지금 흐르는 회복이 <b>축복·유물이 일으킨 것</b>인가. 계측기({@code DummyManager})가
+     * 바닐라 자연 회복·음식·물약을 걸러내려고 읽는다.
+     *
+     * <p>「재생」 축복은 케이론 기준 <b>0.34 HPS</b> 라(최대 체력 34 의 4% 를 4초마다),
+     * 배경 회복이 조금이라도 섞이면 읽을 수가 없다.
+     */
+    public static boolean healAttributed() { return healingBy != null; }
+
     /** 여운 창을 연다 — {@code RelicSkills.ready()} 가 시전 성공 직후에 부른다. */
     public static void markSkillCast(ServerPlayer p) {
         if (v(p, "afterglow") <= 0f) return;

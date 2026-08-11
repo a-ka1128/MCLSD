@@ -396,11 +396,18 @@ public final class DummyManager {
 
         // ── 회복·흡수 ── 축복 넷(생명흡수·치유·범람·재생)은 여기서만 보인다.
         // 0 이면 줄을 안 낸다 — 회복이 없는 유물이 대부분이라 늘 0 이면 눈이 무시하게 된다.
-        if (healed > 0.05f || shielded > 0.05f) {
+        if (healed > 0.05f || shielded > 0.05f || natural > 0.05f) {
             out.add(Component.literal("§8──────────────"));
             out.add(Component.literal(String.format(
                 "§d회복 §f%,.0f §8(%.1f HPS)§7 · 흡수 §f%,.0f §8(%.1f/s)",
                 healed, healed / secs, shielded, shielded / secs)));
+            // 자연 회복은 «우리 것이 아니다». 따로 내되 지우지는 않는다 —
+            // 0 이면 「되받아치기가 안 맞고 있다」는 신호라 그것대로 값어치가 있다.
+            if (natural > 0.05f) {
+                out.add(Component.literal(String.format(
+                    "§8자연 회복 %,.0f (%.1f HPS) — 축복 아님, 위 회복에서 제외됨",
+                    natural, natural / secs)));
+            }
         }
         // 되받아친 판이면 조건을 같이 남긴다 — 안 남기면 나중에 「왜 이 판만 보호막이 떴지」가 된다.
         if (retaliateDmg > 0) {
@@ -463,16 +470,33 @@ public final class DummyManager {
     // 안 잡힌다. 둘을 합쳐 한 줄로 내면 「보호막이 안 도는」 것과 「보호막이 도는데 작은」
     // 것이 구분이 안 된다.
     private static float healed = 0f;
+    private static float natural = 0f;
     private static float shielded = 0f;
     private static float lastAbsorb = 0f;
 
-    static void resetVitals() { healed = 0f; shielded = 0f; lastAbsorb = 0f; }
+    static void resetVitals() { healed = 0f; natural = 0f; shielded = 0f; lastAbsorb = 0f; }
 
+    /**
+     * <b>축복·유물이 넣은 회복</b>과 <b>그 밖의 회복</b>을 갈라 센다 (2026-08-11).
+     *
+     * <p>가르는 기준은 {@code BlessingEffects.healingBy} 다 — 축복·유물이 넣는 회복은 전부
+     * 그 안을 지나고, 바닐라 자연 회복·음식·물약은 안 지난다.
+     *
+     * <p><b>왜 필요한가</b>: 「재생」 축복은 케이론 기준 <b>0.34 HPS</b> 다(최대 체력 34 의 4% 를
+     * 4초마다). 배경 회복이 조금이라도 섞이면 그 값은 읽을 수가 없다.
+     *
+     * <p>⚠️ <b>이 기능을 만든 계기는 오진이었다.</b> ⑤ 묶음 판 0 에서 회복 184 가 잡혔길래
+     * 「되받아치기로 깎이니 자연 회복이 돌았구나」로 읽었는데, 실제로는 <b>지우지 않고 남아
+     * 있던 생명 흡수·치유</b>였다({@code 1,371 × 0.11 × 1.22 = 184.0} — 소수점까지 맞는다).
+     * 기능 자체는 옳아서 남기지만, <b>회복이 이상하면 자연 회복부터 의심하지 말고
+     * {@code /bless status} 로 남은 축복부터 볼 것.</b>
+     */
     @SubscribeEvent
     public static void onHeal(net.neoforged.neoforge.event.entity.living.LivingHealEvent event) {
         if (!measuring) return;
         if (!(event.getEntity() instanceof ServerPlayer)) return;
-        healed += event.getAmount();
+        if (com.laststardust.relics.blessing.BlessingEffects.healAttributed()) healed += event.getAmount();
+        else natural += event.getAmount();
     }
 
     /** 흡수는 이벤트가 없다 — 매 틱 값을 보고 «늘어난 만큼»만 더한다(줄어든 건 소모다). */
