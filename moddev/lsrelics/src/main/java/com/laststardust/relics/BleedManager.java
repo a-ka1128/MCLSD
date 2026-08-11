@@ -62,7 +62,11 @@ public final class BleedManager {
         float incoming = perSecond * durationTicks / 20.0f;   // 이번에 넣으려던 총량
         for (Bleed b : ACTIVE) {
             if (b.victim != victim) continue;
-            float leftover = b.perTick * (b.ticksLeft / (float) INTERVAL);
+            // ⚠️ **정수 나눗셈이어야 한다.** 지급은 `ticksLeft % INTERVAL == 0` 일 때만 일어나므로
+            //    남은 횟수는 floor 다. 실수로 나누면(65/10.0 = 6.5, 실제 60·50·40·30·20·10 = 6회)
+            //    매번 조금씩 부풀고 그게 누적돼 **설계 16% 가 실측 18.4% 로 나왔다**(2026-08-11).
+            int remaining = b.ticksLeft / INTERVAL;
+            float leftover = b.perTick * remaining;
             b.perTick = (leftover + incoming) * INTERVAL / (float) durationTicks;
             b.ticksLeft = durationTicks;
             b.source = source;   // 마지막에 건 사람이 위협도·처치를 가져간다
