@@ -328,7 +328,10 @@
 		#Disable/enable Ferrous Wroughtnaut's boss health bar
 		has_boss_bar = true
 		#Disable/enable Ferrous Wroughtnaut healing while not active
-		heals_out_of_battle = true
+		# Last Stardust 2026-08-11: true -> false
+		# 이 보스는 정면 방어라 «돌면서» 싸운다. 그때마다 교전이 끊긴 것으로 잡혀 회복하면
+		# ls_config.js 의 absHp 3500 (4명 60초 · 딜 유지율 0.45 로 역산)이 통째로 무의미해진다.
+		heals_out_of_battle = false
 		#Disable/enable Ferrous Wroughtnaut resetting health when a player respawns nearby. (Prevents respawn cheese!)
 		reset_health_when_respawn = true
 

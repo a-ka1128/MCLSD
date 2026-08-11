@@ -8,8 +8,10 @@
 // 그래서 - 끝내라고 밀어붙이되 문을 닫지는 않는다 - .
 //
 // 동작
-//   **교전으로 인정된 시간** 8분 후부터 30초마다 그 보스의 공격력 +10% 누적.
+//   **교전으로 인정된 시간** 8분 후부터 30초마다 그 보스의 공격력 +10% 누적 (상한 +200%).
+//   **물러나 있으면 같은 속도로 식는다** — 30초마다 −10%. 2026-08-11 에 더했다.
 //   경고를 같이 띄운다 — 갑자기 아파지면 "왜 죽었는지 모르겠다"가 되고, 그건 실패한 설계다.
+//   그리고 **보스 이름에 「⚡+N%」를 붙인다.** 채팅은 놓치지만 체력바·이름표는 못 놓친다.
 //
 //   「교전으로 인정된」이 핵심이다. 벽시계로 세면 아무도 안 싸우는 보스가 저절로 +200% 가 되고,
 //   나중에 그 앞을 지나간 사람이 영문 모르고 한 방에 죽는다 — 바로 윗줄이 금지한 그 실패다.
@@ -47,6 +49,16 @@ const EN_MOD = 'last_stardust:enrage'
 const EN_RANGE = 48                   // 교전으로 볼 거리 — 원거리 유물(시리우스·솔라리스) 사거리 + 여유
 const EN_IDLE_RESET = 2 * 60 * 20     // 이만큼 교전이 끊기면 «전투가 끝났다»로 보고 되감는다
 
+// ── 식는다 (2026-08-11, 유저 요청) ──
+// 여태 격노는 «올라가기만» 했다. 내려오는 길은 「2분 완전히 끊기면 통째로 0」 하나뿐이라,
+// 파티가 물러났다 다시 붙는 식으로 싸우면 2분 공백이 안 생겨 **한 번 오른 게 끝까지 남았다.**
+// 그러면 격노가 「길어지면 압박」이 아니라 「한 번 삐끗하면 그 판은 끝」이 된다.
+//
+// 오르는 것과 **같은 속도로** 내려가게 한다 — 30초마다 1단계. 대칭이라 설명도 한 줄이면 되고,
+// 「물러나면 식는다」가 그 자체로 전술이 된다(회복·부활·재정비할 시간을 벌 값어치가 생긴다).
+// 2분 하드 리셋은 그대로 둔다 — 방치된 보스를 빨리 0 으로 돌려놓는 건 그쪽이 낫다.
+const EN_DECAY_TICKS = EN_STEP_TICKS  // 30초마다 −1단계 (오름과 대칭)
+
 // uuid -> { eng, idle, stacks, name }
 //   eng  = 교전으로 인정된 누적 틱 (벽시계가 아니다)
 //   idle = 교전이 끊긴 연속 틱
@@ -83,6 +95,42 @@ function enStrip(server, e) {
 function enIsBoss(id) {
   // ls_bossdiff.js 가 먼저 로드되어 BOSS_SET 을 만들어 둔다(파일명 알파벳 순: bossdiff < enrage).
   return typeof BOSS_SET !== 'undefined' && !!BOSS_SET[id]
+}
+
+// ── 격노는 «보이는» 것이어야 한다 (2026-08-11, 유저 요청) ──
+// 여태 알림이 채팅 한 줄뿐이었다(첫 진입 1회 + 4단계마다). 그런데 그걸 놓치면 화면에서
+// 격노한 보스와 멀쩡한 보스가 **완전히 똑같이 생겼다.** 특히 나중에 그 앞을 지나가는
+// 사람은 알림을 아예 못 본다 — 이 파일 머리말이 «왜 죽었는지 모르겠다»라고 적은 실패다.
+//
+// 이름을 바꾼다. 보스 체력바는 대개 개체 표시 이름을 그대로 읽으므로 체력바에도 같이 뜨고,
+// 체력바가 없는 보스는 머리 위 이름표로 보인다. 둘 다 **놓칠 수가 없다.**
+//
+// ⚠️ 원래 이름은 «처음 붙일 때» 한 번만 잡아둔다(st.base). 매번 읽으면 접미사가 붙은
+//    이름을 다시 읽어 «⚡+10% ⚡+20%» 로 겹친다.
+// ⚠️ 서버가 내려가면 EN_ACTIVE(메모리 장부)가 사라져 이름만 남을 수 있다. 그래서
+//    enClear 는 장부를 안 믿고 **표식 문자열로 훑어서** 지운다 — 재시작 후에도 복구된다.
+const EN_MARK = '\u26A1'   // ⚡ — 이 글자가 있으면 우리가 붙인 이름이다
+
+function enMark(server, e, st, stacks) {
+  try {
+    var u = e.getUuid()
+    if (stacks <= 0) {
+      if (st.named) {
+        try { server.runCommandSilent(`data remove entity ${u} CustomName`) } catch (err) { /* 없으면 정상 */ }
+        st.named = false
+      }
+      return
+    }
+    if (!st.base) {
+      // 따옴표·역슬래시가 들어오면 아래 SNBT 가 깨진다. 이름에 그런 글자가 있을 일은
+      // 거의 없지만, 깨지면 «이름이 안 붙는» 게 아니라 «명령이 통째로 실패»라 조용해진다.
+      try { st.base = String(e.getName().getString()).replace(/["'\\]/g, '') } catch (err) { st.base = '보스' }
+    }
+    var pct = Math.round(stacks * EN_STEP_PCT * 100)
+    server.runCommandSilent(
+      `data merge entity ${u} {CustomName:'{"text":"${st.base} ${EN_MARK}+${pct}%","color":"red"}',CustomNameVisible:1b}`)
+    st.named = true
+  } catch (err) { lsWarn('ls_enrage:mark', err) }
 }
 
 function enApply(server, e, stacks) {
@@ -130,12 +178,27 @@ ServerEvents.tick(event => {
       if (enEngaged(server, e)) {
         enSt.eng += 40      // 이 훑기 주기(2초)만큼
         enSt.idle = 0
+        enSt.decay = 0
       } else {
         enSt.idle += 40
+
+        // ── 물러나 있는 동안 식는다 (2026-08-11) ──
+        // 30초마다 1단계씩. `eng` 도 같이 되감아야 한다 — 장부의 단계만 내리면 다시 붙는
+        // 순간 아래 enWant 계산이 옛 eng 를 보고 **그대로 되돌려 놓는다.**
+        enSt.decay = (enSt.decay || 0) + 40
+        while (enSt.stacks > 0 && enSt.decay >= EN_DECAY_TICKS) {
+          enSt.decay -= EN_DECAY_TICKS
+          enSt.eng = Math.max(0, enSt.eng - EN_STEP_TICKS)
+          enSt.stacks -= 1
+          if (enSt.stacks <= 0) { enStrip(server, e); enMark(server, e, enSt, 0) }
+          else { enApply(server, e, enSt.stacks); enMark(server, e, enSt, enSt.stacks) }
+        }
+
         // 오래 끊기면 «전투가 끝났다». 되감고 붙인 것도 걷는다 —
         // 장부만 비우면 공격력이 오른 채 그대로 남는다.
         if (enSt.idle >= EN_IDLE_RESET && enSt.eng > 0) {
           enStrip(server, e)
+          enMark(server, e, enSt, 0)
           console.log(`[LS-ENRAGE] reset ${enSt.name} (교전 끊김 ${Math.floor(enSt.idle / 20)}초 · ${enSt.stacks}단계 해제)`)
           enSt.eng = 0
           enSt.stacks = 0
@@ -150,6 +213,7 @@ ServerEvents.tick(event => {
 
       enSt.stacks = enWant
       enApply(server, e, enWant)
+      enMark(server, e, enSt, enWant)
 
       if (enWant === 1) enBegan = true
       // 매 단계 알리면 소음이 된다. 4단계(2분)마다만.
@@ -182,14 +246,21 @@ ServerEvents.tick(event => {
 
 // 격노를 통째로 걷는다. 모디파이어는 엔티티에 붙어 있어서 장부만 비우면
 // - 공격력이 오른 채 그대로 남는다 - . 붙인 것을 먼저 떼고 나서 장부를 비운다.
+// ⚠️ **장부(EN_ACTIVE)를 믿지 않는다.** 서버가 내려가면 그 객체는 사라지는데 엔티티에
+//    붙인 모디파이어와 이름은 남는다. 그래서 장부에 없더라도 **이름에 표식이 있으면**
+//    같이 걷는다 — 재시작 뒤에 「이름만 ⚡+120% 인 보스」가 떠도는 걸 이걸로 복구한다.
 function enClear(server) {
   var enN = 0
   try {
     server.overworld().getEntities().forEach(e => {
       try {
         if (!e || !e.getUuid) return
-        if (!EN_ACTIVE[String(e.getUuid())]) return
-        server.runCommandSilent(`attribute ${e.getUuid()} minecraft:generic.attack_damage modifier remove ${EN_MOD}`)
+        var enU = String(e.getUuid())
+        var enNamed = false
+        try { enNamed = String(e.getName().getString()).indexOf(EN_MARK) >= 0 } catch (err) { /* 못 읽으면 장부만 본다 */ }
+        if (!EN_ACTIVE[enU] && !enNamed) return
+        server.runCommandSilent(`attribute ${enU} minecraft:generic.attack_damage modifier remove ${EN_MOD}`)
+        if (enNamed) { try { server.runCommandSilent(`data remove entity ${enU} CustomName`) } catch (err2) { /* 없으면 정상 */ } }
         enN++
       } catch (err) { lsWarn('ls_enrage:clear-one', err) }
     })
