@@ -134,6 +134,11 @@
 			"type": "gateways:command",
 			"command": "vault gate <summoner>",
 			"desc": "주간 별빛 금고 — 균열 원정 +1"
+		},
+		{
+			"type": "gateways:command",
+			"command": "rkey done <summoner>",
+			"desc": "균열 서약 정산"
 		}
 	],
 	"failures": [

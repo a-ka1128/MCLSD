@@ -115,13 +115,27 @@ EntityEvents.spawned(event => {
   // 보스는 ls_bossdiff.js 가 따로 스케일링한다 — 여기서 또 곱하면 이중 적용이 된다
   if (typeof BOSS_SET !== 'undefined' && BOSS_SET[id]) return
 
+  // ── 균열 서약 (ls_oath.js) ──
+  // 서약이 걸린 관문 안에서 태어난 몹은 티어 배율에 **곱해서** 더 세진다.
+  // 여기서 받아 같이 계산하는 이유는 아래 `setBaseValue` 가 «쓰는 사람이 하나»여야
+  // 하기 때문이다(이 파일 머리말의 «세 번째 시도»). 저쪽에서 따로 또 쓰면 복리가
+  // 되살아난다 — 재시작 10번에 ×6.2 까지 갔던 바로 그 사고다.
+  var rkHp = 1.0, rkDmg = 1.0
+  try {
+    if (typeof rkMobMul === 'function') {
+      rkHp = rkMobMul(server, e, 'hp')
+      rkDmg = rkMobMul(server, e, 'dmg')
+    }
+  } catch (err) { lsWarn('ls_mobscale:oath', err) }
+
   const tier = msTier(server)
-  if (tier <= 0) return
+  // 티어 0(관문 0개)이어도 서약이 걸렸으면 계속 간다 — 안 그러면 초반에 서약이 무효다.
+  if (tier <= 0 && rkHp === 1.0 && rkDmg === 1.0) return
   if (!msIsHostile(e)) return
 
   const cfg = msCfg()
-  const hpMul = cfg.hp[tier] || 1.0
-  const dmgMul = cfg.dmg[tier] || 1.0
+  const hpMul = (cfg.hp[tier] || 1.0) * rkHp
+  const dmgMul = (cfg.dmg[tier] || 1.0) * rkDmg
 
   // ── 현재값을 읽지 않는다 ──
   // `LS.defaultAttrBase` 는 그 «몹 종류»의 공장 출고값을 준다. 지금 이 개체가 몇 번
@@ -145,7 +159,9 @@ EntityEvents.spawned(event => {
     try { defDmg = LS.defaultAttrBase(e, 'minecraft:generic.attack_damage') } catch (err) { lsWarn('ls_mobscale:defDmg', err) }
     var d = defDmg > 0 ? e.getAttribute('minecraft:generic.attack_damage') : null
     // 원래 센 몹이 배율만으로 즉사기를 갖지 않게 절대 상한을 씌운다
-    if (d) d.setBaseValue(Math.min(defDmg * dmgMul, defDmg + cfg.dmgCapAdd))
+    // 상한도 서약만큼 같이 연다. 안 열면 이미 센 몹에게는 「광포」가 통째로 먹혀서,
+    // **난이도는 그대로인데 보상 배율만 치르는** 판이 된다.
+    if (d) d.setBaseValue(Math.min(defDmg * dmgMul, defDmg + cfg.dmgCapAdd * rkDmg))
   }
 })
 

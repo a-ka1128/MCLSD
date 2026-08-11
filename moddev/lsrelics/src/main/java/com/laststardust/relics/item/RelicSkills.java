@@ -854,19 +854,32 @@ public final class RelicSkills {
 
     // ─────────────────────────────── 궁극: 에테르 이지스 "불멸의 맹세" (궁극·4성) ───────────────────────────────
     // X 키. 5초 무적 + 광역 도발 + 근처 아군 보호막. 쿨 60초.
+    // ── 5성이 여기만 비어 있었다 (2026-08-11, 유저 결정) ──
+    // 궁극 12종 중 **이것만 각성을 전혀 안 탔다.** 나머지는 전부 `dmg(stack, …)` 로 배율
+    // (×1.0→×3.0)을 먹는데, 여기는 값이 통째로 포션 효과 레벨이라 `stack` 을 안 읽었다.
+    // 그래서 4성에 배운 궁이 5성에서도 한 칸도 안 움직였다 — 이지스만 「각성해도 궁이 그대로」.
+    //
+    // 무적(저항 V)은 배율을 더 올릴 데가 없으니 **지속**으로 간다. 흡수는 양과 지속 둘 다,
+    // 도발은 범위와 지속 둘 다. 「탱커의 5성」은 더 아픈 게 아니라 **더 오래 버티는** 것이다.
+    //
+    // ⚠️ 흡수는 바닐라 효과라 `4 × (amplifier + 1)` HP 다. 40 HP = amp 9 · 80 HP = amp 19.
+    //    아이콘에 「X」·「XX」로 뜨는 건 그래서다 — 숫자를 직접 넣는 통로가 없다.
     public static void oathOfImmortality(ServerLevel level, ServerPlayer player, ItemStack stack) {
         if (!ready(level, player, stack, "cdOath", "불멸의 맹세", 1200, 4)) return;
-        // 무적 (저항 V = 100% 경감) 5초
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 4, false, true));
-        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 200, 3, false, true));
-        // 광역 도발 (16칸, 8초)
-        TauntManager.taunt(level, player, 16.0, 160);
-        // 근처 아군 보호막
+        boolean five = star(stack) >= 5;
+
+        // 무적 (저항 V = 100% 경감) — 5초 → 5성 8초
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, five ? 160 : 100, 4, false, true));
+        // 흡수 40 HP / 10초 → 5성 80 HP / 15초
+        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, five ? 300 : 200, five ? 19 : 9, false, true));
+        // 광역 도발 16칸·8초 → 5성 20칸·10초
+        TauntManager.taunt(level, player, five ? 20.0 : 16.0, five ? 200 : 160);
+        // 근처 아군 보호막 — 흡수 8 HP → 5성 20 HP · 저항 I 5초 → 5성 8초
         for (Player ally : level.players()) {
             if (ally == player) continue;
             if (ally.distanceToSqr(player) > 144.0) continue; // 12칸
-            ally.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 200, 1, false, true));
-            ally.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 0, false, true));
+            ally.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 200, five ? 4 : 1, false, true));
+            ally.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, five ? 160 : 100, 0, false, true));
         }
         // ── 연출: 금빛 성역 돔 + 하늘로 뻗는 맹세의 기둥 ──
         double cx = player.getX(), cy = player.getY(), cz = player.getZ();

@@ -39,6 +39,7 @@ function ksTryUse(server, player) {
   server.runCommandSilent(`clear ${player.username} ${id} 1`)
   server.runCommandSilent(`execute at ${player.username} run open_gateway ~ ~1 ~ ${def.gate}`)
   server.players.forEach(p => p.tell(Text.of(`§5⌘ ${player.username}§7이(가) §d${def.name}§7을(를) 열었습니다!`)))
+  rkBegin(server, player)   // 균열 서약 — 걸어 둔 어픽스를 이 판에 복사한다
   server.runCommandSilent(`execute as ${player.username} at @s run playsound minecraft:block.end_portal.spawn master @a ~ ~ ~ 0.8 0.7`)
   console.log(`[LS-KEYS] ${player.username} opened ${def.gate}`)
 }
@@ -58,4 +59,4 @@ BlockEvents.rightClicked(event => {
   ksTryUse(player.server, player)
 })
 
-console.log('[Last Stardust] 균열 열쇠 로드됨 — 3종 (일반/정예/황금)')
+console.log('[Last Stardust] 균열 열쇠 로드됨 — 3종 (일반/정예/황금) + 서약 3종)')
