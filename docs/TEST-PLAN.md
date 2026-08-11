@@ -363,6 +363,32 @@ R·V·C·X 를 각각. **여기서 보는 건 「도는가」이지 수치가 �
 /lsgimmick clear
 ```
 
+⚠️ **그런데 이걸로는 반만 지워진다 (2026-08-11에 실제로 물렸다).**
+
+`/lsgimmick clear` 는 **시험 소환 표식이 붙은 개체만** 지운다(`WroughtnautGimmick.TAG`).
+바로 위에서 바닐라 `/summon` 으로 부른 넷(하이드라·나이트팬텀·어고스트·프로스트모)에는
+그 표식이 없어서 **그대로 남는다.**
+
+남으면 조용히 세진다. 근처에 사람이 있고 보스가 그 사람을 노리고 있으면 교전 시계가 도는데,
+**딜을 안 넣어도 시계는 돈다.** 8분 뒤부터 30초마다 +10%, 상한 +200%(×3.0) —
+나중에 그 앞을 지나가면 네더라이트 풀셋이 한 방에 죽는다.
+
+그래서 바닐라로 부른 건 손으로 지운다:
+
+```
+/kill @e[type=twilightforest:hydra]
+/kill @e[type=twilightforest:knight_phantom]
+/kill @e[type=twilightforest:ur_ghast]
+/kill @e[type=mowziesmobs:frostmaw]
+```
+
+세션을 끝낼 때 습관처럼:
+
+```
+/enrage status      ← 붙어 있으면 숫자가 나온다
+/enrage clear       ← 걷어낸다
+```
+
 ---
 
 ## 4. 2명 필요 — T3 건틀렛 하나뿐
