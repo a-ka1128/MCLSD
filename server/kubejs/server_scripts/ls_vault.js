@@ -51,14 +51,23 @@ function vtAdd(server, name, slot, n) {
     //     UUID string must be 32 or 36 characters long, got 'a_ka1128'
     // 로 터지고 명령이 통째로 죽는다. `ls_util.js` 가 이미 그 함정을 문서로 남겨 뒀는데
     // 초판에서 그대로 밟았다 — 이름으로 찾을 땐 언제나 lsPlayerByName 이다.
-    // 딱 채운 순간에만 크게 알린다. 매번 띄우면 공성 끝날 때마다 채팅이 세 줄씩 는다.
-    if (have === need) {
+    // ── 알림은 «넘어선 순간»에만 ──
+    // 초판은 `have === need` 로 봤다. 그러면 **한 번에 여럿이 들어와 건너뛰면 영영 안 뜬다**
+    // (`/vault add 1 3` 을 두 번 치면 3 → 6 이라 3 을 지나친 적이 없는 게 된다).
+    // 실제로 그걸로 「아무것도 안 뜬다」를 겪었다. 지금은 **이번에 선을 넘었는가**를 본다.
+    var before = have - (n | 0)
+    if (before < need && have >= need) {
+      // ⚠️ `server.getPlayer(name)` 은 UUID 전용이다 — 이름을 넣으면
+      //     UUID string must be 32 or 36 characters long, got 'a_ka1128'
+      // 로 터진다. `ls_util.js` 가 이미 그 함정을 문서로 남겨 뒀는데 초판에서 그대로 밟았다.
       var p = lsPlayerByName(server, name)
       if (p) {
         p.tell(Text.of(`§b✦ 별빛 금고 §7— §f${r.label}§7 칸이 열렸다! §8(${r.prize}) §7· /vault`))
         server.runCommandSilent(`execute as ${name} at @s run playsound minecraft:block.amethyst_block.chime master @s ~ ~ ~ 1.0 1.2`)
       }
     } else if (have < need) {
+      // 진행 중일 때만 조용히 한 줄. 이미 열린 칸에 더 쌓이는 건 안 알린다 —
+      // 공성 끝날 때마다 채팅이 세 줄씩 늘어난다.
       var p2 = lsPlayerByName(server, name)
       if (p2) p2.tell(Text.of(`§8✦ 금고 ${r.label} ${have}/${need}`))
     }
@@ -169,9 +178,15 @@ ServerEvents.commandRegistry(event => {
         .then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
           const p = ctx.source.player
           if (!p) return 0
-          vtAdd(ctx.source.server, String(p.username),
-            ctx.getArgument('slot', 'java.lang.Integer') | 0,
+          var sl = ctx.getArgument('slot', 'java.lang.Integer') | 0
+          if (sl < 1 || sl > VT_SLOTS) { ctx.source.sendSystemMessage(Text.of('§c칸은 1~3 이다.')); return 0 }
+          vtAdd(ctx.source.server, String(p.username), sl,
             ctx.getArgument('n', 'java.lang.Integer') | 0)
+          // **시험용 명령은 언제나 결과를 되돌려준다.** vtAdd 의 알림은 «선을 넘은 순간»에만
+          // 뜨므로, 이미 열린 칸에 더 밀어 넣으면 조용하다 — 그 침묵이 「명령이 안 먹는다」로
+          // 읽혔다. 여기서 현재값을 찍으면 그 착각이 안 생긴다.
+          ctx.source.sendSystemMessage(Text.of(
+            `§7금고 §f${vtRow(sl).label} §7— §e${LS.vaultHave(ctx.source.server, String(p.username), sl) | 0}§7/${LS.vaultNeed(sl) | 0}`))
           return 1
         })))))
 })
