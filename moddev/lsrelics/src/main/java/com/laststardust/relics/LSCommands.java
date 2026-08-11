@@ -98,6 +98,29 @@ public final class LSCommands {
                             .executes(ctx -> setDummyArmor(ctx.getSource(),
                                 IntegerArgumentType.getInteger(ctx, "armor"),
                                 IntegerArgumentType.getInteger(ctx, "toughness"))))))
+                // ── 축복 측정용 손잡이 둘 (2026-08-11) ──
+                // 축복 18종 중 11종이 기본 설정으로는 «영원히 발동하지 않아» 잴 수가 없었다.
+                //   · 체력 비율에 걸리는 것 — 더미 체력이 100만이라 25% 밑으로 못 간다
+                //   · 맞아야 도는 것     — 더미가 setNoAi(true) 라 반격을 안 한다
+                // 그 둘을 여는 손잡이다. 자세한 계획은 `docs/BLESSING.md` 「재보정」.
+                .then(Commands.literal("hp")
+                    .then(Commands.argument("hp", IntegerArgumentType.integer(0, 1_000_000))
+                        .executes(ctx -> {
+                            int v = IntegerArgumentType.getInteger(ctx, "hp");
+                            DummyManager.setHp(v);
+                            ctx.getSource().sendSuccess(() -> Component.literal(v > 0
+                                ? String.format("§6더미 체력 §e%,d §8— 자동 보충 끔 (체력 비율 축복 측정용)", v)
+                                : "§6더미 체력 §e기본(1,000,000) §8— 자동 보충 켬"), false);
+                            return 1;
+                        })))
+                .then(Commands.literal("hit")
+                    .then(Commands.argument("damage", com.mojang.brigadier.arguments.FloatArgumentType.floatArg(0f, 1000f))
+                        .executes(ctx -> setDummyHit(ctx.getSource(),
+                            com.mojang.brigadier.arguments.FloatArgumentType.getFloat(ctx, "damage"), 30))
+                        .then(Commands.argument("everyTicks", IntegerArgumentType.integer(1, 200))
+                            .executes(ctx -> setDummyHit(ctx.getSource(),
+                                com.mojang.brigadier.arguments.FloatArgumentType.getFloat(ctx, "damage"),
+                                IntegerArgumentType.getInteger(ctx, "everyTicks"))))))
                 // 몹 공격력 설계용 — 이 피해가 장비별로 얼마나 들어가는지
                 .then(Commands.literal("calc")
                     .then(Commands.argument("damage", IntegerArgumentType.integer(1, 1000)).executes(ctx -> {
@@ -714,6 +737,19 @@ public final class LSCommands {
         DummyManager.setArmor(armor, toughness);
         src.sendSuccess(() -> Component.literal(String.format(
             "§a표적 방어도 §e%d§a · 견고함 §e%d §7— 이제 측정값이 감쇄를 반영한다", armor, toughness)), false);
+        return 1;
+    }
+
+    // 더미가 되받아친다. 0 이면 끈다.
+    //
+    // ⚠️ **측정 중에만 돈다.** 밖에서도 때리면 더미가 「가만히 서 있는 과녁」이 아니게 되어,
+    //    설정해두고 잊은 채 다른 걸 하다가 죽는다. `/dummy start` 안에서만 산다.
+    private static int setDummyHit(CommandSourceStack src, float dmg, int everyTicks) {
+        DummyManager.setRetaliate(dmg, everyTicks);
+        src.sendSuccess(() -> Component.literal(dmg <= 0
+            ? "§6되받아치기 §8— 끔"
+            : String.format("§6되받아치기 §e%.0f §7× §e%.1f초 §7주기 §8— 측정 중에만 · 16칸 안 (보호막·가시·투지·원한 측정용)",
+                dmg, everyTicks / 20.0f)), false);
         return 1;
     }
 

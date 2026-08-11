@@ -43,8 +43,59 @@ public final class DummyManager {
 
     private static final Logger LOG = LogUtils.getLogger();
 
-    private static final double DUMMY_HP = 1_000_000.0; // AttributeCaps 가 상한을 풀어둬서 가능
+    private static final double DUMMY_HP_DEFAULT = 1_000_000.0; // AttributeCaps 가 상한을 풀어둬서 가능
     private static final double REFILL_BELOW = 0.2;     // 20% 밑으로 떨어지면 다시 채운다
+
+    // ── 더미 체력을 바꿀 수 있다 (2026-08-11) ──
+    // 기본 100만은 「60초 동안 안 죽는 과녁」이라는 목적에는 맞았는데, **체력 비율에 걸리는
+    // 축복을 영원히 못 재는** 부작용이 있었다. `executioner`(체력 25% 이하 추가 피해)는
+    // 100만짜리를 60초에 25% 까지 못 깎으니 한 번도 발동하지 않고, `harvest`(처치 시 회복)는
+    // 더미가 안 죽으니 마찬가지다. 재려면 체력을 내릴 수 있어야 한다.
+    //   · 낮게 잡을 때 REFILL_BELOW(20%) 자동 보충이 executioner 구간을 지워버리므로,
+    //     체력을 직접 정한 동안에는 보충을 끈다(아래 dummyHpFixed).
+    private static double dummyHp = DUMMY_HP_DEFAULT;
+    private static boolean dummyHpFixed = false;
+
+    public static double hp() { return dummyHp; }
+    public static boolean hpFixed() { return dummyHpFixed; }
+
+    /** 값이 0 이하면 기본값(100만)으로 되돌리고 자동 보충도 다시 켠다. */
+    public static void setHp(double v) {
+        dummyHpFixed = v > 0;
+        dummyHp = dummyHpFixed ? v : DUMMY_HP_DEFAULT;
+        prune();
+        for (LivingEntity d : DUMMIES) applyHp(d);
+    }
+
+    private static void applyHp(LivingEntity d) {
+        AttributeInstance a = d.getAttribute(Attributes.MAX_HEALTH);
+        if (a != null) a.setBaseValue(dummyHp);
+        d.setHealth((float) dummyHp);
+    }
+
+    // ── 더미가 되받아친다 (2026-08-11) ──
+    // 더미는 `setNoAi(true)` 라 절대 반격하지 않는다. 측정이 흐려지지 않게 일부러 그렇게
+    // 만든 것인데, 그 때문에 **맞아야 발동하는 축복 5종을 아예 못 쟀다**
+    // (`barrier`·`thorns`·`resolve`·`grudge`·`sprint`).
+    //
+    // AI 를 주는 대신 **정해진 피해를 정해진 주기로** 넣는다. 실제 몹보다 오히려 낫다 —
+    // 「1.5초마다 20」처럼 고정하면 보호막이 몇 번 터졌는지가 산수로 떨어진다. AI 를 주면
+    // 이동·쿨·명중이 섞여 그 계산이 다시 추정이 된다.
+    //
+    // ⚠️ 피해원은 더미(공격자 엔티티)를 그대로 쓴다. `thorns`·`grudge` 는 「누가 때렸나」를
+    //    보므로 공격자가 없는 피해로 넣으면 그 둘이 안 돈다.
+    private static float retaliateDmg = 0f;      // 0 = 꺼짐
+    private static int retaliateEvery = 30;      // 기본 1.5초
+    private static long retaliateNext = 0;
+
+    public static float retaliateDamage() { return retaliateDmg; }
+    public static int retaliateInterval() { return retaliateEvery; }
+
+    public static void setRetaliate(float dmg, int everyTicks) {
+        retaliateDmg = Math.max(0f, dmg);
+        retaliateEvery = Math.max(1, everyTicks);
+        retaliateNext = tick + retaliateEvery;
+    }
 
     private static final List<LivingEntity> DUMMIES = new ArrayList<>();
 
@@ -174,10 +225,10 @@ public final class DummyManager {
         dummy.setCustomNameVisible(true);
 
         AttributeInstance hp = dummy.getAttribute(Attributes.MAX_HEALTH);
-        if (hp != null) hp.setBaseValue(DUMMY_HP);
+        if (hp != null) hp.setBaseValue(dummyHp);
         AttributeInstance kb = dummy.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
         if (kb != null) kb.setBaseValue(1.0); // 밀려나면 근접이 계속 쫓아가야 해서 측정이 흐려진다
-        dummy.setHealth((float) DUMMY_HP);
+        dummy.setHealth((float) dummyHp);
         applyArmor(dummy);
 
         // ── 엔티티 자체에 표식을 박는다 ──
@@ -248,6 +299,8 @@ public final class DummyManager {
         HITS.clear();
         RELICS.clear();
         BUFFS.clear();
+        resetVitals();
+        retaliateNext = tick + retaliateEvery;
         for (LivingEntity d : DUMMIES) d.setHealth(d.getMaxHealth());
         startTick = tick;
         measuring = true;
@@ -329,6 +382,22 @@ public final class DummyManager {
             }
         }
 
+        // ── 회복·흡수 ── 축복 넷(생명흡수·치유·범람·재생)은 여기서만 보인다.
+        // 0 이면 줄을 안 낸다 — 회복이 없는 유물이 대부분이라 늘 0 이면 눈이 무시하게 된다.
+        if (healed > 0.05f || shielded > 0.05f) {
+            out.add(Component.literal("§8──────────────"));
+            out.add(Component.literal(String.format(
+                "§d회복 §f%,.0f §8(%.1f HPS)§7 · 흡수 §f%,.0f §8(%.1f/s)",
+                healed, healed / secs, shielded, shielded / secs)));
+        }
+        // 되받아친 판이면 조건을 같이 남긴다 — 안 남기면 나중에 「왜 이 판만 보호막이 떴지」가 된다.
+        if (retaliateDmg > 0) {
+            out.add(Component.literal(String.format(
+                "§8되받아치기 %.0f × %.1f초 주기 §7(받은 피해 총 %,.0f)",
+                retaliateDmg, retaliateEvery / 20.0f,
+                retaliateDmg * Math.floor(secs * 20 / retaliateEvery))));
+        }
+
         out.add(Component.literal("§8──────────────"));
         out.add(Component.literal(String.format(
             "§7보스 체력 환산 §8— 60초 §f%,.0f §8· 90초 §f%,.0f §8· 120초 §f%,.0f",
@@ -372,18 +441,73 @@ public final class DummyManager {
         HITS.merge(key, 1, Integer::sum);
     }
 
+    // ── 회복·흡수 집계 (2026-08-11) ──
+    //
+    // 왜 필요한가: 축복 18종 중 넷(`lifesteal`·`mend`·`overflow`·`regen`)은 **피해가 아니라
+    // 회복**으로 나타난다. 리포트가 피해만 세니 그 넷은 재도 화면에 아무 변화가 없었다 —
+    // 「돌긴 도는데 얼마인지 모르는」 상태였다.
+    //
+    // 흡수(`overflow`·`barrier`)를 따로 세는 이유: 흡수는 최대 체력을 안 넘으므로 heal 로는
+    // 안 잡힌다. 둘을 합쳐 한 줄로 내면 「보호막이 안 도는」 것과 「보호막이 도는데 작은」
+    // 것이 구분이 안 된다.
+    private static float healed = 0f;
+    private static float shielded = 0f;
+    private static float lastAbsorb = 0f;
+
+    static void resetVitals() { healed = 0f; shielded = 0f; lastAbsorb = 0f; }
+
+    @SubscribeEvent
+    public static void onHeal(net.neoforged.neoforge.event.entity.living.LivingHealEvent event) {
+        if (!measuring) return;
+        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        healed += event.getAmount();
+    }
+
+    /** 흡수는 이벤트가 없다 — 매 틱 값을 보고 «늘어난 만큼»만 더한다(줄어든 건 소모다). */
+    private static void sampleAbsorb(MinecraftServer sv) {
+        float now = 0f;
+        for (ServerPlayer p : sv.getPlayerList().getPlayers()) {
+            if (p.isSpectator()) continue;
+            now += p.getAbsorptionAmount();
+        }
+        if (now > lastAbsorb) shielded += now - lastAbsorb;
+        lastAbsorb = now;
+    }
+
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         tick++;
         server = event.getServer();   // rescan() 이 쓸 유일한 서버 참조
         if (DUMMIES.isEmpty()) return;
         prune();
-        // 더미가 죽어서 측정이 끊기지 않게 체력을 다시 채운다
-        for (LivingEntity d : DUMMIES) {
-            if (d.getHealth() < d.getMaxHealth() * REFILL_BELOW) d.setHealth(d.getMaxHealth());
+        // 더미가 죽어서 측정이 끊기지 않게 체력을 다시 채운다.
+        // ⚠️ 체력을 손으로 정해둔 동안에는 보충하지 않는다 — `executioner`(체력 25% 이하)를
+        //    재려고 낮게 잡았는데 20% 에서 자동으로 꽉 채우면 그 구간이 통째로 사라진다.
+        if (!dummyHpFixed) {
+            for (LivingEntity d : DUMMIES) {
+                if (d.getHealth() < d.getMaxHealth() * REFILL_BELOW) d.setHealth(d.getMaxHealth());
+            }
         }
+
+        // ── 되받아치기 ── 측정 중에만 돈다. 밖에서 맞으면 「가만히 서 있는 과녁」이 아니게 된다.
+        if (measuring && retaliateDmg > 0 && tick >= retaliateNext) {
+            retaliateNext = tick + retaliateEvery;
+            for (LivingEntity d : DUMMIES) {
+                if (!d.isAlive()) continue;
+                for (ServerPlayer p : event.getServer().getPlayerList().getPlayers()) {
+                    if (p.isSpectator() || p.isCreative()) continue;
+                    if (p.distanceToSqr(d) > 256.0) continue;   // 16칸 — 재는 사람만
+                    // 무적 프레임을 지운다. 1.5초 주기라 원래도 안 겹치지만, 주기를 짧게 잡고
+                    // 재는 경우(보호막 재충전 확인 등)에 «가끔 안 들어오는» 게 섞이면 안 된다.
+                    p.invulnerableTime = 0;
+                    p.hurt(d.level().damageSources().mobAttack(d), retaliateDmg);
+                }
+            }
+        }
+
         if (!measuring) return;
         MinecraftServer server = event.getServer();
+        sampleAbsorb(server);
 
         // 정해둔 시간이 되면 스스로 멈추고 결과를 전원에게 알린다.
         // 손으로 stop 을 치면 그 반응 시간이 그대로 측정 창에 섞여서, 매번 다른 길이로 재게 된다
