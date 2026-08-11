@@ -47,15 +47,19 @@ function vtAdd(server, name, slot, n) {
     var r = vtRow(slot)
     var have = LS.vaultHave(server, String(name), slot) | 0
     var need = LS.vaultNeed(slot) | 0
+    // ⚠️ `server.getPlayer(name)` 은 **UUID 전용**이다. 이름을 넣으면
+    //     UUID string must be 32 or 36 characters long, got 'a_ka1128'
+    // 로 터지고 명령이 통째로 죽는다. `ls_util.js` 가 이미 그 함정을 문서로 남겨 뒀는데
+    // 초판에서 그대로 밟았다 — 이름으로 찾을 땐 언제나 lsPlayerByName 이다.
     // 딱 채운 순간에만 크게 알린다. 매번 띄우면 공성 끝날 때마다 채팅이 세 줄씩 는다.
     if (have === need) {
-      var p = server.getPlayer(String(name))
+      var p = lsPlayerByName(server, name)
       if (p) {
         p.tell(Text.of(`§b✦ 별빛 금고 §7— §f${r.label}§7 칸이 열렸다! §8(${r.prize}) §7· /vault`))
         server.runCommandSilent(`execute as ${name} at @s run playsound minecraft:block.amethyst_block.chime master @s ~ ~ ~ 1.0 1.2`)
       }
     } else if (have < need) {
-      var p2 = server.getPlayer(String(name))
+      var p2 = lsPlayerByName(server, name)
       if (p2) p2.tell(Text.of(`§8✦ 금고 ${r.label} ${have}/${need}`))
     }
   } catch (e) { lsWarn('ls_vault:add', e) }
