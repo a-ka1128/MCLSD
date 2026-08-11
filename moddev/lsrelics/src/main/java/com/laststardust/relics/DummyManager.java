@@ -301,7 +301,13 @@ public final class DummyManager {
         BUFFS.clear();
         resetVitals();
         retaliateNext = tick + retaliateEvery;
-        for (LivingEntity d : DUMMIES) d.setHealth(d.getMaxHealth());
+        // ⚠️ **체력을 손으로 정한 동안에는 안 채운다** (2026-08-11).
+        //    `executioner`(체력 25% 이하)를 재려면 «이미 깎인 상태»에서 시작할 수 있어야 한다.
+        //    매번 꽉 채우면 판의 3/4 이 조건 밖이라 30% 효과가 평균 +7.5% 로 묽어지고,
+        //    평타 노이즈(±4%)에 묻힌다. 다시 채우고 싶으면 `/dummy hp <값>` 을 한 번 더 친다.
+        if (!dummyHpFixed) {
+            for (LivingEntity d : DUMMIES) d.setHealth(d.getMaxHealth());
+        }
         startTick = tick;
         measuring = true;
         plannedTicks = Math.max(0, seconds) * 20;
