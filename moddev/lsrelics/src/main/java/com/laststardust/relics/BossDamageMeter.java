@@ -3,6 +3,9 @@ package com.laststardust.relics;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.Locale;
+
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -53,12 +56,20 @@ public final class BossDamageMeter {
         public double maxHit;   // 실제 기준 한 방 최대
         public int hits;
         public int deaths;
+        public String label = "보스";
     }
 
     private static final Map<Integer, Meter> METERS = new HashMap<>();
 
-    /** 이 개체의 피해를 세기 시작한다. {@link BossFightTracker}가 보스를 등록할 때 부른다. */
-    public static void watch(int id) { METERS.computeIfAbsent(id, k -> new Meter()); }
+    /**
+     * 이 개체의 피해를 세기 시작한다. {@link BossFightTracker}가 보스를 등록할 때 부른다.
+     * 이름을 같이 받는 이유는 «플레이어가 죽는 순간»에도 보고를 띄우기 때문이다 — 그때는
+     * 트래커를 거치지 않으므로 여기가 이름을 알아야 한다.
+     */
+    public static void watch(int id, String label) {
+        Meter m = METERS.computeIfAbsent(id, k -> new Meter());
+        m.label = label;
+    }
 
     /** 지켜보는 개체가 아니면 null — 호출부가 조용히 빠진다. */
     private static Meter of(int id) { return METERS.get(id); }
@@ -98,12 +109,70 @@ public final class BossDamageMeter {
         if (a > m.maxHit) m.maxHit = a;
     }
 
+    // ── 죽은 «순간»에 보고한다 ──
+    // 초판은 보고가 BossFightTracker.report 한 곳뿐이었고, 그건 **보스가 죽어야** 돈다.
+    // 그런데 이 계기의 용도는 「보스가 얼마나 아픈가」다 — 아픈지 재려면 맞아야 하고,
+    // 맞다 보면 **플레이어가 먼저 죽는다.** 실제로 첫 시험에서 그렇게 됐고, 한 대도
+    // 못 건진 채 판이 끝났다. 알고 싶은 바로 그 순간에 아무것도 안 나오는 계기였다.
     @SubscribeEvent
     public static void onDeath(LivingDeathEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        if (!(event.getEntity() instanceof ServerPlayer p)) return;
         Meter m = of(attackerId(event.getSource()));
         if (m == null) return;
         m.deaths++;
+        if (p.hasPermissions(2)) print(p, m, false);
+    }
+
+    /**
+     * 지금까지의 기록을 화면에 뿌린다. 보스 처치({@link BossFightTracker#report})와
+     * 플레이어 사망, 그리고 {@code /lsgimmick dmg} 가 같은 것을 쓴다 —
+     * <b>같은 값을 세 곳이 각자 포맷하면 셋이 조금씩 다른 말을 하게 된다.</b>
+     *
+     * @param done 판이 끝나서 내는 보고인가(true) — 중간 조회면 그렇게 표시한다
+     */
+    public static void print(ServerPlayer p, Meter m, boolean done) {
+        if (m == null || m.hits <= 0) {
+            p.sendSystemMessage(Component.literal("§8  받은 피해 기록 없음 — 아직 한 대도 안 맞았다."));
+            return;
+        }
+        double avgRaw = m.raw / m.hits;
+        double avgTaken = m.taken / m.hits;
+        double cut = avgRaw - avgTaken;   // 방어도·저항이 «한 대에서 빼는 몫»
+
+        p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
+            "§6▣ %s §7받은 피해%s — §f%d대 §7· 감쇄 전 §f%.0f §7→ 실제 §c%.0f §8(한 대 평균 %.1f · 최대 %.1f)",
+            m.label, done ? "" : " §8(진행 중)", m.hits, m.raw, m.taken, avgTaken, m.maxHit)));
+        if (m.deaths > 0) {
+            p.sendSystemMessage(Component.literal(
+                String.format(Locale.ROOT, "§c  사망 %d회", m.deaths)));
+        }
+        double hp = p.getMaxHealth();
+        if (avgTaken > 0.01) {
+            p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
+                "§7  내 최대 체력 §f%.0f §7→ §e%.1f§7대에 죽는다 §8(한 대 = 최대 체력의 %.0f%%)",
+                hp, hp / avgTaken, avgTaken / hp * 100)));
+        }
+
+        // ── 여기가 이 계기를 만든 이유다 ──
+        // 방어도가 «빼는 몫»처럼 굴어서 dmg% 배수와 실제 피해 배수가 다르다.
+        // 그 어긋남은 계산이 아니라 이 판에서 실제로 빠진 양으로만 알 수 있다.
+        if (cut > 0.5 && avgTaken > 0.01) {
+            p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
+                "§8  방어도가 빼는 몫 §7%.1f§8/대 — §cdmg%% 를 올리면 실제 피해는 그보다 크게 는다", cut)));
+            StringBuilder sb = new StringBuilder("§8  ");
+            for (int pct : new int[]{120, 130, 140, 150}) {
+                double t = avgRaw * (pct / 100.0) - cut;
+                sb.append(String.format(Locale.ROOT, "§7%d%%§8→§f×%.2f  ", pct, t / avgTaken));
+            }
+            p.sendSystemMessage(Component.literal(sb.toString().trim()));
+        }
+    }
+
+    /** 가장 많이 때린 개체의 기록. {@code /lsgimmick dmg} 가 쓴다 — 보통 지금 싸우는 보스다. */
+    public static Meter busiest() {
+        Meter best = null;
+        for (Meter m : METERS.values()) if (best == null || m.hits > best.hits) best = m;
+        return best;
     }
 
     /** 판이 끝나면 반드시 부른다 — 죽든, 청크 언로드로 사라지든. */

@@ -143,7 +143,7 @@ public final class BossFightTracker {
         fights.add(new Fight(mob, firstDelay));
         // 피해 계기는 «지켜보라고 한 개체»만 센다. 안 그러면 플레이어를 때린 모든 몹이
         // 맵에 남아 서버 수명 내내 자란다 — 여기가 보스 목록을 아는 유일한 자리다.
-        BossDamageMeter.watch(mob.getId());
+        BossDamageMeter.watch(mob.getId(), label);
     }
 
     public void tick() {
@@ -255,41 +255,10 @@ public final class BossFightTracker {
                 "§6▣ %s 처치 §8· §e%.1f초 §8· §7%d명 §8· 체력 %.0f (실측 DPS %.0f)",
                 label, secs, f.peakParty, maxHp, maxHp / secs)));
 
-            // ── 얼마나 아팠나 ──
-            if (dm != null && dm.hits > 0) {
-                double avgRaw = dm.raw / dm.hits;
-                double avgTaken = dm.taken / dm.hits;
-                double cut = avgRaw - avgTaken;          // 방어도·저항이 «한 대에서 빼는 몫»
-                p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
-                    "§7  받은 피해 — §f%d대 §7· 감쇄 전 §f%.0f §7→ 실제 §c%.0f §8(한 대 평균 %.1f · 최대 %.1f)",
-                    dm.hits, dm.raw, dm.taken, avgTaken, dm.maxHit)));
-                if (dm.deaths > 0) {
-                    p.sendSystemMessage(Component.literal(
-                        String.format(Locale.ROOT, "§c  사망 %d회", dm.deaths)));
-                }
-                double hp = p.getMaxHealth();
-                if (avgTaken > 0.01) {
-                    p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
-                        "§7  내 최대 체력 §f%.0f §7→ §e%.1f§7대에 죽는다 §8(한 대 = 최대 체력의 %.0f%%)",
-                        hp, hp / avgTaken, avgTaken / hp * 100)));
-                }
+            // 같은 값을 여기서 따로 포맷하지 않는다 — 처치·사망·조회 셋이 각자 찍으면
+            // 셋이 조금씩 다른 말을 하게 된다. 포맷은 BossDamageMeter.print 한 곳이다.
+            if (dm != null) BossDamageMeter.print(p, dm, true);
 
-                // ── 여기가 이 계기를 만든 이유다 ──
-                // ApothicAttributes 아래에서 방어도는 «비율»이 아니라 «한 대에서 빼는 몫»처럼 군다.
-                // 그래서 `/bossdiff dmg` 를 ×1.4 해도 **실제 피해는 ×1.4 가 아니다** — 빼는 몫이
-                // 그대로라 남는 쪽만 곱해진다. 짐작으로 올리면 반드시 과하게 올리게 되므로,
-                // 이 판에서 실제로 빠진 양으로 «진짜 배수»를 계산해 찍는다.
-                if (cut > 0.5 && avgTaken > 0.01) {
-                    p.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
-                        "§8  방어도가 빼는 몫 §7%.1f§8/대 — §cdmg%% 를 올리면 실제 피해는 그보다 크게 는다", cut)));
-                    StringBuilder sb = new StringBuilder("§8  ");
-                    for (int pct : new int[]{120, 130, 140, 150}) {
-                        double t = avgRaw * (pct / 100.0) - cut;
-                        sb.append(String.format(Locale.ROOT, "§7%d%%§8→§f×%.2f  ", pct, t / avgTaken));
-                    }
-                    p.sendSystemMessage(Component.literal(sb.toString().trim()));
-                }
-            }
             // 권장 체력은 «4명·60초» 목표를 가진 보스에게만 뜻이 있다. 탐험 보스(신호만 내는
             // 트래커)는 그 목표를 안 갖는다 — 거기에 같은 줄을 띄우면 없는 기준을 있는 것처럼 만든다.
             if (!periodic) continue;

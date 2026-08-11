@@ -171,6 +171,21 @@ public final class LSCommands {
         event.getDispatcher().register(
             Commands.literal("lsgimmick")
                 .requires(s -> s.hasPermission(2))
+                // ── 지금까지 얼마나 아팠나 ──
+                // 처치 보고와 사망 보고만 있으면 **둘 다 판이 끝나야** 나온다. 조율은
+                // 「30초 맞아 보고 값을 본다」가 제일 싸므로 중간 조회가 있어야 한다.
+                .then(Commands.literal("dmg").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    BossDamageMeter.Meter m = BossDamageMeter.busiest();
+                    if (m == null) {
+                        ctx.getSource().sendFailure(Component.literal(
+                            "지켜보는 보스가 없다 — 먼저 /lsgimmick summon (또는 ignis·lich·gauntlet·monstrosity summon)"));
+                        return 0;
+                    }
+                    BossDamageMeter.print(p, m, false);
+                    return 1;
+                }))
                 .then(Commands.literal("summon").executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
