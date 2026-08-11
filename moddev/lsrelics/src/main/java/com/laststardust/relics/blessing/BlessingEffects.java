@@ -374,11 +374,28 @@ public final class BlessingEffects {
         // ⚠️ 이름표를 단다 — 연쇄와 같은 이유다(2026-08-11). 맨 `hurt` 면 계측 리포트에서
         //    **평타 칸에 섞인다.** 반사 피해원은 플레이어가 주인이라 「내가 준 피해」로 잡히는데,
         //    그러면 「평타가 세진 건지 반사가 붙은 건지」를 못 가른다.
+        //
+        // ── 피해원을 `relicSource()` 로 바꿨다 (2026-08-11, 실측 후 유저 결정) ──
+        // 예전엔 `damageSources().thorns(p)`(바닐라)였는데, 그러면 **우리가 관리하지 않는
+        // 피해 타입**이 되어 스킬트리·장비의 배수를 제멋대로 탄다. 실측에서 설계의 2.2배가
+        // 나왔고, 그 정체가 이거였다:
+        //   · `relicScale`(케이론 1.374) — 유물을 든 사람의 모든 피해에 곱한다. 이건 정상이다
+        //   · 그리고 **×1.5** — 같은 판에서 평타(근접)는 안 붙는데 가시만 붙었다.
+        //     바닐라 가시가 «마법»으로 분류돼 그쪽 노드를 탄 것이다. 같은 판의 축성은
+        //     `relicSource()` 를 써서 이론값과 정확히 맞았다(113.2 vs 113.6).
+        //
+        // `RelicSkills.dt()` 머리말이 애초에 이 문제로 만들어졌다 — 「태그 없는 피해를 전부
+        // melee 로 분류해서 지팡이 스킬이 근접 노드로 올라간다」. **가시만 그 처리를 안 받고
+        // 있었다.** 이제 유물 스킬과 같은 취급을 받는다.
+        //
+        // ⚠️ 대가: 바닐라 가시 타입은 방어도를 무시했는데 이제 안 무시한다. 다만 이 팩의
+        //    방어도는 뺄셈처럼 작동해서(관통 실측 참고) 반사처럼 작은 피해엔 영향이 크지 않다.
         float thorns = v(p, "thorns");
         if (thorns > 0f && event.getSource().getEntity() instanceof LivingEntity foe
             && foe != p && foe.isAlive()) {
             derived(() -> com.laststardust.relics.LsDamage.hit(
-                foe, level.damageSources().thorns(p), raw * thorns, "가시"));
+                foe, com.laststardust.relics.item.RelicSkills.relicSource(level, p),
+                raw * thorns, "가시"));
         }
     }
 
