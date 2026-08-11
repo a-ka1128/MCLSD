@@ -277,7 +277,18 @@ public final class BlessingEffects {
                 if (e == origin || e == p || e instanceof Player) continue;
                 if (!e.isAlive() || e.isAlliedTo(p)) continue;
                 if (e.distanceToSqr(origin) > r * r) continue;
-                e.hurt(level.damageSources().playerAttack(p), amount);
+                // ── 이름표를 단다 (2026-08-11) ──
+                // 예전엔 맨 `hurt` 라 이름표가 없었고, 계측 리포트에서 **평타 칸에 섞였다.**
+                // 그래서 2026-08-11 측정에서 「평타 65타 → 168타」로만 보였고, 실제 값은
+                // 기준선을 빼서 역산해야 했다 — 무보정 두 판의 평타 타수가 8% 벌어져
+                // 그 오차가 그대로 증폭돼 **16~21% 라는 넓은 답**이 나왔다.
+                // 「출혈」은 이름표가 있어 한 줄로 딱 읽혔다. 같은 대접을 해준다.
+                //
+                // ⚠️ LsDamage.hit 은 `inSkill` 을 세운다. 연쇄는 «평타에서 파생된» 피해라
+                //    위협도 평타 배수(ThreatManager)가 안 붙게 되는데, 그게 맞다 —
+                //    한 번 휘두른 것으로 어그로를 세 배 끄는 게 오히려 이상하다.
+                com.laststardust.relics.LsDamage.hit(
+                    e, level.damageSources().playerAttack(p), amount, "연쇄");
                 hit++;
             }
         });
