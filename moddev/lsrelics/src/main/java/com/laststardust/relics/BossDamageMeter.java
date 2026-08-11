@@ -50,6 +50,8 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 public final class BossDamageMeter {
     private BossDamageMeter() {}
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     public static final class Meter {
         public double raw;      // 감쇄 전 총합 (방어도·저항이 깎기 전)
         public double taken;    // 실제 총합
@@ -120,7 +122,23 @@ public final class BossDamageMeter {
         Meter m = of(attackerId(event.getSource()));
         if (m == null) return;
         m.deaths++;
+        log(m, "사망");
         if (p.hasPermissions(2)) print(p, m, false);
+    }
+
+    /**
+     * 로그에 한 줄. <b>화면 줄만으로는 부족하다</b> — 조율은 대개 판이 끝난 «뒤에»
+     * 로그를 뒤져서 하는데(`docs/BLESSING.md` 의 교훈), 죽는 순간의 채팅은 리스폰과
+     * 사망 메시지에 곧바로 밀린다. 실제로 그래서 한 번 값을 놓쳤다.
+     */
+    public static void log(Meter m, String when) {
+        if (m == null || m.hits <= 0) return;
+        LOG.info("[전투 피해] {} ({}) · {}대 · 감쇄전={} 실제={} · 한대평균={} 최대={} · 사망={}",
+            m.label, when, m.hits,
+            String.format(Locale.ROOT, "%.0f", m.raw),
+            String.format(Locale.ROOT, "%.0f", m.taken),
+            String.format(Locale.ROOT, "%.1f", m.taken / m.hits),
+            String.format(Locale.ROOT, "%.1f", m.maxHit), m.deaths);
     }
 
     /**

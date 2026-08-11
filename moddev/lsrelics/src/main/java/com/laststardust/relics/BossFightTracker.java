@@ -236,15 +236,7 @@ public final class BossFightTracker {
         BossDamageMeter.Meter dm = BossDamageMeter.take(f.boss.getId());
 
         // 로그에도 남긴다 — 화면 줄은 OP 에게만 가고 스크롤에 금방 밀리는데, 조율은
-        // 대개 판이 끝난 «뒤에» 로그를 뒤져서 한다(`docs/BLESSING.md` 의 교훈).
-        if (dm != null && dm.hits > 0) {
-            LOG.info("[전투 피해] {} · {}대 · 감쇄전={} 실제={} · 한대평균={} 최대={} · 사망={}",
-                label, dm.hits,
-                String.format(Locale.ROOT, "%.0f", dm.raw),
-                String.format(Locale.ROOT, "%.0f", dm.taken),
-                String.format(Locale.ROOT, "%.1f", dm.taken / dm.hits),
-                String.format(Locale.ROOT, "%.1f", dm.maxHit), dm.deaths);
-        }
+        BossDamageMeter.log(dm, "처치");
 
         if (!(f.boss.level() instanceof ServerLevel level)) return;
         for (ServerPlayer p : level.players()) {
