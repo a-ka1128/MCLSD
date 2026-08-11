@@ -655,6 +655,15 @@ function finishSiege(server, outcome) {
     playAll(server, 'minecraft:entity.player.levelup', 0.7, 1.2)
     say(server, `§a✔ ${grand ? '대공세를 격퇴했다!' : '성역 방어 성공!'} §e공동 금고 +${reward} §7· 위협도↓(${getThreat(server)})`)
     if (grand) lsAdv(server, '@a', 'siege_grand')   // 도전과제 (ls_util.js)
+    // ── 주간 별빛 금고 1칸 (ls_vault.js) ──
+    // **관전자를 뺀 접속자 전원**에게 준다. 공성은 「누가 마무리했나」가 없는 공동 이벤트라
+    // 마지막 킬을 잡은 사람만 세면 벽을 고치고 봉화를 켠 사람이 아무것도 못 받는다.
+    // 로드 순서가 s < v 라 `typeof` 로 감싼다 — 없어도 공성은 그대로 끝나야 한다.
+    try {
+      if (typeof vtSiegeWin === 'function') {
+        server.players.forEach(p => { if (!p.isSpectator()) vtSiegeWin(server, String(p.username)) })
+      }
+    } catch (e) { lsWarn('ls_siege:vault', e) }
     // 공성 격퇴 = 반복 가능한 정수 공급처 (무기 각성과 마을 재건을 동시에 굴려야 하므로).
     // 대공세는 항상, 일반 공성은 고위협(HIGH_THREAT_ESS 이상)에서 완전 격퇴했을 때만 —
     // "위협도를 낮게 깔면 안전하지만 정수가 안 나온다"는 선택지를 만든다.

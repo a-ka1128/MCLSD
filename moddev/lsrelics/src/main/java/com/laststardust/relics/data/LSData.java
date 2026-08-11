@@ -32,6 +32,7 @@ public class LSData extends SavedData {
     private final BossDiffData bossDiff = new BossDiffData();
     private final TitleData titles = new TitleData();
     private final BountyData bounty = new BountyData();
+    private final VaultData vault = new VaultData();
     private final BeaconData beacons = new BeaconData();
     private final CasinoData casino = new CasinoData();
     private final RescueData rescue = new RescueData();
@@ -76,6 +77,10 @@ public class LSData extends SavedData {
     }
 
     // 현상금 — 게시 중인 3건과 진행도 (이관 5단계).
+    public VaultData vault() {
+        return vault;
+    }
+
     public BountyData bounty() {
         return bounty;
     }
@@ -148,6 +153,7 @@ public class LSData extends SavedData {
         data.bossDiff.load(tag.getCompound("bossDiff"), registries);
         data.titles.load(tag.getCompound("titles"), registries);
         data.bounty.load(tag.getCompound("bounty"), registries);
+        data.vault.load(tag.getCompound("vault"), registries);
         data.beacons.load(tag.getCompound("beacons"), registries);
         data.casino.load(tag.getCompound("casino"), registries);
         data.rescue.load(tag.getCompound("rescue"), registries);
@@ -170,6 +176,7 @@ public class LSData extends SavedData {
         tag.put("bossDiff", bossDiff.save(registries));
         tag.put("titles", titles.save(registries));
         tag.put("bounty", bounty.save(registries));
+        tag.put("vault", vault.save(registries));
         tag.put("beacons", beacons.save(registries));
         tag.put("casino", casino.save(registries));
         tag.put("rescue", rescue.save(registries));

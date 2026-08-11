@@ -1218,5 +1218,70 @@ public class LSKubeBridge implements KubeJSPlugin {
         public void syncTown(ServerPlayer player) {
             if (player != null) TownGui.sync(player);
         }
+
+        // ══════════════════════════════════════════════════════════════
+        //  주간 별빛 금고 (VaultData)
+        //
+        //  ⚠️ 읽기 전에 **반드시** vaultRollover 를 먼저 부른다. 주 판정을 스크립트가
+        //  들고 있으면 리셋이 언제 도는지가 두 곳의 사정으로 갈린다 — 실시간 기준이라
+        //  서버가 켜져 있는 채로 자정을 넘기는 일이 실제로 흔하다.
+        // ══════════════════════════════════════════════════════════════
+
+        /** 주가 넘어갔으면 전원 진행도를 지우고 true. 매 틱 불러도 싸다(정수 비교 하나). */
+        public boolean vaultRollover(MinecraftServer server) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.vault().rollover()) return false;
+            data.dirty();
+            return true;
+        }
+
+        public int vaultWeek(MinecraftServer server) {
+            return server == null ? 0 : LSData.get(server).vault().week();
+        }
+
+        public int vaultHave(MinecraftServer server, String name, int slot) {
+            return server == null ? 0 : LSData.get(server).vault().have(name, slot);
+        }
+
+        public int vaultNeed(int slot) {
+            return com.laststardust.relics.data.VaultData.need(slot);
+        }
+
+        public boolean vaultOpen(MinecraftServer server, String name, int slot) {
+            return server != null && LSData.get(server).vault().open(name, slot);
+        }
+
+        public int vaultOpenCount(MinecraftServer server, String name) {
+            return server == null ? 0 : LSData.get(server).vault().openCount(name);
+        }
+
+        public boolean vaultClaimed(MinecraftServer server, String name) {
+            return server != null && LSData.get(server).vault().claimed(name);
+        }
+
+        public void addVault(MinecraftServer server, String name, int slot, int n) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.vault().add(name, slot, n);
+            data.dirty();
+        }
+
+        /** 수령. 이미 받았거나 그 칸이 안 열렸으면 false — 판정은 여기 하나뿐이다. */
+        public boolean claimVault(MinecraftServer server, String name, int slot) {
+            if (server == null) return false;
+            LSData data = LSData.get(server);
+            if (!data.vault().claim(name, slot)) return false;
+            data.dirty();
+            return true;
+        }
+
+        /** 관리자 초기화. 이름이 비면 전원. */
+        public void resetVault(MinecraftServer server, String name) {
+            if (server == null) return;
+            LSData data = LSData.get(server);
+            data.vault().reset(name);
+            data.dirty();
+        }
     }
 }

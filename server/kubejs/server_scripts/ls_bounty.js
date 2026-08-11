@@ -107,6 +107,11 @@ function btComplete(server, i, b, playerName) {
   btPlay(server, 'minecraft:entity.player.levelup', 0.8, 1.3)
   btSay(server, `§6✎ 현상금 완료! §f${b.name} §7(${playerName} 마무리) — §e공동 금고 +${pay} §7· 기여도 +${Math.ceil(pay / 10)}`)
   lsAdv(server, '@a', 'bounty_first')   // 도전과제 (ls_util.js) — 보상이 공동 금고라 @a
+  // ── 주간 별빛 금고 3칸 (ls_vault.js) ──
+  // 여기는 **마무리한 사람만** 센다. 공성과 달리 현상금은 「누가 끝냈나」가 분명하고,
+  // 전원에게 주면 한 사람이 다섯 건을 도는 주에 나머지 칸이 공짜로 열린다.
+  try { if (typeof vtBounty === 'function') vtBounty(server, String(playerName)) }
+  catch (e) { lsWarn('ls_bounty:vault', e) }
   // 정예(토벌) 현상금 = 반복 가능한 정수 공급처.
   // 정수 공급이 관문·노드 같은 유한한 풀에만 묶여 있으면, 열쇠 던전(장비 파밍)을 돌릴수록
   // 마을 재건 재료가 말라붙는다. 3일마다 1건씩 도는 정예 현상금이 그 완충 역할을 한다.
