@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.scores.PlayerTeam;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -149,6 +150,14 @@ public final class Nick {
 
     // ── 이름이 실제로 쓰이는 두 자리 ──
 
+    /**
+     * 채팅·사망 메시지·명령 출력에 쓰이는 이름.
+     *
+     * <p>✅ <b>칭호와 저절로 합쳐진다.</b> {@code Player.getDisplayName()} 은 이 이벤트로
+     * 기본 이름을 정한 <b>뒤에</b> {@code PlayerTeam.formatNameForTeam} 으로 팀 접두사를 씌운다.
+     * 칭호({@code ls_title.js})가 바로 그 팀 접두사라, 여기서는 아무것도 안 해도
+     * 「[별을 이은 자] 린케우스」가 된다 — 칭호를 여기 끼워 넣으면 <b>두 번 붙는다.</b>
+     */
     @SubscribeEvent
     public static void onNameFormat(PlayerEvent.NameFormat event) {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
@@ -156,10 +165,19 @@ public final class Nick {
         if (!n.isEmpty()) event.setDisplayname(Component.literal(n));
     }
 
+    /**
+     * 탭 목록의 이름.
+     *
+     * <p>⚠️ <b>여기는 팀 접두사가 «저절로» 안 붙는다.</b> 클라이언트는 탭 항목에
+     * 표시 이름이 <b>안 정해져 있을 때만</b> 팀 서식을 입힌다. 그냥 별명만 넣으면
+     * 탭에서만 <b>칭호가 사라진다</b> — 채팅에는 멀쩡히 있어서 더 헷갈린다.
+     * 그래서 여기서는 손으로 씌운다.
+     */
     @SubscribeEvent
     public static void onTabName(PlayerEvent.TabListNameFormat event) {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
         String n = get(p);
-        if (!n.isEmpty()) event.setDisplayName(Component.literal(n));
+        if (n.isEmpty()) return;
+        event.setDisplayName(PlayerTeam.formatNameForTeam(p.getTeam(), Component.literal(n)));
     }
 }
