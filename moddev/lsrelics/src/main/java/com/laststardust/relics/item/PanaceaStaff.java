@@ -44,7 +44,7 @@ public class PanaceaStaff extends Item implements RelicActions {
     // 2026-07-26 상향: 4.3 → 6.5 (+51%). 파티전에서는 힐 우선이라 평타가 거의 안 나가지만,
     // 솔로·아군이 사선에 없을 때의 체감이 너무 약했다. 파티 화력 기여는 성역 연소가 맡는다.
     private static final float BOLT_DMG = 6.5f;   // × 2발/초 = DPS 13
-    private static final float HEAL = 2.0f;       // × 2발/초 = 4 HPS (5성 10 HPS)
+    public static final float HEAL = 2.0f;       // × 2발/초 = 4 HPS (5성 10 HPS)
     private static final double RANGE = 20.0;
     private static final double AIM_LENIENCY = 1.5; // 아군 조준 허용 오차(칸)
 
@@ -53,7 +53,7 @@ public class PanaceaStaff extends Item implements RelicActions {
     // ── 패시브 ① 자기 재생 ──
     // 평타의 아군 힐(4 HPS)의 1/4. 스스로는 느리게 차서 파티 지원이 여전히 필요하지만,
     // 전투 사이에 밥 먹고 기다릴 일은 없어진다. (평타로는 자신을 조준할 수 없기 때문에 필요한 보완)
-    private static final float SELF_REGEN = 1.0f;   // 초당
+    public static final float SELF_REGEN = 1.0f;   // 초당
     private static final int REGEN_INTERVAL = 20;
 
     // ── 패시브 ② 과잉 치유 ──

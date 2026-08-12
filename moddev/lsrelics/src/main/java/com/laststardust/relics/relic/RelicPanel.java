@@ -111,9 +111,22 @@ public final class RelicPanel {
         // ⚠️ 기본값이 아니라 **최종 피해**를 보여준다. {@code RelicSkills.dmg} 를 그대로
         //    통과시키므로 각성 배율·전역 배율·무기 어픽스가 실제 전투와 «같은 식»으로 얹힌다.
         //    표의 숫자를 그냥 찍으면 5성인데 1성 값이 보인다.
-        row(user, "§8── 스킬 피해 (지금 든 유물) ──", "", 0x6B7280);
+        row(user, "§8── 스킬 (지금 든 유물) ──", "", 0x6B7280);
         for (RelicSkillTable.Skill s : skills) {
             row(user, s.label(), fmt(com.laststardust.relics.item.RelicSkills.dmg(stack, s.base())), 0xE08A8A);
+            // 효과는 피해 밑에 흐리게 한 줄. 같은 줄에 붙이면 오른쪽 정렬이 깨져 표가 안 읽힌다.
+            if (!s.effect().isEmpty()) row(user, "  §8↳ " + s.effect(), "", 0x6B7280);
+        }
+
+        // ── 회복량 ──
+        // 회복은 «속성»이 아니라 스킬 안의 숫자라 무기 툴팁에 안 나온다 — 여기서만 볼 수 있다.
+        // 성급 보정(healScale)까지 얹은 실제 값이다.
+        if (stack.getItem() == com.laststardust.relics.LSRelics.HEALER.get()) {
+            float hs = com.laststardust.relics.item.RelicSkills.healScale(stack);
+            row(user, "평타 회복", fmt(com.laststardust.relics.item.PanaceaStaff.HEAL * hs * 2) + "/초",
+                0x7FD98A);
+            row(user, "자가 재생", fmt(com.laststardust.relics.item.PanaceaStaff.SELF_REGEN * hs) + "/초",
+                0x7FD98A);
         }
         // 배율은 마지막에 한 줄. 「왜 이 숫자인가」를 설명해 주는 자리다.
         row(user, "§8적용 배율", "§8×" + fmt(com.laststardust.relics.item.RelicSkills.power(stack))
