@@ -178,11 +178,19 @@ function rlAltarKeys() { return Object.keys(RELICS).concat([RL_SHARED]) }
 // ── 제단 우클릭 클레임 (lodestone, /relic altar 로 배치) ──
 BlockEvents.rightClicked(event => {
   const b = event.block
-  if (!b || b.id !== 'minecraft:lodestone') return
+  // ⚠️ 여기서 «조용히 되돌아가는 길»이 넷이다 — 블록 없음 · 자석석 아님 · 플레이어 없음 ·
+  //    서버 없음. 넷 다 아무 자국을 안 남겨서, 안 될 때 어디서 멈췄는지 알 수가 없었다
+  //    (2026-08-13, 우클릭이 통째로 안 먹는데 로그가 한 줄도 없었다).
+  //    자석석은 흔한 블록이 아니므로 «들어왔다»는 것만은 항상 남긴다.
+  var bid = ''
+  try { bid = String(b ? b.id : '') } catch (e) { lsWarn('ls_relic:block-id', e); return }
+  if (bid.indexOf('lodestone') < 0) return
+
   const player = event.player
-  if (!player) return
-  const server = player.server
-  if (!server) return
+  const server = player ? player.server : null
+  console.log(`[LS-RELIC] ▶ 자석석 우클릭 id=${bid} @ ${b.x},${b.y},${b.z}`
+    + ` player=${player ? player.username : '없음'} server=${server ? '있음' : '없음'}`)
+  if (!player || !server) return
 
   // ⚠️ 공용 제단을 **먼저** 본다. 같은 블록에 둘이 걸려 있을 때(등록 검사를 우회해
   //    직접 데이터를 만졌다면) 「가호가 안 맞는다」로 막히는 쪽이 이기면 안 된다.
