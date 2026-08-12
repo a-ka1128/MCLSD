@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -62,29 +63,31 @@ public final class LSCommands {
         // ── 비행선 NPC 온보딩 ──
         // Easy NPC 대화의 마지막 버튼이 부른다. 관리자도 손으로 부를 수 있어야 한다 —
         // NPC 가 안 보이거나 대화가 막혔을 때 첫 세션을 여기서 구할 수 있어야 하기 때문이다.
+        //
+        // ⚠️ 인수는 **EntityArgument.player()** 다. 예전엔 StringArgumentType.word() 로 받아
+        //    이름을 getPlayerByName 으로 찾았는데, 그러면 `@p`·`@s` 가 통째로 막힌다 —
+        //    `@` 는 word() 의 허용 문자도 아니라 파싱 단계에서 「잘못된 인수」로 튕긴다.
+        //    Easy NPC 버튼에 손으로 `/lsonboard @p` 를 넣으면 정확히 그렇게 된다.
+        //
+        //    EntityArgument.player() 는 **선택자와 맨 이름을 둘 다** 받으므로
+        //    `/lsonboard a_ka1128` 도 그대로 살아 있고, 대상 제안도 공짜로 붙는다.
+        //    NPC 버튼에는 `@initiator`(Easy NPC 가 «클릭한 사람»의 이름으로 바꿔 준다)를 쓴다 —
+        //    `@p` 는 «명령을 실행한 자리에서 제일 가까운 사람」이라 옆 사람이 더 가까우면
+        //    엉뚱한 사람이 날아간다.
         event.getDispatcher().register(
             Commands.literal("lsonboard")
                 .requires(s -> s.hasPermission(2))
-                .then(Commands.argument("who", StringArgumentType.word())
-                    .suggests((ctx, b) -> {
-                        for (ServerPlayer sp : ctx.getSource().getServer().getPlayerList().getPlayers()) {
-                            b.suggest(sp.getGameProfile().getName());
-                        }
-                        return b.buildFuture();
-                    })
+                .then(Commands.argument("who", EntityArgument.player())
                     .executes(ctx -> {
-                        String who = StringArgumentType.getString(ctx, "who");
-                        ServerPlayer target = ctx.getSource().getServer().getPlayerList().getPlayerByName(who);
-                        if (target == null) {
-                            ctx.getSource().sendFailure(Component.literal(who + " 은(는) 접속 중이 아니다."));
-                            return 0;
-                        }
+                        ServerPlayer target = EntityArgument.getPlayer(ctx, "who");
+                        String who = target.getGameProfile().getName();
                         String fail = Onboarding.send(target);
                         if (fail != null) {
                             ctx.getSource().sendFailure(Component.literal("§c" + fail));
                             return 0;
                         }
                         LOG.info("[온보딩] {} -> 성역", who);
+                        ctx.getSource().sendSuccess(() -> Component.literal("§7" + who + " → 성역"), false);
                         return 1;
                     })));
 
