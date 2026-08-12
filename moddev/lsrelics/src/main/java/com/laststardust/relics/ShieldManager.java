@@ -41,6 +41,11 @@ public final class ShieldManager {
         }
         float give = Math.min(room, amount);
         target.setAbsorptionAmount(target.getAbsorptionAmount() + give);
+        // ⚠️ 계기에 알린다. 흡수를 «까는 자리»에서 세야 한다 — 틱 끝에 흡수량을 보면
+        //    같은 틱에 소모된 몫이 통째로 사라져 0 이 나온다(BlessingEffects.shieldGiven 주석).
+        //    이 통로가 빠져 있어서 파나케이아 「과잉 치유」와 셀레스티아 5성 「별빛 방벽」이
+        //    **도는데도 리포트에 0 으로 찍혔다.**
+        com.laststardust.relics.blessing.BlessingEffects.noteShield(give);
         if (s == null) ACTIVE.put(target.getUUID(), new Shield(give, ticks));
         else { s.granted += give; s.ticksLeft = ticks; }
     }

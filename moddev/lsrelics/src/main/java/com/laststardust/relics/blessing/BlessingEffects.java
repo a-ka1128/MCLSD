@@ -401,11 +401,25 @@ public final class BlessingEffects {
         float before = p.getAbsorptionAmount();
         float after = Math.min(cap, before + add);
         p.setAbsorptionAmount(after);
-        shieldGiven += Math.max(0f, after - before);
+        noteShield(Math.max(0f, after - before));
     }
 
     /**
-     * 이번 측정 동안 <b>실제로 깔린</b> 보호막 총량. {@code DummyManager} 가 읽는다.
+     * 「보호막을 이만큼 깔았다」고 계기에 알린다. <b>축복 밖에서도 부른다.</b>
+     *
+     * <p>초판은 {@link #addAbsorption} 안에서만 셌다. 그런데 흡수를 까는 통로가 둘이다 —
+     * 축복(여기)과 {@link com.laststardust.relics.ShieldManager}(파나케이아 「과잉 치유」·
+     * 셀레스티아 5성 「별빛 방벽」). <b>후자는 계기에 전혀 안 잡혔다.</b>
+     * 그래서 셀레스티아 2단을 재고 「보호막 0 — 안 도는군」으로 읽을 뻔했다.
+     * 실제로는 <b>도는데 안 보였다.</b>
+     */
+    public static void noteShield(float given) {
+        if (given > 0f) shieldGiven += given;
+    }
+
+    /**
+     * 이번 측정 동안 <b>실제로 깔린</b> 보호막 총량 — <b>축복과 유물을 합쳐서</b> 센다.
+     * {@code DummyManager} 가 읽는다.
      *
      * <p>⚠️ <b>흡수량을 밖에서 관찰해서는 못 잰다.</b> 「별빛 보호막」은 피해가 들어오기
      * <b>직전</b>에 흡수를 까는데, 그 흡수가 <b>같은 틱 안에서 그 피해에 바로 소모된다.</b>
