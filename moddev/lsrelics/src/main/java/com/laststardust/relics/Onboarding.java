@@ -149,6 +149,8 @@ public final class Onboarding {
     public static final class Later {
         private Later() {}
 
+        private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
         private interface Step { void run(ServerPlayer p); }
 
         private static final class Task {
@@ -167,15 +169,43 @@ public final class Onboarding {
             QUEUE.add(new Task(p, ticks, step));
         }
 
+        /**
+         * ⚠️ <b>순회를 먼저 끝내고, 실행은 그 밖에서 한다.</b>
+         *
+         * <p>처음엔 {@code QUEUE.removeIf(t -> { …; t.step.run(); … })} 한 줄이었다.
+         * 그런데 <b>이 대본은 스스로 다음 걸음을 예약한다</b> — 「이동」 단계가 「눈을 뜬다」를
+         * 다시 {@link #run} 으로 건다. 그 {@code QUEUE.add} 가 <b>removeIf 가 순회하는
+         * 도중에</b> 일어나 {@code ConcurrentModificationException} 이 났다.
+         *
+         * <p>그리고 여기는 <b>서버 틱 핸들러</b>다 — 여기서 던진 예외는 그 틱을 죽이는 게 아니라
+         * <b>서버를 통째로 내린다.</b> 실제로 그렇게 됐다(2026-08-12 23:45 크래시).
+         * 그래서 걸음마다 {@code try/catch} 도 함께 둔다. 연출 하나가 잘못돼도
+         * 서버가 죽을 이유는 없다.
+         */
         @net.neoforged.bus.api.SubscribeEvent
         public static void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
             if (QUEUE.isEmpty()) return;
-            QUEUE.removeIf(t -> {
-                if (t.player.hasDisconnected() || t.player.getServer() == null) return true;
-                if (--t.delay > 0) return false;
-                t.step.run(t.player);
-                return true;
-            });
+
+            java.util.List<Task> due = null;
+            for (java.util.Iterator<Task> it = QUEUE.iterator(); it.hasNext(); ) {
+                Task t = it.next();
+                if (t.player.hasDisconnected() || t.player.getServer() == null) { it.remove(); continue; }
+                if (--t.delay > 0) continue;
+                it.remove();
+                if (due == null) due = new java.util.ArrayList<>();
+                due.add(t);
+            }
+            if (due == null) return;
+
+            // 여기서부터는 QUEUE 를 순회하지 않는다 — 걸음이 새 걸음을 예약해도 안전하다.
+            for (Task t : due) {
+                try {
+                    t.step.run(t.player);
+                } catch (Exception e) {
+                    LOG.error("[온보딩] 지연 걸음 실패 — {}",
+                        t.player.getGameProfile().getName(), e);
+                }
+            }
         }
     }
 }
