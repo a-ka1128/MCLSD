@@ -60,6 +60,57 @@ public final class LSCommands {
                     return 1;
                 })));
 
+        // ── 부르는 이름 ──
+        // **권한을 안 건다.** 이건 관리 도구가 아니라 첫 대화에서 린케우스가 시키는 일이고,
+        // 일반 플레이어가 못 쓰면 온보딩이 거기서 멈춘다.
+        //
+        // ⚠️ 인수는 반드시 **greedyString** 이다. `word()`/`string()` 은 따옴표가 없으면
+        //    `0-9A-Za-z_-.+` 만 읽는다 — **한글이 통째로 안 들어간다.**
+        //    `/닉네임 린케우스` 가 「잘못된 인수」로 튕긴다(`/lsonboard @p` 와 같은 함정이다).
+        //
+        // ⚠️ 리터럴 이름이 한글이다. 브리가디어는 리터럴을 문자열 비교로 맞추므로 문제없지만,
+        //    IME 를 켜야 칠 수 있다. 그래서 `/nick` 도 같은 것으로 등록한다 —
+        //    둘은 «같은 명령의 두 이름»이지 서로 다른 기능이 아니다.
+        for (String alias : new String[] {"닉네임", "nick"}) {
+            event.getDispatcher().register(
+                Commands.literal(alias)
+                    .executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) {
+                            ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다."));
+                            return 0;
+                        }
+                        String cur = Nick.get(p);
+                        if (cur.isEmpty()) {
+                            ctx.getSource().sendSystemMessage(Component.literal(
+                                "§7아직 부르는 이름이 없습니다. §e/닉네임 <이름>"));
+                        } else {
+                            ctx.getSource().sendSystemMessage(Component.literal(
+                                "§7당신은 §r" + cur + "§7 라고 불립니다. §8(계정 "
+                                + p.getGameProfile().getName() + ")"));
+                        }
+                        return 1;
+                    })
+                    .then(Commands.argument("이름", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            ServerPlayer p = ctx.getSource().getPlayer();
+                            if (p == null) {
+                                ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다."));
+                                return 0;
+                            }
+                            String want = StringArgumentType.getString(ctx, "이름");
+                            String fail = Nick.set(p, want);
+                            if (fail != null) {
+                                ctx.getSource().sendFailure(Component.literal("§c" + fail));
+                                return 0;
+                            }
+                            ctx.getSource().sendSystemMessage(Component.literal(
+                                "§a이제 §r" + Nick.get(p) + "§a 라고 부르겠습니다."));
+                            LOG.info("[닉네임] {} -> {}", p.getGameProfile().getName(), Nick.get(p));
+                            return 1;
+                        })));
+        }
+
         // ── 비행선 NPC 온보딩 ──
         // Easy NPC 대화의 마지막 버튼이 부른다. 관리자도 손으로 부를 수 있어야 한다 —
         // NPC 가 안 보이거나 대화가 막혔을 때 첫 세션을 여기서 구할 수 있어야 하기 때문이다.

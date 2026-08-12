@@ -3,7 +3,7 @@
     author:"Last Stardust",
     category:"Quest",
     created:1786538762004L,
-    description:"난파한 비행선의 마지막 생존자. 대화를 마치면 플레이어를 성역으로 보낸다(/lsonboard). 첫 세션 온보딩의 시작점.",
+    description:"난파한 비행선의 마지막 별지기. 이름을 묻고, 대화를 마치면 성역으로 보낸다(/lsonboard). 첫 세션 온보딩의 시작점.",
     entityTypeId:"easy_npc:humanoid",
     modified:1786538762004L,
     name:"린케우스 — 마지막 별지기",
@@ -12,99 +12,68 @@
   },
   id:"easy_npc:humanoid",
   ActionData:{
-      ActionEventSet:{
-        ON_INTERACTION:[{
-          Type:"OPEN_DEFAULT_DIALOG"
-        }]
-      },
-      ActionPermissionLevel:3
+    ActionEventSet:{
+      ON_INTERACTION:[{
+        Type:"OPEN_DEFAULT_DIALOG"
+      }]
     },
+    ActionPermissionLevel:3
+  },
   CustomName:'{"color":"#FFFF00","text":"린케우스"}',
   CustomNameVisible:1b,
   DialogData:{
-      DialogDataSet:[{
-        Label:"start",
-        Name:"첫 만남",
-        Priority:10,
-        Texts:[{
-          Text:"…살아 있는 사람이군. @initiator, 이름은 기억해 두겠네."
-        },{
-          Text:"이 배는 별이 떨어지던 밤에 여기 박혔다. 나는 그 뒤로 계속 여기 있었지."
-        }],
-        Buttons:[{
-          Label:"b_where",Name:"여기가 어디입니까",
-          Actions:[{ Cmd:"where",Type:"OPEN_NAMED_DIALOG" }]
-        },{
-          Label:"b_you",Name:"당신은 누구입니까",
-          Actions:[{ Cmd:"who",Type:"OPEN_NAMED_DIALOG" }]
-        }]
+    DialogDataSet:[{
+      Label:"start",
+      Name:"첫 만남",
+      Priority:10,
+      Texts:[{
+        Text:"이런 곳에 생존자가 있을 줄이야… 별의 가호를 받았나보구만."
       },{
-        Label:"where",
-        Name:"여기가 어디인가",
-        Texts:[{
-          Text:"세계의 끝자락. 별빛이 닿지 않게 된 지 오래된 곳이다."
-        },{
-          Text:"하늘을 봐라. 아무것도 없지. 별은 전부 삼켜졌고, 마지막 하나가 이 땅에 떨어져 부서졌다."
-        },{
-          Text:"…그런데 그 잔해가 아직 빛나고 있어. 나는 그걸 성역이라 부른다."
-        }],
-        Buttons:[{
-          Label:"b_send_from_where",Name:"그 성역으로 가겠습니다",
-          Actions:[{ Cmd:"send",Type:"OPEN_NAMED_DIALOG" }]
-        },{
-          Label:"b_you2",Name:"당신은 누구입니까",
-          Actions:[{ Cmd:"who",Type:"OPEN_NAMED_DIALOG" }]
-        }]
-      },{
-        Label:"who",
-        Name:"당신은 누구인가",
-        Texts:[{
-          Text:"별지기였다. 지금은 그냥 늙은이고."
-        },{
-          Text:"우리는 여덟이었다. 각자 별에게 하나씩 받았지 — 검, 창, 활, 지팡이… 이름은 다 달랐다."
-        },{
-          Text:"돌아온 사람은 나 하나다. 그것도 무기는 어디다 두고 왔는지 기억이 안 나."
-        }],
-        Buttons:[{
-          Label:"b_send_from_who",Name:"성역으로 보내주십시오",
-          Actions:[{ Cmd:"send",Type:"OPEN_NAMED_DIALOG" }]
-        },{
-          Label:"b_where2",Name:"여기가 어디입니까",
-          Actions:[{ Cmd:"where",Type:"OPEN_NAMED_DIALOG" }]
-        }]
-      },{
-        Label:"send",
-        Name:"성역으로",
-        Texts:[{
-          Text:"이 배에 아직 힘이 조금 남아 있다. 한 사람쯤은 보낼 수 있어."
-        },{
-          Text:"거기서 별이 자네를 볼 거다. 무엇으로 보이는지는 자네가 정하는 게 아니야."
-        },{
-          Text:"…가라. 나는 여기 남는다."
-        }],
-        Buttons:[{
-          Label:"b_go",Name:"§6[ 성역으로 간다 ]",
-          Actions:[{
-            Cmd:"/lsonboard @initiator",Type:"COMMAND"
-          }]
-        },{
-          Label:"b_wait",Name:"조금 더 둘러보겠습니다",
-          Actions:[{ Cmd:"start",Type:"OPEN_NAMED_DIALOG" }]
-        }]
+        Text:"이 비행선은 성역으로 향하는 비행선이야."
+      }],
+      Buttons:[{
+        Label:"b_isee",
+        Name:"그렇군요.",
+        Actions:[{ Cmd:"name",Type:"OPEN_NAMED_DIALOG" }]
       }]
-    },
+    },{
+      Label:"name",
+      Name:"이름을 묻다",
+      Texts:[{
+        Text:"너를 뭐라고 불러야 할지 모르겠군."
+      },{
+        Text:"\"/닉네임 원하는닉네임\" 으로 이름을 알려주게나."
+      }],
+      Buttons:[{
+        Label:"b_ok",
+        Name:"알겠습니다.",
+        Actions:[{ Cmd:"rest",Type:"OPEN_NAMED_DIALOG" }]
+      }]
+    },{
+      Label:"rest",
+      Name:"성역으로",
+      Texts:[{
+        Text:"그럼 잠시 쉬고 있게. 곧 성역으로 이동될 거야."
+      }],
+      Buttons:[{
+        Label:"b_go",
+        Name:"§7[ 잠시 눈을 감는다 ]",
+        Actions:[{ Cmd:"/lsonboard @initiator",Type:"COMMAND" }]
+      }]
+    }]
+  },
   Invulnerable:1b,
   NoAI:1b,
   Silent:1b,
   SkinData:{
-      Content:"",
-      DisableLayers:0b,
-      Name:"HRSSamuelTTV",
-      Type:"PLAYER_SKIN",
-      URL:"",
-      UUID:[I;-215787416,-1924641877,-1413010573,-1263525539],
-      Timestamp:1786512306354L
-    },
+    Content:"",
+    DisableLayers:0b,
+    Name:"HRSSamuelTTV",
+    Type:"PLAYER_SKIN",
+    URL:"",
+    UUID:[I;-215787416,-1924641877,-1413010573,-1263525539],
+    Timestamp:1786512306354L
+  },
   VariantType:"STEVE",
   Profession:"NONE",
   ArmorItems:[{},{},{},{}],

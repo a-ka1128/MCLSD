@@ -252,6 +252,23 @@ function ftChoose(server, player, key) {
   // 성좌 중계 (전체) — STORY 부록A. 가호를 받은 순간 꺼진 별 하나가 그를 알아본다.
   // ls_voice.js 가 없어도 가호 지급은 끝나야 하므로 감싼다(ttGrant 호출과 같은 방식).
   try { vStar(server, player.username, 1) } catch (e) { lsWarn('ls_fate:166', e) }
+
+  // ── 부르는 이름 안내 ──
+  // 린케우스가 비행선에서 「/닉네임 으로 이름을 알려주게나」라고 하는데, 그 자리에서
+  // 안 정하고 넘어오는 사람이 대부분이다(대화 중엔 채팅을 안 친다).
+  // 가호를 받은 «직후»가 다시 말하기 제일 좋은 자리다 — 이제 자기가 누구인지 정해졌으니까.
+  //
+  // ⚠️ 본인에게만 보낸다. ftSay 는 전체 방송이라 여기 쓰면 남의 화면에도 뜬다.
+  // ⚠️ 이미 정한 사람에게는 안 띄운다. 안 그러면 다시 들어올 때마다 잔소리가 된다.
+  try {
+    if (!String(LS.nick(server, player.username) || '')) {
+      player.tell(Text.of(''))
+      player.tell(Text.of('§7━━ §f당신을 뭐라고 부르면 될까요? §7━━'))
+      player.tell(Text.of('§7  §e/닉네임 <이름>§7 으로 이름을 설정하세요.'))
+      player.tell(Text.of('§8   예) /닉네임 린케우스     ·  나중에 바꿀 수 있습니다'))
+    }
+  } catch (e) { lsWarn('ls_fate:nick-hint', e) }
+
   console.log(`[LS-FATE] ${player.username} -> ${key}`)
   return 1
 }

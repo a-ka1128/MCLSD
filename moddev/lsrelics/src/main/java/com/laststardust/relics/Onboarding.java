@@ -10,6 +10,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 
 import com.laststardust.relics.data.LSData;
 
@@ -42,6 +44,22 @@ public final class Onboarding {
     private static final int SETTLE_TICKS = 60;
 
     /**
+     * 눈을 감는 시간. 「잠시 눈을 감는다」를 누르고 나서 실제로 옮겨지기까지.
+     *
+     * <p>── 화면을 어떻게 어둡게 하나 ──
+     * 바닐라에는 «페이드 아웃» 이 없다. {@code title} 의 fade 는 <b>글자만</b> 흐리게 하지
+     * 화면을 덮지 않는다. 그래서 <b>실명(blindness)</b> 을 쓴다 — 걸면 시야가 서서히 닫히고,
+     * 풀면 서서히 열린다. 그 두 번의 전환이 우리가 원하는 페이드 아웃/인이다.
+     *
+     * <p>입자와 아이콘은 끈다. 안 끄면 「눈을 감는」 연출 중에 상태이상 아이콘이 떠서
+     * <b>연출이 아니라 디버프로 읽힌다.</b>
+     */
+    private static final int FADE_TICKS = 40;
+
+    /** 도착하고 나서 시야가 다시 열리기까지. 눈을 뜨는 쪽이 감는 쪽보다 조금 느린 게 자연스럽다. */
+    private static final int OPEN_EYES_TICKS = 30;
+
+    /**
      * 비행선 → 성역.
      *
      * @return 실패 사유 (성공이면 {@code null}) — 부른 쪽이 그대로 화면에 띄운다.
@@ -58,10 +76,27 @@ public final class Onboarding {
             // 첫 세션 직전에 제일 흔한 실수다. 「어디로 보낼지 아무도 안 정했다」를 그대로 말한다.
             return "성역이 아직 정해지지 않았다 — 먼저 §e/sanctuary set";
         }
-        BlockPos to = data.sanctuary();
-        ServerLevel overworld = server.overworld();
 
-        // ── 떠나는 자리 ──
+        // ── ① 눈을 감는다 ──
+        // 실명 지속시간은 «페이드 + 이동 + 눈 뜨는 시간» 보다 넉넉히 길게 준다.
+        // 짧게 잡아 중간에 풀리면 이동하는 순간이 그대로 보인다.
+        p.addEffect(new MobEffectInstance(MobEffects.BLINDNESS,
+            FADE_TICKS + OPEN_EYES_TICKS + 40, 0, false, false, false));
+        if (p.level() instanceof ServerLevel from) {
+            from.playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
+                SoundSource.PLAYERS, 0.7f, 0.5f);
+        }
+
+        // ── ② 2초 뒤에 실제로 옮긴다 ──
+        // 화면이 이미 어두워진 뒤라 «순간이동하는 장면» 이 안 보인다. 그게 이 지연의 전부다.
+        Later.run(p, FADE_TICKS, who -> arrive(who, data.sanctuary(), server.overworld()));
+        return null;
+    }
+
+    /** 도착 — 어두운 화면 뒤에서 벌어지는 일. */
+    private static void arrive(ServerPlayer p, BlockPos to, ServerLevel overworld) {
+        // 떠나는 자리에만 남는 흔적. 본인은 눈을 감고 있어서 못 보지만,
+        // 비행선에 남아 있는 다른 사람에게는 「사라졌다」가 보여야 한다.
         if (p.level() instanceof ServerLevel from) {
             from.sendParticles(ParticleTypes.PORTAL,
                 p.getX(), p.getY() + 1, p.getZ(), 80, 0.4, 0.9, 0.4, 0.5);
@@ -72,23 +107,75 @@ public final class Onboarding {
         p.teleportTo(overworld, to.getX() + 0.5, to.getY() + 1, to.getZ() + 0.5,
             p.getYRot(), p.getXRot());
 
-        // ── 도착한 자리 ──
         overworld.sendParticles(ParticleTypes.END_ROD,
             to.getX() + 0.5, to.getY() + 1.4, to.getZ() + 0.5, 90, 0.6, 1.0, 0.6, 0.06);
         overworld.sendParticles(ParticleTypes.FLASH,
             to.getX() + 0.5, to.getY() + 1.5, to.getZ() + 0.5, 1, 0, 0, 0, 0);
         overworld.playSound(null, to, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0f, 1.0f);
-        overworld.playSound(null, to, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0f, 0.7f);
-        SoundScheduler.at(overworld, p.position(), SoundEvents.BEACON_ACTIVATE, 1.2f, 0.8f, 20);
 
-        p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§b성역")));
-        p.connection.send(new ClientboundSetSubtitleTextPacket(
-            Component.literal("§7부서진 별이 떨어진 자리")));
+        // ── ③ 눈을 뜬다 ──
+        // 실명을 풀면 시야가 서서히 열린다. 타이틀은 그 «열리는 동안» 떠 있어야
+        // 「눈을 뜨니 성역이었다」가 된다 — 다 열린 뒤에 띄우면 두 장면이 따로 논다.
+        Later.run(p, OPEN_EYES_TICKS, who -> {
+            who.removeEffect(MobEffects.BLINDNESS);
+            // ⚠️ 자막을 먼저 보낸다. 자막은 «보관»만 되고 타이틀이 올 때 같이 뜬다 —
+            //    반대로 보내면 그 판엔 자막이 없고 다음번에 뒤늦게 따라붙는다
+            //    (ls_siege.js 와 airship_enter.mcfunction 에서 같은 것을 겪었다).
+            who.connection.send(new ClientboundSetSubtitleTextPacket(
+                Component.literal("§7부서진 별이 떨어진 자리")));
+            who.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§b성역")));
+            if (who.level() instanceof ServerLevel lv) {
+                lv.playSound(null, who.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
+                    SoundSource.PLAYERS, 1.0f, 0.7f);
+                SoundScheduler.at(lv, who.position(), SoundEvents.BEACON_ACTIVATE, 1.2f, 0.8f, 20);
+            }
 
-        // ── 가호 선택은 조금 늦게 ──
-        // ⚠️ 이미 가호가 있으면 {@code openScreen} 이 스스로 건너뛴다 — NPC 와 두 번째로
-        //    대화하는 경우가 그렇다. 다시 못 고르는데 창만 열리면 「고를 수 있나 보다」로 읽힌다.
-        FateAutoOpen.openLater(p, SETTLE_TICKS);
-        return null;
+            // ── ④ 가호 선택 ──
+            // ⚠️ 이미 가호가 있으면 openScreen 이 스스로 건너뛴다 — NPC 와 두 번째로
+            //    대화하는 경우가 그렇다. 다시 못 고르는데 창만 열리면 「고를 수 있나 보다」로 읽힌다.
+            FateAutoOpen.openLater(who, SETTLE_TICKS);
+        });
+    }
+
+    /**
+     * N틱 뒤에 그 플레이어에게 무언가를 한다.
+     *
+     * <p>{@link SoundScheduler} 는 «자리»에 소리를 놓는 물건이라 사람을 못 따라간다.
+     * 여기서 필요한 건 <b>그 사람에게</b> 하는 일이라 따로 둔다.
+     *
+     * <p>⚠️ 나간 사람은 버린다. 안 그러면 접속이 끊긴 뒤에 패킷을 쏜다.
+     */
+    @net.neoforged.fml.common.EventBusSubscriber(modid = LSRelics.MODID)
+    public static final class Later {
+        private Later() {}
+
+        private interface Step { void run(ServerPlayer p); }
+
+        private static final class Task {
+            final ServerPlayer player;
+            final Step step;
+            int delay;
+            Task(ServerPlayer player, int delay, Step step) {
+                this.player = player; this.delay = delay; this.step = step;
+            }
+        }
+
+        private static final java.util.List<Task> QUEUE = new java.util.ArrayList<>();
+
+        static void run(ServerPlayer p, int ticks, Step step) {
+            if (ticks <= 0) { step.run(p); return; }
+            QUEUE.add(new Task(p, ticks, step));
+        }
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+            if (QUEUE.isEmpty()) return;
+            QUEUE.removeIf(t -> {
+                if (t.player.hasDisconnected() || t.player.getServer() == null) return true;
+                if (--t.delay > 0) return false;
+                t.step.run(t.player);
+                return true;
+            });
+        }
     }
 }

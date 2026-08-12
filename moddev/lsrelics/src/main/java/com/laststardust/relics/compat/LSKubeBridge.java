@@ -183,6 +183,19 @@ public class LSKubeBridge implements KubeJSPlugin {
             data.dirty();
         }
 
+        // ── 부르는 이름 ──
+        // ⚠️ **저장 열쇠로 쓰면 안 된다.** 가호·유물·각성·금고는 전부 계정 이름이 열쇠다.
+        //    이건 «화면에 뿌릴 때»만 쓴다.
+        public String nick(MinecraftServer server, String username) {
+            var p = server == null ? null : server.getPlayerList().getPlayerByName(username);
+            return p == null ? "" : com.laststardust.relics.Nick.get(p);
+        }
+
+        /** 별명이 있으면 별명, 없으면 계정 이름. */
+        public String display(MinecraftServer server, String username) {
+            return com.laststardust.relics.Nick.displayOf(server, username);
+        }
+
         // 제단은 사람이 아니라 - 가호 - 에 붙는다. 여덟 직업이 각자 자기 제단을 갖는다.
         public boolean hasAltar(MinecraftServer server, String fateKey) {
             return server != null && LSData.get(server).hero().hasAltar(fateKey);
