@@ -232,6 +232,11 @@ function rlPanel(server, player) {
   } catch (e) { lsWarn('ls_relic:panel-hp', e) }
   LS.panelRow(uname, '보유 별의 파편', String(have), have > 0 ? 0xC08AE0 : 0x6B7280)
 
+  // 손에 든 유물의 «지금 진짜» 수치 — 공격력·공속·평타 DPS·배율.
+  // 이 값들만 자바가 직접 붙인다. 각성 배율표·전역 배율·어픽스 보정이 거기 살기 때문이다.
+  // 주손에 유물이 없으면 아무 줄도 안 붙는다(0 을 찍으면 「약하다」로 읽힌다).
+  try { LS.panelStats(server, uname) } catch (e) { lsWarn('ls_relic:panel-stats', e) }
+
   // ── 성급 사다리 ──
   // 도달한 칸은 «무엇을 얻었는지», 남은 칸은 «무엇이 필요한지» 를 말한다.
   for (var s = 2; s <= AS_MAX; s++) {

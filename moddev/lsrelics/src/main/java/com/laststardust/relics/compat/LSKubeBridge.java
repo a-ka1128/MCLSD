@@ -207,6 +207,11 @@ public class LSKubeBridge implements KubeJSPlugin {
         public void panelFooter(String user, String footer) {
             com.laststardust.relics.relic.RelicPanel.footer(user, footer);
         }
+        /** 손에 든 유물의 실제 수치를 붙인다 — 이 값들만은 자바에 산다(RelicPanel.stats 머리말). */
+        public void panelStats(MinecraftServer server, String user) {
+            var p = server == null ? null : server.getPlayerList().getPlayerByName(user);
+            com.laststardust.relics.relic.RelicPanel.stats(p);
+        }
         public boolean panelShow(MinecraftServer server, String user) {
             return com.laststardust.relics.relic.RelicPanel.show(server, user);
         }

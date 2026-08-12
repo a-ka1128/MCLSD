@@ -84,6 +84,48 @@ public final class RelicPanel {
         draft(user).footer = footer == null ? "" : footer;
     }
 
+    /**
+     * <b>손에 든 유물의 «실제» 수치</b>를 붙인다.
+     *
+     * <p>여기만 자바가 직접 채운다. 나머지 항목은 KubeJS 가 채우는데(수치가 거기 살아서),
+     * <b>이 값들은 반대로 자바에만 있다</b> — 각성 배율표({@code ASCENSION})·전역 배율
+     * ({@code GLOBAL_POWER})·무기 어픽스 보정은 전부 {@code RelicSkills} 안이고,
+     * 공격력·공격속도는 아이템 속성이다. KubeJS 로 옮기면 이번엔 그쪽이 사본이 된다.
+     *
+     * <p>⚠️ <b>플레이어의 «살아 있는» 속성을 읽는다</b> — 아이템에 적힌 기본값이 아니라.
+     * 그래야 인챈트·젬·어픽스·가호 패시브가 이미 섞인 «지금 진짜 때리는 값»이 나온다.
+     * 아이템 정의만 읽으면 화면의 숫자와 실제로 들어가는 피해가 갈린다.
+     *
+     * <p>⚠️ 주손에 유물이 없으면 <b>아무 줄도 안 붙인다.</b> 0 을 찍으면
+     * 「유물이 약하다」로 읽힌다 — 안 든 것과 약한 것은 다르다.
+     */
+    public static void stats(ServerPlayer p) {
+        if (p == null) return;
+        var stack = p.getMainHandItem();
+        if (stack.isEmpty()) return;
+        String user = p.getGameProfile().getName();
+
+        double atk = p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        double spd = p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
+        row(user, "§8── 지금 든 무기 ──", "", 0x6B7280);
+        row(user, "공격력", fmt(atk), 0xFFD98A);
+        row(user, "공격 속도", fmt(spd) + "/초", 0xC7CDD6);
+        // 초당 피해는 «평타만» 이다. 스킬·투사체는 각자 계산식이 달라 한 줄로 못 줄인다 —
+        // 합쳐서 한 숫자로 내면 그게 곧 거짓말이 된다.
+        row(user, "평타 초당 피해", fmt(atk * spd), 0xE08A8A);
+
+        float asc = com.laststardust.relics.item.RelicSkills.ascension(stack);
+        row(user, "각성 배율", "×" + fmt(asc), 0xFFD98A);
+        row(user, "전역 배율", "×" + fmt(com.laststardust.relics.item.RelicSkills.GLOBAL_POWER), 0x9AA4B2);
+        row(user, "스킬 총배율", "×" + fmt(com.laststardust.relics.item.RelicSkills.power(stack)), 0xC08AE0);
+    }
+
+    /** 소수 첫째 자리까지, 딱 떨어지면 정수로. 「4.0」보다 「4」가 표로 읽기 좋다. */
+    private static String fmt(double v) {
+        double r = Math.round(v * 10) / 10.0;
+        return r == Math.floor(r) ? String.valueOf((long) r) : String.valueOf(r);
+    }
+
     /** 쌓은 것을 그 사람에게 보낸다. 보내고 나면 초안은 버린다. */
     public static boolean show(MinecraftServer server, String user) {
         if (server == null || user == null) return false;
