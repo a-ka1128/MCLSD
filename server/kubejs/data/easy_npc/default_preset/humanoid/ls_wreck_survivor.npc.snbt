@@ -4,18 +4,24 @@
     category:"Quest",
     description:"난파한 비행선의 마지막 생존자. 대화를 마치면 플레이어를 성역으로 보낸다(/lsonboard). 첫 세션 온보딩의 시작점.",
     entityTypeId:"easy_npc:humanoid",
-    name:"네스토르 — 마지막 별지기",
-    variantType:"PROFESSOR_01",
+    name:"린케우스 — 마지막 별지기",
+    variantType:"STEVE",
     version:"1.0.0"
   },
   data:{
+    // ⚠️ `ActionPermissionLevel` 은 **`ActionEventSet` 의 형제**다. 안에 넣으면 조용히
+    //    무시되고 기본 권한으로 떨어져 `/lsonboard`(권한 2)가 튕긴다.
+    //    (인게임 NPC 를 뜯어 확인했다 — `world/easy_npc/npcs/<uuid>.npc.nbt`)
+    //
+    // ⚠️ ON_INTERACTION 에는 **대화만** 둔다. 인게임 기본값에는 `OPEN_TRADING_SCREEN` 이
+    //    같이 들어 있어서, 클릭하면 대화와 거래창이 함께 뜬다.
     ActionData:{
       ActionEventSet:{
         ON_INTERACTION:[{
           Type:"OPEN_DEFAULT_DIALOG"
-        }],
-        ActionPermissionLevel:4
-      }
+        }]
+      },
+      ActionPermissionLevel:3
     },
     Attributes:[{
       Base:0.0d,Name:"minecraft:generic.movement_speed"
@@ -24,17 +30,25 @@
     }],
     CanPickUpLoot:0b,
     CanUpdate:1b,
-    CustomName:'{"color":"#C9A227","text":"네스토르"}',
+    CustomName:'{"color":"#FFFF00","text":"린케우스"}',
     CustomNameVisible:1b,
     Invulnerable:1b,
     NoAI:1b,
     Silent:1b,
+    Profession:"NONE",
+    VariantType:"STEVE",
+    // 인게임에서 씌운 스킨을 그대로 적는다. `Type:"DEFAULT"` 로 두면 **가져올 때 스킨이 지워진다** —
+    // 이 파일이 스킨을 «비어 있음»으로 덮어쓰기 때문이다. 프리셋은 모자란 쪽을 채우는 게 아니라
+    // 통째로 갈아끼우는 물건이다.
+    // UUID·Timestamp 까지 있어야 플레이어 스킨이 실제로 붙는다 (이름만으로는 안 붙는다).
     SkinData:{
       Content:"",
       DisableLayers:0b,
-      Name:"",
-      Type:"DEFAULT",
-      URL:""
+      Name:"HRSSamuelTTV",
+      Type:"PLAYER_SKIN",
+      URL:"",
+      UUID:[I;-215787416,-1924641877,-1413010573,-1263525539],
+      Timestamp:1786512306354L
     },
     DialogData:{
       DialogDataSet:[{
