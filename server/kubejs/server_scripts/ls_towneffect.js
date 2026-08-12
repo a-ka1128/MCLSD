@@ -82,13 +82,18 @@ BlockEvents.rightClicked(event => {
   // 막지 않고 통과시키는 쪽이 안전한 방향이라 동작은 그대로 두되, 조용히 사라지게는 두지 않는다.
   try { if (LS.townLevel(server, 'sanctum') >= 1) return } catch (e) { lsWarn('ls_towneffect:gate-level', e); return }
 
-  event.cancel()
+  // ⚠️ 안내를 «먼저», 취소를 «나중에». KubeJS 는 event.cancel() 을 예외로 구현해서
+  //    뒤에 둔 코드가 한 줄도 안 돈다 — 순서가 반대였을 때 전송석은 막히는데
+  //    **왜 막혔는지는 아무 말도 안 했다.** 이 서버가 제일 싫어하는 조용한 실패다.
+  //    (2026-08-13, ls_relic.js 의 제단에서 같은 것을 잡다가 여기까지 찾았다.)
   const p = event.player
-  if (!p) return
-  p.tell(Text.of('§5✧ 전송석이 침묵한다. §7— 성소 §e웨이스톤 공명§7을 지어야 공명이 시작된다.'))
-  try {
-    server.runCommandSilent(`execute as ${p.username} at @s run playsound minecraft:block.beacon.deactivate master @s ~ ~ ~ 0.6 0.8`)
-  } catch (e2) { lsWarn('ls_towneffect:107', e2) }
+  if (p) {
+    p.tell(Text.of('§5✧ 전송석이 침묵한다. §7— 성소 §e웨이스톤 공명§7을 지어야 공명이 시작된다.'))
+    try {
+      server.runCommandSilent(`execute as ${p.username} at @s run playsound minecraft:block.beacon.deactivate master @s ~ ~ ~ 0.6 0.8`)
+    } catch (e2) { lsWarn('ls_towneffect:107', e2) }
+  }
+  event.cancel()
 })
 
 console.log('[Last Stardust] 마을 효과 로드됨 — 별빛 축복(근접+원거리) · 전송석 게이팅 · 성역 동기화')

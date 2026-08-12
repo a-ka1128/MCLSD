@@ -211,40 +211,51 @@ BlockEvents.rightClicked(event => {
   // ⚠️ **여기부터는 통째로 감싼다.** 이 안에서 예외가 나면 KubeJS 가 그걸 삼켜서
   //    로그에 아무것도 안 남는다 — 「들어온 자국은 있는데 나간 자국이 없는」 상태가 되고,
   //    그때 남는 단서가 0 이다. 2026-08-13 에 여기서 세 번 헛짚었다.
+  var handled = false
   try {
     var bx = Number(b.x), by = Number(b.y), bz = Number(b.z)
 
     // 공용 제단을 **먼저** 본다. 같은 블록에 둘이 걸려 있으면(등록 검사를 우회해 직접
     // 데이터를 만졌다면) 「가호가 안 맞는다」로 막히는 쪽이 이기면 안 된다.
     if (rlAltarAt(server, RL_SHARED, bx, by, bz)) {
-      event.cancel()
+      handled = true
       console.log(`[LS-RELIC] shared altar hit by ${player.username} @ ${bx},${by},${bz}`)
       rlGrant(server, player, false)   // 가호는 안 본다 — rlGrant 가 그 사람의 가호로 고른다
-      return
-    }
-    const keys = Object.keys(RELICS)
-    for (let i = 0; i < keys.length; i++) {
-      var fate = keys[i]
-      if (!rlAltarAt(server, fate, bx, by, bz)) continue
-      event.cancel()
-      var pf = String(LS.fate(server, player.username) || '')
-      if (pf !== fate) { player.tell(Text.of(`§7이 제단은 §r${RELICS[fate].name}§7의 것 — 당신의 길이 아니다.`)); return }
-      rlGrant(server, player, false)
-      return
+    } else {
+      var keys = Object.keys(RELICS)
+      for (var i = 0; i < keys.length; i++) {
+        var fate = keys[i]
+        if (!rlAltarAt(server, fate, bx, by, bz)) continue
+        handled = true
+        var pf = String(LS.fate(server, player.username) || '')
+        if (pf !== fate) player.tell(Text.of(`§7이 제단은 §r${RELICS[fate].name}§7의 것 — 당신의 길이 아니다.`))
+        else rlGrant(server, player, false)
+        break
+      }
     }
 
     // ── 자석석인데 어느 제단도 아니다 ──
     // 조용히 지나가면 「우클릭해도 아무 일이 없다」와 구분이 안 된다.
     // 등록된 좌표를 같이 찍어 무엇과 어긋났는지 눈으로 볼 수 있게 한다.
-    var known = []
-    rlAltarKeys().forEach(k => {
-      if (LS.hasAltar(server, k)) known.push(`${k}=${LS.altarX(server, k)},${LS.altarY(server, k)},${LS.altarZ(server, k)}`)
-    })
-    console.log(`[LS-RELIC] lodestone ${bx},${by},${bz} 는 제단이 아님 · 등록됨: ${known.join(' · ') || '없음'}`)
+    if (!handled) {
+      var known = []
+      rlAltarKeys().forEach(k => {
+        if (LS.hasAltar(server, k)) known.push(`${k}=${LS.altarX(server, k)},${LS.altarY(server, k)},${LS.altarZ(server, k)}`)
+      })
+      console.log(`[LS-RELIC] lodestone ${bx},${by},${bz} 는 제단이 아님 · 등록됨: ${known.join(' · ') || '없음'}`)
+    }
   } catch (e) {
     console.log('[LS-RELIC] ✘ 제단 판정 중 예외: ' + e)
     lsWarn('ls_relic:altar-click', e)
   }
+
+  // ⚠️⚠️ **`event.cancel()` 은 반드시 맨 마지막이다.**
+  //    KubeJS 는 cancel 을 «예외(EventExit)를 던져서» 구현한다 — 뒤에 둔 코드는 한 줄도 안 돈다.
+  //    원래 이게 첫 줄에 있어서 rlGrant 가 **한 번도 안 불렸다**. 오류도 안 나고
+  //    「우클릭해도 아무 일이 없는」 상태로만 보였다.
+  //    그리고 try 블록 «밖»이어야 한다 — 안에 두면 우리 catch 가 KubeJS 의 제어 흐름을
+  //    삼켜서 취소가 아예 안 먹는다(실제로 그렇게 됐다).
+  if (handled) event.cancel()
 })
 
 // ── 제단 등록 본체 ──

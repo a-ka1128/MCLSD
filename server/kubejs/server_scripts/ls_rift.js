@@ -303,8 +303,12 @@ BlockEvents.rightClicked(event => {
   if (!server || !isActive(server) || rfGetB(server, 'rf_pending') || rfGetB(server, 'rf_engaged')) return
   const ax = rfGetI(server, 'rf_ax'), ay = rfGetI(server, 'rf_ay'), az = rfGetI(server, 'rf_az')
   if (b.x === ax && b.y === ay + 1 && b.z === az) {
-    event.cancel()
+    // ⚠️ 소환을 «먼저», 취소를 «나중에». KubeJS 는 event.cancel() 을 예외로 구현해서
+    //    뒤에 둔 코드가 한 줄도 안 돈다 — 순서가 반대였을 때 **제물대를 우클릭해도
+    //    보스가 안 나왔다.** 오류도 안 나서 「제단이 고장났나」로만 보인다.
+    //    (2026-08-13, ls_relic.js 의 제단에서 같은 것을 잡다가 여기까지 찾았다.)
     summonAltarBoss(server)
+    event.cancel()
   }
 })
 
