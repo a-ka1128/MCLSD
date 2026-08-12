@@ -2,13 +2,16 @@
   PresetMetadata:{
     author:"Last Stardust",
     category:"Quest",
+    created:1786538762004L,
     description:"난파한 비행선의 마지막 생존자. 대화를 마치면 플레이어를 성역으로 보낸다(/lsonboard). 첫 세션 온보딩의 시작점.",
     entityTypeId:"easy_npc:humanoid",
+    modified:1786538762004L,
     name:"린케우스 — 마지막 별지기",
     variantType:"STEVE",
     version:"1.0.0"
   },
   data:{
+    id:"easy_npc:humanoid",
     ActionData:{
       ActionEventSet:{
         ON_INTERACTION:[{

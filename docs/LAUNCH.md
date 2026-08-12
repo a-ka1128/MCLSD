@@ -258,9 +258,19 @@ lodestone 을 놓는다  →  그 위에 서서  /relic altar <가호>  →  그
 
 #### ⚠️ 프리셋 파일을 고칠 때 (2026-08-12에 겪음)
 
+**고쳤으면 반드시 먼저 돌린다** — 아래 셋 다 인게임에서 이유를 안 알려준다:
+
+```powershell
+py tools/check_snbt.py server/kubejs/data/easy_npc/default_preset/humanoid/ls_wreck_survivor.npc.snbt
+```
+
+- 🔴 **`data` 바로 아래에 `id`(엔티티 타입)가 있어야 한다** — `id:"easy_npc:humanoid"`.
+  **`PresetMetadata.entityTypeId` 는 별개다.** 그게 있어도 `data.id` 가 없으면 실패한다.
+  인게임에는 §c「Unable to import default preset …」§r 한 줄만 뜨고, 진짜 이유는
+  **서버 로그에만** 남는다 — `Missing entity ID tag in preset data`.
+  **막히면 채팅 말고 `logs/latest.log` 를 본다.**
 - **SNBT 에는 주석을 못 넣는다.** `//` 를 한 줄 넣으면 파서가 거기서 죽고,
-  **프리셋이 목록에서 조용히 빠진다** — 채팅에 오류가 안 뜬다. 설명은 이 문서에 적는다.
-  `tools/` 없이 확인하려면 괄호·따옴표 균형과 `//` 유무만 봐도 대부분 걸린다.
+  **프리셋이 목록에서 조용히 빠진다.** 설명은 이 문서에 적는다.
 - **`ActionPermissionLevel` 은 `ActionEventSet` 의 «형제»다.** 안에 넣으면 무시되고
   기본 권한으로 떨어져 `/lsonboard`(권한 2)가 튕긴다 — 증상은 「대화는 되는데
   마지막 버튼만 아무 일도 안 일어난다」라 찾기 어렵다.
