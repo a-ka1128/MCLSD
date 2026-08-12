@@ -399,6 +399,15 @@ const TIER_NEWS = {
 
 // 공성 방향 (밤마다 1방향에서만 몰려옴 — 방어선 구축이 의미있어짐)
 const DIR8_KO = ['북', '북동', '동', '남동', '남', '남서', '서', '북서']
+// 고정 진격 방향(도). 설정이 없거나 숫자가 아니면 null — 그때는 굴린다.
+function sgFixedAngle() {
+  try {
+    if (typeof LS_CONFIG === 'undefined' || !LS_CONFIG.wall) return null
+    var v = LS_CONFIG.wall.siegeAngle
+    return (typeof v === 'number' && isFinite(v)) ? ((v % 360) + 360) % 360 : null
+  } catch (e) { lsWarn('ls_siege:fixed-angle', e); return null }
+}
+
 function sgDirName(angDeg) {
   // 각도(수학각: 0=동, 반시계) → 마인크래프트 방위 텍스트
   const dx = Math.cos(angDeg * Math.PI / 180), dz = Math.sin(angDeg * Math.PI / 180)
@@ -573,7 +582,10 @@ function startSiege(server, auto, forceGrand) {
   LS.setSiegeReward(server, 0)
   // 진격 방향 롤 (이번 공성 내내 유지) + 예고
   LS.setWallWarn(server, 4) // 성벽 경보 단계 초기화
-  const dirDeg = Math.floor(Math.random() * 360)
+  // ── 방향: 고정값이 있으면 그것, 없으면 굴린다 ──
+  // 성문이 한쪽을 보는 큰 성에서는 고정이 낫다 — 매 밤 「어디에 설지」를 안 헤매고,
+  // 성문·해자·망루가 실제로 값을 한다(ls_config.js `wall.siegeAngle`).
+  const dirDeg = sgFixedAngle() !== null ? sgFixedAngle() : Math.floor(Math.random() * 360)
   LS.setSiegeAngle(server, dirDeg)
   say(server, `§c⚑ 어둠의 진격 방향: §e${sgDirName(dirDeg)}쪽 §7— 그쪽 방어선에 집결해 주세요!`)
   if (wallBroken(server)) say(server, '§4▨ 성벽이 무너진 채다 — 오늘 밤 방어선이 없습니다! (/wall repair)')
@@ -1248,6 +1260,10 @@ ServerEvents.commandRegistry(event => {
         `§8   모양 §7${wSq ? '정사각(한 변 ' + (wRad * 2) + ')' : '원형'}§8 · 반경 §7${wRad}§8 · 스폰 거리 §7${spawnRing(s)}§8칸`))
       ctx.source.sendSystemMessage(Text.of(
         `§8   건축: §7${wSq ? `//pos1 ~-${wRad} ~ ~-${wRad} · //pos2 ~${wRad} ~5 ~${wRad} · //walls <블록>` : `//hcyl <블록> ${wRad} 5`} §8(성역 중심에서)`))
+      const fx = sgFixedAngle()
+      ctx.source.sendSystemMessage(Text.of(fx === null
+        ? '§8   진격 방향 §7매 공성마다 무작위'
+        : `§8   진격 방향 §7${sgDirName(fx)}쪽 고정 §8(${fx}° · ±35° 부채꼴)`))
       simWarn(ctx.source, s)
       if (wallBroken(s)) ctx.source.sendSystemMessage(Text.of('§c   붕괴됨 — 공성 몹이 그대로 들어온다. §7/wall repair <n> §8(필요량은 /wall cost <n>)'))
       return 1
