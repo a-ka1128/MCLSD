@@ -241,12 +241,38 @@ lodestone 을 놓는다  →  그 위에 서서  /relic altar <가호>  →  그
 
 ### 세우는 법
 
+프리셋은 **데이터팩 파일**이라 고친 뒤 `/reload` 를 해야 목록에 뜬다.
+
 ```
-/easy_npc preset import default humanoid ls_wreck_survivor     ← 이름·구문은 인게임 탭으로 확인
+/reload
+/easy_npc preset import default <탭>          ← 새로 하나 세운다
 ```
+
+`import` 아래 갈래는 `default` · `world` · `custom` · `data` · `local` 다
+(jar 의 `PresetImportCommand` 에서 확인). 우리 파일은
+`kubejs/data/easy_npc/**default_preset**/humanoid/` 에 있으므로 **`default`** 다.
+뒤의 이름·좌표·소유자는 **탭 완성으로** 고른다 — 인수 순서는 버전마다 바뀐다.
 
 비행선 갑판에 세우고 — `NoAI` · `Invulnerable` · `Silent` 가 프리셋에 들어 있으니
 안 움직이고 안 죽고 조용하다.
+
+#### ⚠️ 프리셋 파일을 고칠 때 (2026-08-12에 겪음)
+
+- **SNBT 에는 주석을 못 넣는다.** `//` 를 한 줄 넣으면 파서가 거기서 죽고,
+  **프리셋이 목록에서 조용히 빠진다** — 채팅에 오류가 안 뜬다. 설명은 이 문서에 적는다.
+  `tools/` 없이 확인하려면 괄호·따옴표 균형과 `//` 유무만 봐도 대부분 걸린다.
+- **`ActionPermissionLevel` 은 `ActionEventSet` 의 «형제»다.** 안에 넣으면 무시되고
+  기본 권한으로 떨어져 `/lsonboard`(권한 2)가 튕긴다 — 증상은 「대화는 되는데
+  마지막 버튼만 아무 일도 안 일어난다」라 찾기 어렵다.
+  실물은 `world/easy_npc/npcs/<uuid>.npc.nbt` 를 열어 보면 된다(gzip NBT).
+- **`ON_INTERACTION` 에는 대화만 둔다.** 인게임에서 만든 NPC 의 기본값에는
+  `OPEN_TRADING_SCREEN` 이 같이 들어 있어, 클릭하면 거래창이 함께 뜬다.
+- **프리셋은 «통째로 갈아끼운다».** 모자란 칸만 채우는 게 아니다.
+  그래서 `SkinData` 를 `Type:"DEFAULT"` 로 비워 두면 **가져오는 순간 스킨이 지워진다.**
+  플레이어 스킨은 이름만으로는 안 붙고 `UUID`·`Timestamp` 까지 있어야 한다.
+
+> 지금 파일은 인게임의 **린케우스**(`STEVE` + `HRSSamuelTTV` 플레이어 스킨)에 맞춰져 있다.
+> 그래서 지금 세워 둔 NPC 에 그대로 가져와도 이름·스킨이 안 바뀐다.
 
 ### ⚠️ 세우기 전에 성역부터
 
