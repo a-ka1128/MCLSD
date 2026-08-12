@@ -420,15 +420,35 @@ function sgDirName(angDeg) {
 // 여태 웨이브 규모가 인원수를 전혀 안 봤다. 6명이 1명과 같은 12마리를 상대했으니
 // 사람이 모일수록 쉬워졌다(6인 파티 화력은 솔로의 약 5.6배다 — 실측 304 vs 54).
 //
-// 그렇다고 5.6배를 그대로 곱하면 66마리다. 모드 몹(Cataclysm)이 무거워 서버가 못 버틴다.
-// 그래서 수(數)로는 절반만 따라가고, 나머지 절반은 위협도·몹 스케일링(질)이 맡는다.
-//   위협도 15 기준: 1명 12 · 2명 18 · 4명 30 · 6명 40 (6명은 PARTY_HARD_CAP 에 걸린다)
-// 첫 판 뒤에 조절하기 쉽도록 상수 하나로 뺐다.
 // 2026-08-13 유저 결정: 0.5 → 1.0. 인원수에 **정비례**한다 — 1명 5, 2명 10, 3명 15, 4명 20.
-// 예전 0.5 는 「6인 화력이 솔로의 5.6배인데 수는 3배까지만」이라 모일수록 쉬워졌다.
-// 1.0 이면 인원이 늘어도 «1인분»이 그대로 유지된다.
+// 인원이 늘어도 «1인분»이 그대로 유지된다.
 const PARTY_PER_EXTRA = 1.0   // 추가 인원 1명당 +100%
-const PARTY_HARD_CAP = 40     // 서버 보호 — 이 이상은 안 뽑는다
+
+// ── 상한을 «정예»에만 건다 (2026-08-13) ──
+//
+// 예전 상한(PARTY_HARD_CAP 40)이 생긴 이유는 마릿수가 아니라 **무게**였다 —
+// 원래 주석이 그렇게 적고 있다: 「모드 몹(Cataclysm)이 무거워 서버가 못 버틴다」.
+// 그런데 그걸 «전체 마릿수»로 깎으니 **좀비까지 같이 눌렸고**, 위협도를 15까지 올려도
+// 4명이면 40에서 평평해졌다. 난이도가 조용히 천장에 닿는 종류다.
+//
+// 그래서 둘로 가른다:
+//   · 일반 몹(바닐라) — 거의 안 막는다. 가볍고, 수가 곧 압박이다
+//   · 정예(모드 몹)   — 여기만 예산을 잡는다. 무거운 건 이쪽뿐이다
+// 예산을 넘기면 정예 자리를 **일반 몹으로 대신 채운다** — 마릿수는 안 줄고 무게만 준다.
+//
+// ⚠️ WAVE_HARD_CAP 은 «난이도 손잡이»가 아니라 **서버가 죽는 걸 막는 마지막 빗장**이다.
+//    난이도를 올리고 싶으면 위협도·정예 예산을 만지고 여기는 그대로 둔다.
+const WAVE_HARD_CAP = 100     // 한 물결 절대 상한 (일반 포함) — 서버 보호
+const ELITE_PER_PLAYER = 3    // 인원 1명당 정예 예산
+const ELITE_HARD_CAP = 16     // 정예 절대 상한 (일반 공성)
+const ELITE_HARD_CAP_GRAND = 24  // 대공세는 정예가 주인공이라 더 준다
+// 정예로 치는 것 — 무거운 모드 몹. 여기 없는 건 «일반»으로 세고 안 막는다.
+const ELITE_IDS = ['cataclysm:ignited_berserker', 'cataclysm:ignited_revenant']
+
+function eliteBudget(grand, players) {
+  const cap = grand ? ELITE_HARD_CAP_GRAND : ELITE_HARD_CAP
+  return Math.min(cap, Math.round(ELITE_PER_PLAYER * (grand ? 1.5 : 1) * Math.max(1, players || 1)))
+}
 
 // ── 마지막 웨이브의 선봉 (관문 기믹의 연습장) ──
 // 종류와 표식은 모드의 SiegeVanguardGimmick 과 - 반드시 같아야 한다 - .
@@ -458,15 +478,26 @@ function partyCount(server) { return Math.max(1, activePlayers(server)) }
 function buildWave(threat, grand, players, prog) {
   const mobs = []
   const mul = 1 + PARTY_PER_EXTRA * Math.max(0, (players || 1) - 1)
-  const cap = Math.min(PARTY_HARD_CAP, Math.round((grand ? 16 : 12) * mul))
-  const total = Math.min(cap, Math.round(((grand ? 5 : 3) + threat) * mul))
+  // 마릿수는 위협도·인원이 그대로 정한다. 여기서 «무게» 때문에 깎지 않는다.
+  const total = Math.min(WAVE_HARD_CAP, Math.round(((grand ? 5 : 3) + threat) * mul))
   const tier = waveTier(prog, threat)
+  var elitesLeft = eliteBudget(grand, players)
+
+  // 정예를 뽑되 예산이 없으면 일반 몹으로 대신한다.
+  // ⚠️ 자리를 «비우지» 않는다 — 비우면 마릿수가 줄어 인원 비례가 도로 깨진다.
+  function pick(id, fallback) {
+    if (ELITE_IDS.indexOf(id) < 0) return id
+    if (elitesLeft <= 0) return fallback
+    elitesLeft--
+    return id
+  }
+
   for (let i = 0; i < total; i++) {
     // 5단계는 새 몹을 더하지 않고 - 밀도 - 를 올린다. 종류를 더 늘리면 화면에서 구분이 안 된다.
-    if (tier >= 5 && i % 4 === 0) mobs.push('cataclysm:ignited_berserker')
-    else if (tier >= 5 && i % 3 === 1) mobs.push('cataclysm:ignited_revenant')
-    else if (tier >= 4 && i % 6 === 0) mobs.push('cataclysm:ignited_berserker')
-    else if (tier >= 3 && i % 5 === 0) mobs.push('cataclysm:ignited_revenant')
+    if (tier >= 5 && i % 4 === 0) mobs.push(pick('cataclysm:ignited_berserker', 'minecraft:wither_skeleton'))
+    else if (tier >= 5 && i % 3 === 1) mobs.push(pick('cataclysm:ignited_revenant', 'minecraft:husk'))
+    else if (tier >= 4 && i % 6 === 0) mobs.push(pick('cataclysm:ignited_berserker', 'minecraft:wither_skeleton'))
+    else if (tier >= 3 && i % 5 === 0) mobs.push(pick('cataclysm:ignited_revenant', 'minecraft:husk'))
     else if (tier >= 3 && i % 4 === 1) mobs.push('minecraft:wither_skeleton')
     else if (tier >= 2 && i % 4 === 0) mobs.push('minecraft:husk')
     else if (tier >= 2 && i % 5 === 2) mobs.push('minecraft:stray')
@@ -476,6 +507,13 @@ function buildWave(threat, grand, players, prog) {
     else mobs.push('minecraft:zombie')
   }
   return mobs
+}
+
+/** 이 웨이브에 정예가 몇 마리인가 — `/siege status` 가 보여준다. */
+function countElites(wave) {
+  var n = 0
+  for (var i = 0; i < wave.length; i++) if (ELITE_IDS.indexOf(wave[i]) >= 0) n++
+  return n
 }
 
 // 웨이브 하나 소환
@@ -1486,6 +1524,11 @@ ServerEvents.commandRegistry(event => {
       var pg = LS.progress(s)
       ctx.source.sendSystemMessage(Text.of(
         `§8인원 §7${pc}명§8 → 웨이브 §7${buildWave(et, false, pc, pg).length}마리§8 (1명이면 ${buildWave(et, false, 1, pg).length}) · 대공세 §7${buildWave(et, true, pc, pg).length}마리`))
+      // 정예 수를 따로 보여준다 — 서버 무게는 «마릿수»가 아니라 이쪽이 정한다.
+      // 이게 안 보이면 「40마리인데 왜 렉이 걸리지」와 「80마리인데 멀쩡하네」를 못 가른다.
+      var wN = buildWave(et, false, pc, pg), wG = buildWave(et, true, pc, pg)
+      ctx.source.sendSystemMessage(Text.of(
+        `§8   그중 정예 §c${countElites(wN)}§8마리 (대공세 §c${countElites(wG)}§8) · 예산 ${eliteBudget(false, pc)}/${eliteBudget(true, pc)}`))
       // 양과 질이 갈렸으니 둘을 같이 보여준다 — 안 보이면 "관문 깼는데 뭐가 달라졌지"가 된다
       ctx.source.sendSystemMessage(Text.of(
         `§8몹 단계 §7${waveTier(pg, et)}§8/5 §7— 관문 ${pg}/4${et >= 10 ? ' §c+ 방치 보정(위협 10+)' : ''}`))
