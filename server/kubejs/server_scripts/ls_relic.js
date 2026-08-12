@@ -193,16 +193,72 @@ ServerEvents.commandRegistry(event => {
       if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만 (본인에게 지급)')); return 0 }
       return rlGrant(ctx.source.server, p, true)
     }))
+    // ── 제단 등록 ──
+    // ⚠️ 예전엔 `Math.floor(p.y)` 를 그대로 넣었다 — 그건 **발이 들어 있는 칸**이고,
+    //    위 우클릭 판정은 **lodestone 블록 칸**과 비교한다. lodestone 위에 서면 한 칸 어긋나
+    //    등록은 «✔» 로 뜨는데 우클릭이 영원히 안 먹었다. 조용히 실패하는 종류라
+    //    제단 열둘을 다 짓고 나서야 알게 된다.
+    //
+    // 그래서 좌표를 짐작하지 않고 **lodestone 을 직접 찾는다** — 발밑(-1), 선 자리(0),
+    // 반블록/카펫을 밟고 선 경우(-2)까지. 못 찾으면 등록하지 않고 이유를 말한다.
     .then(Commands.literal('altar').requires(s => s.hasPermission(2))
       .then(fateArg().executes(ctx => {
         const s = ctx.source.server; const p = ctx.source.player
         if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
         const fate = Arguments.STRING.getResult(ctx, 'fate')
         if (!RELICS[fate]) { ctx.source.sendSystemMessage(Text.of('§c가호: ' + Object.keys(RELICS).join('/'))); return 0 }
-        LS.setAltar(s, fate, Math.floor(p.x), Math.floor(p.y), Math.floor(p.z))
-        ctx.source.sendSystemMessage(Text.of(`§a${RELICS[fate].name}§a 제단 등록: ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)} §7(발밑 lodestone에 배치)`))
+
+        var rlAlX = Math.floor(p.x), rlAlZ = Math.floor(p.z), rlAlFeet = Math.floor(p.y)
+        var rlAlY = null
+        try {
+          var rlAlOff = [-1, 0, -2]
+          for (var rlAlI = 0; rlAlI < rlAlOff.length && rlAlY === null; rlAlI++) {
+            var rlAlB = p.level.getBlock(rlAlX, rlAlFeet + rlAlOff[rlAlI], rlAlZ)
+            if (rlAlB && rlAlB.id === 'minecraft:lodestone') rlAlY = rlAlFeet + rlAlOff[rlAlI]
+          }
+        } catch (e) { lsWarn('ls_relic:altar-scan', e) }
+
+        if (rlAlY === null) {
+          ctx.source.sendSystemMessage(Text.of('§c발밑에 lodestone(자석석)이 없습니다 — 제단 블록 위에 서서 실행하세요.'))
+          ctx.source.sendSystemMessage(Text.of(`§8   찾아본 곳: ${rlAlX}, ${rlAlFeet - 2}~${rlAlFeet}, ${rlAlZ}`))
+          return 0
+        }
+
+        // 같은 블록에 두 가호를 등록하면 우클릭 판정이 «먼저 걸린 쪽»만 잡는다.
+        // 열둘을 짓다 보면 한 번쯤 나오는 실수고, 증상은 「어떤 직업만 유물을 못 받는다」다.
+        var rlAlDup = null
+        Object.keys(RELICS).forEach(k => {
+          if (k === fate || rlAlDup || !LS.hasAltar(s, k)) return
+          if (LS.altarX(s, k) === rlAlX && LS.altarY(s, k) === rlAlY && LS.altarZ(s, k) === rlAlZ) rlAlDup = k
+        })
+        if (rlAlDup) {
+          ctx.source.sendSystemMessage(Text.of(`§c이 블록은 이미 §r${RELICS[rlAlDup].name}§c 의 제단입니다 — 다른 곳에 놓으세요.`))
+          return 0
+        }
+
+        LS.setAltar(s, fate, rlAlX, rlAlY, rlAlZ)
+        ctx.source.sendSystemMessage(Text.of(`§a${RELICS[fate].name}§a 제단 등록: ${rlAlX}, ${rlAlY}, ${rlAlZ}`))
+        ctx.source.sendSystemMessage(Text.of('§8   그 자리에서 우클릭해 보면 바로 확인됩니다.'))
+        console.log(`[LS-RELIC] altar ${fate} @ ${rlAlX},${rlAlY},${rlAlZ}`)
         return 1
       })))
+    // ── 제단 현황 ──
+    // 열두 개를 손으로 짓는 동안 «어디까지 했더라»를 볼 방법이 없었다.
+    .then(Commands.literal('altars').requires(s => s.hasPermission(2)).executes(ctx => {
+      const s = ctx.source.server
+      var rlLsKeys = Object.keys(RELICS), rlLsDone = 0
+      ctx.source.sendSystemMessage(Text.of('§6═══ ✦ 유물 제단 ═══'))
+      rlLsKeys.forEach(k => {
+        if (LS.hasAltar(s, k)) {
+          rlLsDone++
+          ctx.source.sendSystemMessage(Text.of(`§a ✔ §r${RELICS[k].name} §8(${k}) §7${LS.altarX(s, k)}, ${LS.altarY(s, k)}, ${LS.altarZ(s, k)}`))
+        } else {
+          ctx.source.sendSystemMessage(Text.of(`§c ✘ §r${RELICS[k].name} §8(${k}) §c미등록`))
+        }
+      })
+      ctx.source.sendSystemMessage(Text.of(`§7${rlLsDone} / ${rlLsKeys.length} 등록됨`))
+      return 1
+    }))
     // ── 유물 회수 (OP) ──
     // /relic grant 는 본인 전용이라 남의 획득 상태를 되돌릴 방법이 없었다.
     // /fate set 으로 직업을 바꿔주면 유물 플래그만 옛 직업에 남아 어긋난다.
