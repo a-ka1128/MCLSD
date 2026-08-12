@@ -223,6 +223,20 @@ public final class FateAutoOpen {
      * ({@link #openScreen} 이 스스로 확인한다). 글과 타이틀은 그대로 나오므로
      * 박자를 보는 데는 지장이 없다.
      */
+    /**
+     * {@code ticks} 뒤에 <b>가호 화면만</b> 연다. 프롤로그는 안 튼다.
+     *
+     * <p>비행선 NPC 온보딩({@link Onboarding})이 성역으로 보낸 직후에 쓴다 —
+     * 그 시점엔 프롤로그를 이미 봤고, 필요한 건 「이제 고르라」 한 걸음뿐이다.
+     * 여기 있는 대본 장치를 그대로 쓰는 이유는 <b>화면을 여는 길이 하나여야</b>
+     * 「명령으로 열면 잠긴 목록이 보이는데 자동으로 열면 안 보이는」 어긋남이 안 생기기 때문이다.
+     */
+    public static void openLater(ServerPlayer player, int ticks) {
+        if (player == null) return;
+        PENDING.removeIf(p -> p.player == player);
+        PENDING.add(new Pending(player, List.of(new Cue(ticks, FateAutoOpen::openScreen))));
+    }
+
     public static void replay(ServerPlayer player) {
         PENDING.removeIf(p -> p.player == player);          // 돌고 있던 대본은 버린다
         CompoundTag root = player.getPersistentData();

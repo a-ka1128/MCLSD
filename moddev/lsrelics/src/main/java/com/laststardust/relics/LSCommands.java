@@ -59,6 +59,35 @@ public final class LSCommands {
                     return 1;
                 })));
 
+        // ── 비행선 NPC 온보딩 ──
+        // Easy NPC 대화의 마지막 버튼이 부른다. 관리자도 손으로 부를 수 있어야 한다 —
+        // NPC 가 안 보이거나 대화가 막혔을 때 첫 세션을 여기서 구할 수 있어야 하기 때문이다.
+        event.getDispatcher().register(
+            Commands.literal("lsonboard")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.argument("who", StringArgumentType.word())
+                    .suggests((ctx, b) -> {
+                        for (ServerPlayer sp : ctx.getSource().getServer().getPlayerList().getPlayers()) {
+                            b.suggest(sp.getGameProfile().getName());
+                        }
+                        return b.buildFuture();
+                    })
+                    .executes(ctx -> {
+                        String who = StringArgumentType.getString(ctx, "who");
+                        ServerPlayer target = ctx.getSource().getServer().getPlayerList().getPlayerByName(who);
+                        if (target == null) {
+                            ctx.getSource().sendFailure(Component.literal(who + " 은(는) 접속 중이 아니다."));
+                            return 0;
+                        }
+                        String fail = Onboarding.send(target);
+                        if (fail != null) {
+                            ctx.getSource().sendFailure(Component.literal("§c" + fail));
+                            return 0;
+                        }
+                        LOG.info("[온보딩] {} -> 성역", who);
+                        return 1;
+                    })));
+
         // 훈련 더미 — 파티 실효 DPS 실측 (보스 체력 설계의 근거가 된다)
         event.getDispatcher().register(
             Commands.literal("dummy")

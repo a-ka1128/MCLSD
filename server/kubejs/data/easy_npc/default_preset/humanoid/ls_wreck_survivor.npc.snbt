@@ -1,0 +1,105 @@
+{
+  PresetMetadata:{
+    author:"Last Stardust",
+    category:"Quest",
+    description:"난파한 비행선의 마지막 생존자. 대화를 마치면 플레이어를 성역으로 보낸다(/lsonboard). 첫 세션 온보딩의 시작점.",
+    entityTypeId:"easy_npc:humanoid",
+    name:"난파선의 생존자",
+    variantType:"STEVE",
+    version:"1.0.0"
+  },
+  data:{
+    ActionData:{
+      ActionEventSet:{
+        ON_INTERACTION:[{
+          Type:"OPEN_DEFAULT_DIALOG"
+        }],
+        ActionPermissionLevel:4
+      }
+    },
+    Attributes:[{
+      Base:0.0d,Name:"minecraft:generic.movement_speed"
+    },{
+      Base:20.0d,Name:"minecraft:generic.max_health"
+    }],
+    CanPickUpLoot:0b,
+    CanUpdate:1b,
+    CustomName:'{"color":"#C9A227","text":"난파선의 생존자"}',
+    CustomNameVisible:1b,
+    Invulnerable:1b,
+    NoAI:1b,
+    Silent:1b,
+    DialogData:{
+      DialogDataSet:[{
+        Label:"start",
+        Name:"첫 만남",
+        Priority:10,
+        Texts:[{
+          Text:"…살아 있는 사람이군. @initiator, 이름은 기억해 두겠네."
+        },{
+          Text:"이 배는 별이 떨어지던 밤에 여기 박혔다. 나는 그 뒤로 계속 여기 있었지."
+        }],
+        Buttons:[{
+          Label:"b_where",Name:"여기가 어디입니까",
+          Actions:[{ Cmd:"where",Type:"OPEN_NAMED_DIALOG" }]
+        },{
+          Label:"b_you",Name:"당신은 누구입니까",
+          Actions:[{ Cmd:"who",Type:"OPEN_NAMED_DIALOG" }]
+        }]
+      },{
+        Label:"where",
+        Name:"여기가 어디인가",
+        Texts:[{
+          Text:"세계의 끝자락. 별빛이 닿지 않게 된 지 오래된 곳이다."
+        },{
+          Text:"하늘을 봐라. 아무것도 없지. 별은 전부 삼켜졌고, 마지막 하나가 이 땅에 떨어져 부서졌다."
+        },{
+          Text:"…그런데 그 잔해가 아직 빛나고 있어. 나는 그걸 성역이라 부른다."
+        }],
+        Buttons:[{
+          Label:"b_send_from_where",Name:"그 성역으로 가겠습니다",
+          Actions:[{ Cmd:"send",Type:"OPEN_NAMED_DIALOG" }]
+        },{
+          Label:"b_you2",Name:"당신은 누구입니까",
+          Actions:[{ Cmd:"who",Type:"OPEN_NAMED_DIALOG" }]
+        }]
+      },{
+        Label:"who",
+        Name:"당신은 누구인가",
+        Texts:[{
+          Text:"별지기였다. 지금은 그냥 늙은이고."
+        },{
+          Text:"우리는 여덟이었다. 각자 별에게 하나씩 받았지 — 검, 창, 활, 지팡이… 이름은 다 달랐다."
+        },{
+          Text:"돌아온 사람은 나 하나다. 그것도 무기는 어디다 두고 왔는지 기억이 안 나."
+        }],
+        Buttons:[{
+          Label:"b_send_from_who",Name:"성역으로 보내주십시오",
+          Actions:[{ Cmd:"send",Type:"OPEN_NAMED_DIALOG" }]
+        },{
+          Label:"b_where2",Name:"여기가 어디입니까",
+          Actions:[{ Cmd:"where",Type:"OPEN_NAMED_DIALOG" }]
+        }]
+      },{
+        Label:"send",
+        Name:"성역으로",
+        Texts:[{
+          Text:"이 배에 아직 힘이 조금 남아 있다. 한 사람쯤은 보낼 수 있어."
+        },{
+          Text:"거기서 별이 자네를 볼 거다. 무엇으로 보이는지는 자네가 정하는 게 아니야."
+        },{
+          Text:"…가라. 나는 여기 남는다."
+        }],
+        Buttons:[{
+          Label:"b_go",Name:"§6[ 성역으로 간다 ]",
+          Actions:[{
+            Cmd:"/lsonboard @initiator",Type:"COMMAND"
+          }]
+        },{
+          Label:"b_wait",Name:"조금 더 둘러보겠습니다",
+          Actions:[{ Cmd:"start",Type:"OPEN_NAMED_DIALOG" }]
+        }]
+      }]
+    }
+  }
+}
