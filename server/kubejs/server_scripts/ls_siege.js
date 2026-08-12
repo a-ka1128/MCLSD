@@ -167,6 +167,22 @@ function wallReach(server) { return wallIsSquare(server) ? wallR(server) * Math.
 // **몹이 성벽 안에 스폰된다.** 게다가 공성 방향이 매번 랜덤이라 어떤 밤엔 되고 어떤 밤엔 뚫린다.
 // 여기서 계산하면 반경을 바꾸든 모양을 바꾸든 어긋날 자리가 없다.
 function spawnRing(server) { return Math.ceil(wallReach(server)) + SPAWN_GAP }
+
+// ── 스폰 거리가 시뮬레이션 거리를 넘었는가 ──
+// **넘으면 조용히 실패한다.** 몹은 스폰되는데 틱을 안 받아 그 자리에 서 있고,
+// 오류도 로그도 없이 밤이 그냥 지나간다. 반경을 200 까지 열어 준 이상 이건 시간 문제다.
+// 그래서 «반경을 바꾸는 자리»와 «상태를 보는 자리» 둘 다에서 말해 준다 —
+// 오늘 하루 계기가 값을 쥐고도 안 보여줘서 네 번 헤맸다(docs/CLASSES.md 「계기 구멍」).
+function simBlocks(server) {
+  try { return (LS.simulationDistance(server) | 0) * 16 } catch (e) { lsWarn('ls_siege:simdist', e); return 0 }
+}
+function simWarn(src, server) {
+  const need = spawnRing(server), have = simBlocks(server)
+  if (have <= 0 || need <= have) return false
+  src.sendSystemMessage(Text.of(`§c⚠ 스폰 거리 ${need}칸 > 시뮬레이션 거리 ${have}칸 §7— 몹이 스폰돼도 §c움직이지 않는다.`))
+  src.sendSystemMessage(Text.of(`§8   server.properties 의 §7simulation-distance§8 를 §7${Math.ceil(need / 16)}§8 이상으로 올리거나, 반경을 줄일 것.`))
+  return true
+}
 // 방벽 레벨당 최대 내구도 +100 (기본 150 → 4레벨 550).
 // 방벽 트랙의 가장 직관적인 보상이라 눈에 띄게 올린다.
 function wallMax(server) { return WALL_BASE_HP + townLvl(server, 'ramparts') * 1000 }
@@ -1232,6 +1248,7 @@ ServerEvents.commandRegistry(event => {
         `§8   모양 §7${wSq ? '정사각(한 변 ' + (wRad * 2) + ')' : '원형'}§8 · 반경 §7${wRad}§8 · 스폰 거리 §7${spawnRing(s)}§8칸`))
       ctx.source.sendSystemMessage(Text.of(
         `§8   건축: §7${wSq ? `//pos1 ~-${wRad} ~ ~-${wRad} · //pos2 ~${wRad} ~5 ~${wRad} · //walls <블록>` : `//hcyl <블록> ${wRad} 5`} §8(성역 중심에서)`))
+      simWarn(ctx.source, s)
       if (wallBroken(s)) ctx.source.sendSystemMessage(Text.of('§c   붕괴됨 — 공성 몹이 그대로 들어온다. §7/wall repair <n> §8(필요량은 /wall cost <n>)'))
       return 1
     })
@@ -1285,9 +1302,13 @@ ServerEvents.commandRegistry(event => {
       return 1
     })))
     .then(Commands.literal('radius').requires(s => s.hasPermission(2)).then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
-      const n = Math.max(8, Math.min(60, Arguments.INTEGER.getResult(ctx, 'n')))
+      // 상한 60 → 200 (2026-08-12). 성 하나를 통째로 감싸려면 60 으로는 모자란다.
+      // ⚠️ 대신 **시뮬레이션 거리**가 새 천장이 된다 — 아래 simWarn 참고.
+      const n = Math.max(8, Math.min(200, Arguments.INTEGER.getResult(ctx, 'n')))
       LS.setWallRadius(ctx.source.server, n)
-      ctx.source.sendSystemMessage(Text.of(`§a성벽 반경 = ${n} §7(실제 성벽 크기에 맞춰 조정)`)); return 1
+      ctx.source.sendSystemMessage(Text.of(`§a성벽 반경 = ${n} §7(실제 성벽 크기에 맞춰 조정)`))
+      simWarn(ctx.source, ctx.source.server)
+      return 1
     })))
     .then(Commands.literal('set').requires(s => s.hasPermission(2)).then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
       wallSetHp(ctx.source.server, Arguments.INTEGER.getResult(ctx, 'n'))

@@ -1215,6 +1215,17 @@ public class LSKubeBridge implements KubeJSPlugin {
             com.laststardust.relics.ReviveRules.begin(player);
         }
 
+        /**
+         * 서버의 <b>시뮬레이션 거리</b>(청크). 공성이 이걸 봐야 한다.
+         *
+         * <p>스폰 거리는 성벽 반경에서 «계산»되는데(`ls_siege.js spawnRing`), 그 값이
+         * 시뮬레이션 거리를 넘으면 <b>몹이 스폰만 되고 틱을 안 받아 그 자리에 서 있는다.</b>
+         * 오류도 로그도 없다 — 밤이 조용히 지나갈 뿐이다. 그래서 «보이게» 만들 근거가 필요하다.
+         */
+        public int simulationDistance(MinecraftServer server) {
+            return server == null ? 0 : server.getPlayerList().getSimulationDistance();
+        }
+
         public void syncTown(ServerPlayer player) {
             if (player != null) TownGui.sync(player);
         }
