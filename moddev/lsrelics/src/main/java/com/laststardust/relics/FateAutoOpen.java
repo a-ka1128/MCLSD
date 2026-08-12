@@ -96,10 +96,32 @@ public final class FateAutoOpen {
 
     private record Cue(int at, Beat beat) {}
 
-    private static final List<Cue> WITH_PROLOGUE = buildProlouge();
+    /**
+     * <b>처음 오는 사람의 가호 선택을 «성역에 도착한 뒤»로 미룬다.</b>
+     *
+     * <p>비행선 NPC 온보딩({@link Onboarding})이 생기면서 순서가 어긋났다. 접속하자마자
+     * 화면이 열리면 플레이어는 <b>NPC 를 만나기도 전에</b> 가호를 고르고, 그러면
+     * NPC 의 「거기서 별이 자네를 볼 거다」가 이미 지난 일을 말하는 대사가 된다.
+     * 도착 뒤에 여는 {@link Onboarding} 의 {@code openLater} 도 «이미 가호가 있음»으로
+     * 조용히 건너뛴다 — 연출이 통째로 죽어 있었다.
+     *
+     * <p>그래서 첫 접속에는 <b>프롤로그와 타이틀까지만</b> 틀고 화면은 열지 않는다.
+     * 화면은 성역에 도착하고 3초 뒤 {@link Onboarding} 이 연다.
+     *
+     * <p>⚠️ <b>두 번째 접속부터는 그냥 연다</b>({@code PLAIN}) — 이게 탈출구다.
+     * NPC 가 없거나 대화가 막혀도 재접속 한 번이면 가호를 고를 수 있다.
+     * 이 구멍이 없으면 「대화가 안 되는데 가호도 못 고르는」 상태에 갇힌다.
+     *
+     * <p>비행선 온보딩을 접으면 이 값을 {@code false} 로 되돌린다 — 예전처럼 접속 즉시 연다.
+     */
+    private static final boolean DEFER_TO_ONBOARDING = true;
+
+    private static final List<Cue> WITH_PROLOGUE = buildProlouge(true);
+    /** 프롤로그·타이틀까지만. 가호 화면은 {@link Onboarding} 이 성역에서 연다. */
+    private static final List<Cue> PROLOGUE_ONLY = buildProlouge(false);
     private static final List<Cue> PLAIN = List.of(new Cue(DELAY_TICKS, FateAutoOpen::openScreen));
 
-    private static List<Cue> buildProlouge() {
+    private static List<Cue> buildProlouge(boolean openScreenAtEnd) {
         List<Cue> out = new ArrayList<>();
         int t = START_TICKS;
         // 모드팩 로딩 줄과 붙어 시작하면 프롤로그가 그 일부로 읽힌다. 빈 줄로 떼어낸다.
@@ -118,8 +140,10 @@ public final class FateAutoOpen {
         }
         t += TITLE_GAP;
         out.add(new Cue(t, FateAutoOpen::showTitle));
-        t += SCREEN_GAP;
-        out.add(new Cue(t, FateAutoOpen::openScreen));
+        if (openScreenAtEnd) {
+            t += SCREEN_GAP;
+            out.add(new Cue(t, FateAutoOpen::openScreen));
+        }
         return List.copyOf(out);
     }
 
@@ -167,7 +191,10 @@ public final class FateAutoOpen {
 
         boolean first = !persisted(player).getBoolean(K_SEEN);
         if (first) markSeen(player);
-        PENDING.add(new Pending(player, first ? WITH_PROLOGUE : PLAIN));
+        // 첫 접속 → 프롤로그. 화면을 여기서 여느냐 성역에서 여느냐는 DEFER_TO_ONBOARDING 이 가른다.
+        // 두 번째부터는 언제나 그냥 연다 — 온보딩이 막혔을 때의 탈출구다.
+        PENDING.add(new Pending(player,
+            first ? (DEFER_TO_ONBOARDING ? PROLOGUE_ONLY : WITH_PROLOGUE) : PLAIN));
     }
 
     @SubscribeEvent
