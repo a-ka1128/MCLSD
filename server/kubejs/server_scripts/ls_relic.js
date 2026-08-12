@@ -73,11 +73,23 @@ const RL_COST = 1   // 유물 해금에 바치는 별의 파편
 // ── 유물 지급 (모드 아이템이 스탯·무적 내장 → 순수 give) ──
 // 유물은 그냥 주지 않는다: 첫 공세를 맨몸으로 버텨 얻은 정수를 제단에 바쳐야 깨어난다.
 // "받는 무기"가 아니라 "버텨서 얻은 무기"가 되어야 강한 성능이 정당해진다.
+// ⚠️ **거절도 로그에 남긴다.** 예전엔 성공만 남겼다 — 그래서 「제단을 우클릭했는데
+//    유물이 안 나온다」가 왔을 때 셋 중 무엇인지(가호 없음·이미 보유·파편 부족)를
+//    로그로 가릴 수가 없었다. 채팅은 스크롤로 사라지고 남이 대신 볼 수도 없다.
+//    이 프로젝트에서 같은 모양의 구멍을 이미 네 번 겪었다(CLASSES.md 「계기 구멍」).
+function rlDeny(uname, why) { console.log(`[LS-RELIC] deny ${uname}: ${why}`) }
+
 function rlGrant(server, player, force) {
   const uname = player.username
   const fate = String(LS.fate(server, uname) || '')
-  if (!fate || !RELICS[fate]) { player.tell(Text.of('§c먼저 별의 가호를 선택하세요. §e/fate')); return 0 }
-  if (!force && LS.hasRelic(server, uname)) { player.tell(Text.of('§7이미 당신의 유물을 손에 넣었습니다.')); return 0 }
+  if (!fate || !RELICS[fate]) {
+    player.tell(Text.of('§c먼저 별의 가호를 선택하세요. §e/fate'))
+    rlDeny(uname, '가호 없음'); return 0
+  }
+  if (!force && LS.hasRelic(server, uname)) {
+    player.tell(Text.of('§7이미 당신의 유물을 손에 넣었습니다. §8(관리자: /relic revoke ' + uname + ')'))
+    rlDeny(uname, '이미 보유 (fate=' + fate + ')'); return 0
+  }
   if (!force) {
     // 정수 확인 후 회수 — 인벤토리를 직접 읽는다 (ls_util.js).
     // /clear 반환값으로 세는 건 애초에 불가능했고(runCommandSilent 는 void),
@@ -86,9 +98,12 @@ function rlGrant(server, player, force) {
     if (have < RL_COST) {
       player.tell(Text.of(`§c별의 파편이 부족합니다: §e${have}/${RL_COST}`))
       player.tell(Text.of('§7   첫 공세를 막아내면 정수가 주어집니다 — 그것을 제단에 바치세요.'))
-      return 0
+      rlDeny(uname, `파편 부족 ${have}/${RL_COST}`); return 0
     }
-    if (lsTakeItem(player, RL_ESS, RL_COST) < RL_COST) { player.tell(Text.of('§c정수 회수에 실패했습니다.')); return 0 }
+    if (lsTakeItem(player, RL_ESS, RL_COST) < RL_COST) {
+      player.tell(Text.of('§c정수 회수에 실패했습니다.'))
+      rlDeny(uname, '정수 회수 실패'); return 0
+    }
   }
   const r = RELICS[fate]
   rlCmd(server, `give ${uname} ${r.id}`)
@@ -151,6 +166,9 @@ BlockEvents.rightClicked(event => {
       && b.y === LS.altarY(server, RL_SHARED)
       && b.z === LS.altarZ(server, RL_SHARED)) {
     event.cancel()
+    // 「블록이 안 맞은 것」과 「맞았는데 거절된 것」을 로그로 가를 수 있어야 한다.
+    // 이게 없으면 둘 다 «아무 일도 안 일어남» 으로 똑같이 보인다.
+    console.log(`[LS-RELIC] shared altar hit by ${player.username} @ ${b.x},${b.y},${b.z}`)
     rlGrant(server, player, false)   // 가호는 안 본다 — rlGrant 가 그 사람의 가호로 고른다
     return
   }
