@@ -4,8 +4,8 @@
     category:"Quest",
     description:"난파한 비행선의 마지막 생존자. 대화를 마치면 플레이어를 성역으로 보낸다(/lsonboard). 첫 세션 온보딩의 시작점.",
     entityTypeId:"easy_npc:humanoid",
-    name:"난파선의 생존자",
-    variantType:"STEVE",
+    name:"네스토르 — 마지막 별지기",
+    variantType:"PROFESSOR_01",
     version:"1.0.0"
   },
   data:{
@@ -24,11 +24,18 @@
     }],
     CanPickUpLoot:0b,
     CanUpdate:1b,
-    CustomName:'{"color":"#C9A227","text":"난파선의 생존자"}',
+    CustomName:'{"color":"#C9A227","text":"네스토르"}',
     CustomNameVisible:1b,
     Invulnerable:1b,
     NoAI:1b,
     Silent:1b,
+    SkinData:{
+      Content:"",
+      DisableLayers:0b,
+      Name:"",
+      Type:"DEFAULT",
+      URL:""
+    },
     DialogData:{
       DialogDataSet:[{
         Label:"start",

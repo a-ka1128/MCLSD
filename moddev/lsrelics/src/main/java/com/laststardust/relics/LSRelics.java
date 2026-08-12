@@ -30,6 +30,17 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 // Last Stardust — 별의 유물 커스텀 모드. 진짜 하이브리드 무기(활/방패/도끼/지팡이).
 @Mod(LSRelics.MODID)
+// ── 유물은 «닳지 않는다» (2026-08-12, 유저 결정) ──
+// 예전엔 셋만 내구도가 있었다(시리우스 1500 · 솔라리스 1500 · 타이탄은 네더라이트 티어).
+// 나머지 아홉은 애초에 `durability()` 가 없어 안 닳았으므로, **셋만 닳는 게 오히려 어긋남**이었다.
+//
+// 인첸트를 안 열기로 한 것과 같은 결정이다 — **그 자리는 「별의 축복」이 갖는다.**
+// 무기 축복 10종이 정확히 인첸트의 자리고, 둘을 같이 두면 한 칸을 놓고 겹친다.
+// 그러면 내구성·수선 인첸트도 필요 없고, 내구도 자체가 아무 선택도 만들지 않는 숫자가 된다.
+//
+// ⚠️ 타이탄만 방식이 다르다. `TieredItem` 생성자가 `properties.durability(tier.getUses())` 를
+//    **강제로** 걸어서 `.durability()` 를 빼는 것으로는 못 막는다 —
+//    `UNBREAKABLE` 컴포넌트로 덮는다. `false` 는 「툴팁에 '파괴 불가'를 안 쓴다」는 뜻이다.
 public class LSRelics {
     public static final String MODID = "lsrelics";
 
@@ -112,7 +123,7 @@ public class LSRelics {
     // ── 유물 4종 ──
     // 겨우살이: 진짜 활 (화살 발사). 방벽: 방패(막기)+무기(공격). 도끼: 진짜 도끼(채굴+공격). 지팡이: 마법 무기.
     public static final DeferredItem<StarBow> HUNTER = ITEMS.register("hunter",
-        () -> new StarBow(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(1500).attributes(hunterAttrs())));
+        () -> new StarBow(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(hunterAttrs())));
 
     // ── 평타 DPS 예산 ──
     // 상용 RPG의 밸런스 관행을 그대로 계수화했다. 기준 = 원거리 순수 딜러 12.0.
@@ -175,6 +186,8 @@ public class LSRelics {
     // 근접이라 타격 타이밍에 따라 4% 정도 흔들려서 한 판에 맞추면 다음 판에 어긋난다.
     public static final DeferredItem<RiftAxe> PIONEER = ITEMS.register("pioneer",
         () -> new RiftAxe(Tiers.NETHERITE, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
+            .component(net.minecraft.core.component.DataComponents.UNBREAKABLE,
+                new net.minecraft.world.item.component.Unbreakable(false))
             // 공속 -2.6(1.4회/초) → -3.0(1.0회/초). 바닐라 네더라이트 도끼와 같은 속도다.
             // 도끼가 검보다 빠를 이유가 없는데 1.4회/초였고, 실측 68.8 DPS 의 상당 부분이
             // 여기서 나왔다. 한 방이 무거운 무기라는 정체성에도 느린 쪽이 맞다.
@@ -191,7 +204,7 @@ public class LSRelics {
     // 솔라리스 — 마총. 좌클릭 = 태양탄(6발 탄창 + 2초 재장전), 우클릭 = 스코프.
     // 목표 56 / 실측 56.7. 수치와 그 근거는 전부 SolarMusket 주석에 있다.
     public static final DeferredItem<SolarMusket> GUNNER = ITEMS.register("gunner",
-        () -> new SolarMusket(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(1500)));
+        () -> new SolarMusket(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
     // 파나케이아 — 힐 지팡이. 좌클릭이 조준 대상에 따라 회복/공격으로 자동 전환된다.
     public static final DeferredItem<PanaceaStaff> HEALER = ITEMS.register("healer",
