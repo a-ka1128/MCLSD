@@ -144,6 +144,16 @@ BlockEvents.rightClicked(event => {
   if (!player) return
   const server = player.server
   if (!server) return
+  // ⚠️ 공용 제단을 **먼저** 본다. 같은 블록에 둘이 걸려 있을 때(등록 검사를 우회해
+  //    직접 데이터를 만졌다면) 「가호가 안 맞는다」로 막히는 쪽이 이기면 안 된다.
+  if (LS.hasAltar(server, RL_SHARED)
+      && b.x === LS.altarX(server, RL_SHARED)
+      && b.y === LS.altarY(server, RL_SHARED)
+      && b.z === LS.altarZ(server, RL_SHARED)) {
+    event.cancel()
+    rlGrant(server, player, false)   // 가호는 안 본다 — rlGrant 가 그 사람의 가호로 고른다
+    return
+  }
   const keys = Object.keys(RELICS)
   for (let i = 0; i < keys.length; i++) {
     var fate = keys[i]
@@ -161,6 +171,25 @@ BlockEvents.rightClicked(event => {
 // ── 제단 등록 본체 ──
 // 서 있는 자리에서 찾아 넣든 좌표로 찍어 넣든 **검사는 한 곳에서** 한다.
 // 두 벌로 두면 한쪽에만 검사가 붙어 「좌표로 넣은 것만 조용히 어긋나는」 상태가 된다.
+// ── 공용 제단 ──
+// 열두 제단을 «성벽 안 한 자리»에 모아 두면 나눠 놓은 값이 사라진다 —
+// 「이 제단은 네 길이 아니다」는 제단끼리 멀 때만 뜻이 있는 문장이고,
+// 한 방에 열둘이 서 있으면 그냥 «내 것을 찾아 12번 우클릭하는» 일이 된다.
+//
+// 그래서 «가호 무관» 제단 하나를 둘 수 있게 한다. 우클릭한 사람의 가호를 보고
+// 그에 맞는 유물을 준다 — 지급 규칙(rlGrant)은 원래부터 가호를 보고 있었으므로
+// 바뀌는 것은 «어느 블록이 문을 여는가» 하나뿐이다.
+//
+// ⚠️ 예약 키다. `RELICS` 에 절대 이 이름을 쓰지 말 것 — 가호 하나가 통째로 가려진다.
+const RL_SHARED = '__shared'
+
+function rlAltarLabel(key) {
+  return key === RL_SHARED ? '§b공용 제단' : (RELICS[key] ? RELICS[key].name : key)
+}
+// 등록된 제단 열쇠 전부 (가호 12 + 공용 1). 중복 검사·현황이 같은 목록을 봐야
+// 「공용이랑 겹쳐 놨는데 아무도 모르는」 상태가 안 생긴다.
+function rlAltarKeys() { return Object.keys(RELICS).concat([RL_SHARED]) }
+
 function rlAltarPut(src, server, level, fate, x, y, z) {
   var b = null
   try { b = level.getBlock(x, y, z) } catch (e) { lsWarn('ls_relic:altar-block', e) }
@@ -168,19 +197,22 @@ function rlAltarPut(src, server, level, fate, x, y, z) {
     src.sendSystemMessage(Text.of(`§c${x}, ${y}, ${z} 는 lodestone(자석석)이 아닙니다 §8(${b ? b.id : '읽기 실패'})`))
     return 0
   }
-  // 같은 블록에 두 가호를 등록하면 우클릭 판정이 «먼저 걸린 쪽»만 잡는다.
-  // 열둘을 짓다 보면 한 번쯤 나오는 실수고, 증상은 「어떤 직업만 유물을 못 받는다」다.
+  // 같은 블록에 둘을 등록하면 우클릭 판정이 «먼저 걸린 쪽»만 잡는다.
+  // 증상은 「어떤 직업만 유물을 못 받는다」라 눈에 안 띈다.
   var dup = null
-  Object.keys(RELICS).forEach(k => {
+  rlAltarKeys().forEach(k => {
     if (k === fate || dup || !LS.hasAltar(server, k)) return
     if (LS.altarX(server, k) === x && LS.altarY(server, k) === y && LS.altarZ(server, k) === z) dup = k
   })
   if (dup) {
-    src.sendSystemMessage(Text.of(`§c이 블록은 이미 §r${RELICS[dup].name}§c 의 제단입니다 — 다른 곳에 놓으세요.`))
+    src.sendSystemMessage(Text.of(`§c이 블록은 이미 §r${rlAltarLabel(dup)}§c 입니다 — 다른 곳에 놓으세요.`))
     return 0
   }
   LS.setAltar(server, fate, x, y, z)
-  src.sendSystemMessage(Text.of(`§a${RELICS[fate].name}§a 제단 등록: ${x}, ${y}, ${z}`))
+  src.sendSystemMessage(Text.of(`§a${rlAltarLabel(fate)}§a 등록: ${x}, ${y}, ${z}`))
+  if (fate === RL_SHARED) {
+    src.sendSystemMessage(Text.of('§7   누가 우클릭하든 §f그 사람의 가호에 맞는 유물§7을 줍니다.'))
+  }
   console.log(`[LS-RELIC] altar ${fate} @ ${x},${y},${z}`)
   return 1
 }
@@ -190,6 +222,10 @@ ServerEvents.commandRegistry(event => {
   const { commands: Commands, arguments: Arguments } = event
   const fateArg = () => Commands.argument('fate', Arguments.STRING.create(event))
     .suggests((ctx, b) => { Object.keys(RELICS).forEach(k => b.suggest(k)); return b.buildFuture() })
+  // 제단 등록에는 `shared` 가 하나 더 붙는다 — 유물 지급(/relic grant)에는 없는 선택지라
+  // 제안 목록을 따로 둔다. 한 목록에 섞으면 지급 명령에도 shared 가 뜬다.
+  const altarArg = () => Commands.argument('fate', Arguments.STRING.create(event))
+    .suggests((ctx, b) => { b.suggest('shared'); Object.keys(RELICS).forEach(k => b.suggest(k)); return b.buildFuture() })
 
   event.register(Commands.literal('relic')
     .executes(ctx => {
@@ -237,24 +273,40 @@ ServerEvents.commandRegistry(event => {
       .executes(ctx => {
         const s = ctx.source.server
         var rlLsKeys = Object.keys(RELICS), rlLsDone = 0
+        var rlShared = LS.hasAltar(s, RL_SHARED)
         ctx.source.sendSystemMessage(Text.of('§6═══ ✦ 유물 제단 ═══'))
+        // 공용이 있으면 그것만으로 끝난다 — 가호별 열둘은 «선택»이지 남은 일이 아니다.
+        // 이걸 안 갈라 놓으면 「1/13 등록됨」이 떠서 열둘을 더 지어야 하는 줄 알게 된다.
+        if (rlShared) {
+          ctx.source.sendSystemMessage(Text.of(
+            `§a ✔ §b공용 제단 §7${LS.altarX(s, RL_SHARED)}, ${LS.altarY(s, RL_SHARED)}, ${LS.altarZ(s, RL_SHARED)}`))
+          ctx.source.sendSystemMessage(Text.of('§7   누구든 자기 가호에 맞는 유물을 받습니다. §8이것만으로 충분합니다.'))
+        }
         rlLsKeys.forEach(k => {
           if (LS.hasAltar(s, k)) {
             rlLsDone++
             ctx.source.sendSystemMessage(Text.of(`§a ✔ §r${RELICS[k].name} §8(${k}) §7${LS.altarX(s, k)}, ${LS.altarY(s, k)}, ${LS.altarZ(s, k)}`))
-          } else {
+          } else if (!rlShared) {
             ctx.source.sendSystemMessage(Text.of(`§c ✘ §r${RELICS[k].name} §8(${k}) §c미등록`))
           }
         })
-        ctx.source.sendSystemMessage(Text.of(`§7${rlLsDone} / ${rlLsKeys.length} 등록됨`))
-        if (rlLsDone < rlLsKeys.length) ctx.source.sendSystemMessage(Text.of('§8   등록: 자석석 위에 서서 §7/relic altar <가호>'))
+        if (rlShared) {
+          if (rlLsDone > 0) ctx.source.sendSystemMessage(Text.of(`§8   가호별 제단 ${rlLsDone}곳도 함께 열려 있습니다.`))
+        } else {
+          ctx.source.sendSystemMessage(Text.of(`§7${rlLsDone} / ${rlLsKeys.length} 등록됨`))
+          if (rlLsDone < rlLsKeys.length) {
+            ctx.source.sendSystemMessage(Text.of('§8   등록: 자석석 위에 서서 §7/relic altar <가호>'))
+            ctx.source.sendSystemMessage(Text.of('§8   한 곳으로 끝내려면 §7/relic altar shared'))
+          }
+        }
         // ── 복구용 목록을 로그에 남긴다 ──
         // 제단 좌표는 laststardust.dat 안에 있다. 플레이 데이터를 정리하려고 그 파일을 지우면
         // **자석석은 그대로인데 등록만 사라진다** — 열두 번 다시 서서 다시 찍어야 한다.
         // 여기서 좌표판 명령을 통째로 뽑아 두면 붙여넣기 열두 줄로 끝난다.
         // 채팅이 아니라 로그로 보내는 이유: 채팅은 스크롤로 사라지고 복사가 안 된다.
-        if (rlLsDone > 0) {
+        if (rlLsDone > 0 || rlShared) {
           console.log('[LS-RELIC] ── 제단 복구용 (그대로 붙여넣으면 재등록된다) ──')
+          if (rlShared) console.log(`/relic altar shared ${LS.altarX(s, RL_SHARED)} ${LS.altarY(s, RL_SHARED)} ${LS.altarZ(s, RL_SHARED)}`)
           rlLsKeys.forEach(k => {
             if (LS.hasAltar(s, k)) {
               console.log(`/relic altar ${k} ${LS.altarX(s, k)} ${LS.altarY(s, k)} ${LS.altarZ(s, k)}`)
@@ -264,11 +316,12 @@ ServerEvents.commandRegistry(event => {
         }
         return 1
       })
-      .then(fateArg().executes(ctx => {
+      .then(altarArg().executes(ctx => {
         const s = ctx.source.server; const p = ctx.source.player
         if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
-        const fate = Arguments.STRING.getResult(ctx, 'fate')
-        if (!RELICS[fate]) { ctx.source.sendSystemMessage(Text.of('§c가호: ' + Object.keys(RELICS).join('/'))); return 0 }
+        var fate = Arguments.STRING.getResult(ctx, 'fate')
+        if (fate === 'shared') fate = RL_SHARED
+        if (fate !== RL_SHARED && !RELICS[fate]) { ctx.source.sendSystemMessage(Text.of('§c가호: shared / ' + Object.keys(RELICS).join('/'))); return 0 }
 
         var rlAlX = Math.floor(p.x), rlAlZ = Math.floor(p.z), rlAlFeet = Math.floor(p.y)
         var rlAlY = null
@@ -306,8 +359,9 @@ ServerEvents.commandRegistry(event => {
           .then(Commands.argument('y', Arguments.INTEGER.create(event))
             .then(Commands.argument('z', Arguments.INTEGER.create(event)).executes(ctx => {
               const s = ctx.source.server
-              const fate = Arguments.STRING.getResult(ctx, 'fate')
-              if (!RELICS[fate]) { ctx.source.sendSystemMessage(Text.of('§c가호: ' + Object.keys(RELICS).join('/'))); return 0 }
+              var fate = Arguments.STRING.getResult(ctx, 'fate')
+              if (fate === 'shared') fate = RL_SHARED
+              if (fate !== RL_SHARED && !RELICS[fate]) { ctx.source.sendSystemMessage(Text.of('§c가호: shared / ' + Object.keys(RELICS).join('/'))); return 0 }
               // 콘솔에서도 부를 수 있어야 한다 — 붙여넣기 열두 줄이 이 명령의 존재 이유다.
               const p = ctx.source.player
               const lvl = (p && p.level) ? p.level : s.overworld()
