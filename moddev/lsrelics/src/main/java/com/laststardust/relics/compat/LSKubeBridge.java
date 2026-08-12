@@ -183,6 +183,34 @@ public class LSKubeBridge implements KubeJSPlugin {
             data.dirty();
         }
 
+        // ── 유물 제단 화면 ──
+        // 수치가 KubeJS 에 살기 때문에 «무엇을 보여줄지»는 그쪽이 채우고 자바는 그리기만 한다.
+        // 왜 그렇게 나눴는지는 RelicView 머리말에 있다 — 표를 자바로 복사하면 두 곳이 갈라진다.
+        //
+        // ⚠️ 순서가 있다: panelBegin → (panelRow / panelLadder / panelText / panelFooter) → panelShow.
+        //    panelShow 를 안 부르면 아무 일도 안 일어난다. 쌓다 만 것은 다음 panelBegin 이 덮는다.
+        public void panelBegin(String user, String title, String subtitle, String kind) {
+            com.laststardust.relics.relic.RelicPanel.begin(user, title, subtitle, kind);
+        }
+        public void panelStars(String user, int star, int maxStar, boolean owned) {
+            com.laststardust.relics.relic.RelicPanel.stars(user, star, maxStar, owned);
+        }
+        public void panelRow(String user, String label, String value, int color) {
+            com.laststardust.relics.relic.RelicPanel.row(user, label, value, color);
+        }
+        public void panelLadder(String user, int star, String desc, int cost, boolean reached) {
+            com.laststardust.relics.relic.RelicPanel.ladder(user, star, desc, cost, reached);
+        }
+        public void panelText(String user, String lore, String echo) {
+            com.laststardust.relics.relic.RelicPanel.text(user, lore, echo);
+        }
+        public void panelFooter(String user, String footer) {
+            com.laststardust.relics.relic.RelicPanel.footer(user, footer);
+        }
+        public boolean panelShow(MinecraftServer server, String user) {
+            return com.laststardust.relics.relic.RelicPanel.show(server, user);
+        }
+
         // ── 부르는 이름 ──
         // ⚠️ **저장 열쇠로 쓰면 안 된다.** 가호·유물·각성·금고는 전부 계정 이름이 열쇠다.
         //    이건 «화면에 뿌릴 때»만 쓴다.

@@ -36,6 +36,14 @@ public final class LSNetwork {
         reg.playToServer(BlessActionPayload.TYPE, BlessActionPayload.STREAM_CODEC, LSNetwork::handleBlessAction);
         reg.playToClient(BlessViewPayload.TYPE, BlessViewPayload.STREAM_CODEC, LSNetwork::handleBlessView);
         reg.playToClient(RelicAnimPayload.TYPE, RelicAnimPayload.STREAM_CODEC, LSNetwork::handleAnim);
+        reg.playToClient(RelicViewPayload.TYPE, RelicViewPayload.STREAM_CODEC, LSNetwork::handleRelicView);
+    }
+
+    // ── 유물 제단 화면 ──
+    // 클라 클래스는 «다리»를 통해서만 만진다 — 전용 서버에는 없어서 직접 참조하면
+    // NoClassDefFoundError 가 난다(TownScreens 와 같은 이유).
+    private static void handleRelicView(RelicViewPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> com.laststardust.relics.client.RelicScreens.show(payload.view()));
     }
 
     // ── 플레이어 자세 ──

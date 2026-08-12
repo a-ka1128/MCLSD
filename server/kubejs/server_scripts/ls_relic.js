@@ -191,6 +191,74 @@ function rlAltarAt(server, key, bx, by, bz) {
     && Number(LS.altarZ(server, key)) === bz
 }
 
+// ── 제단 화면 ──
+// 「자세한 수치를 어디서도 안 보여준다」를 메꾸는 자리. 성급별 피해 배수·체력 칸수·
+// 각성 비용은 여태 문서에만 있었다.
+//
+// ⚠️ **수치를 자바로 옮기지 않는다.** 표는 ls_ascend.js 에, 유물 정의는 이 파일에 그대로 둔다.
+//    자바는 그리기만 한다(RelicView.java 머리말). 복사본을 두면 한쪽만 고치는 날이 온다.
+//
+// ⚠️ 남의 파일 함수(asStar·asHearts…)를 **함수 안에서** 부른다. 최상위에서 읽으면
+//    로드 순서가 바뀌는 날 조용히 undefined 가 된다(ls_siege.js 머리말).
+function rlPanel(server, player) {
+  var uname = String(player.username)
+  var fate = String(LS.fate(server, uname) || '')
+  var r = RELICS[fate]
+  if (!r) {
+    LS.panelBegin(uname, '§7별의 제단', '아직 당신의 길이 정해지지 않았다', '')
+    LS.panelStars(uname, 0, 5, false)
+    LS.panelFooter(uname, '§e/fate §7로 별의 가호를 먼저 고르세요.')
+    LS.panelShow(server, uname)
+    return
+  }
+
+  var star = 1, owned = false, have = 0
+  try { star = asStar(server, uname) } catch (e) { lsWarn('ls_relic:panel-star', e) }
+  try { owned = !!LS.hasRelic(server, uname) } catch (e) { lsWarn('ls_relic:panel-owned', e) }
+  try { have = lsCountItem(player, RL_ESS) } catch (e) { lsWarn('ls_relic:panel-ess', e) }
+  if (!owned) star = 0   // 아직 못 받았으면 0성으로 보여준다 — asStar 는 바닥이 1이다
+
+  LS.panelBegin(uname, r.name, fate, r.kind)
+  LS.panelStars(uname, star, AS_MAX, owned)
+
+  // ── 수치 ──
+  // 「지금 이 값이 얼마인가」만 적는다. 다음 성급의 값은 아래 사다리가 맡는다.
+  var mulNow = star >= 2 && ASCEND[star] ? ASCEND[star].desc.split(' ')[1] : '×1.0'
+  LS.panelRow(uname, '피해 배수', String(mulNow), 0xFFD98A)
+  try {
+    var hNow = asHearts(server, uname, Math.max(1, star))
+    var hMax = asHearts(server, uname, AS_MAX)
+    LS.panelRow(uname, '최대 체력', hNow + '칸 §8(5성 ' + hMax + '칸)', 0x7FD98A)
+  } catch (e) { lsWarn('ls_relic:panel-hp', e) }
+  LS.panelRow(uname, '보유 별의 파편', String(have), have > 0 ? 0xC08AE0 : 0x6B7280)
+
+  // ── 성급 사다리 ──
+  // 도달한 칸은 «무엇을 얻었는지», 남은 칸은 «무엇이 필요한지» 를 말한다.
+  for (var s = 2; s <= AS_MAX; s++) {
+    var a = ASCEND[s]
+    if (!a) continue
+    var reached = star >= s
+    var desc = a.desc
+    if (!reached && a.gate) desc += ' §8· ' + (GATE_NAME[a.gate] || ('관문 ' + a.gate))
+    LS.panelLadder(uname, s, desc, a.cost, reached)
+  }
+
+  LS.panelText(uname, r.lore, r.echo)
+
+  if (!owned) {
+    LS.panelFooter(uname, have >= RL_COST
+      ? '§a제단을 다시 우클릭하면 유물이 깨어납니다. §7(별의 파편 ' + RL_COST + ' 소모)'
+      : '§c별의 파편 ' + have + '/' + RL_COST + ' §7— 첫 공세를 막아내면 주어집니다.')
+  } else if (star >= AS_MAX) {
+    LS.panelFooter(uname, '§6✦ 각성 완료 §7— 더 오를 곳이 없습니다.')
+  } else {
+    var need = ASCEND[star + 1]
+    LS.panelFooter(uname, '§7다음 ' + (star + 1) + '성 — 파편 §e' + have + '/' + need.cost
+      + '§7 · §e/ascend §7로 각성')
+  }
+  LS.panelShow(server, uname)
+}
+
 // ── 제단 우클릭 클레임 (lodestone, /relic altar 로 배치) ──
 BlockEvents.rightClicked(event => {
   const b = event.block
@@ -220,7 +288,10 @@ BlockEvents.rightClicked(event => {
     if (rlAltarAt(server, RL_SHARED, bx, by, bz)) {
       handled = true
       console.log(`[LS-RELIC] shared altar hit by ${player.username} @ ${bx},${by},${bz}`)
+      // 지급을 «먼저», 화면을 «나중에». 순서가 반대면 방금 받은 유물이 화면에 안 보인다.
+      // rlGrant 는 조건이 안 맞으면 스스로 거절하고 이유를 채팅·로그에 남긴다.
       rlGrant(server, player, false)   // 가호는 안 본다 — rlGrant 가 그 사람의 가호로 고른다
+      rlPanel(server, player)
     } else {
       var keys = Object.keys(RELICS)
       for (var i = 0; i < keys.length; i++) {
@@ -228,8 +299,12 @@ BlockEvents.rightClicked(event => {
         if (!rlAltarAt(server, fate, bx, by, bz)) continue
         handled = true
         var pf = String(LS.fate(server, player.username) || '')
-        if (pf !== fate) player.tell(Text.of(`§7이 제단은 §r${RELICS[fate].name}§7의 것 — 당신의 길이 아니다.`))
-        else rlGrant(server, player, false)
+        if (pf !== fate) {
+          player.tell(Text.of(`§7이 제단은 §r${RELICS[fate].name}§7의 것 — 당신의 길이 아니다.`))
+        } else {
+          rlGrant(server, player, false)
+          rlPanel(server, player)
+        }
         break
       }
     }
