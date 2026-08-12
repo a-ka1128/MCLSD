@@ -175,6 +175,22 @@ function rlAltarLabel(key) {
 // 「공용이랑 겹쳐 놨는데 아무도 모르는」 상태가 안 생긴다.
 function rlAltarKeys() { return Object.keys(RELICS).concat([RL_SHARED]) }
 
+// 이 블록이 `key` 제단인가.
+//
+// ⚠️ **최상위에 둔다.** 처음엔 우클릭 핸들러의 `try { }` 안에 `function rlAt(...)` 로
+//    넣었는데, **Rhino 는 블록 안의 함수 선언을 끌어올리지 않는다** — 부르는 시점에
+//    `undefined` 라 `TypeError` 가 났다. (V8 에서는 되니까 더 안 보인다.)
+//
+// ⚠️ 좌표에 `===` 를 쓰지 않는다. 한쪽은 블록에서 온 값이고 다른 쪽은 자바 브릿지가
+//    돌려준 값이라, 같은 숫자라도 «타입이 달라» 엄격 비교가 어긋날 수 있다.
+//    `Number(...)` 로 둘 다 끌어내려 비교한다 — 좌표는 정수라 정밀도 문제가 없다.
+function rlAltarAt(server, key, bx, by, bz) {
+  return LS.hasAltar(server, key)
+    && Number(LS.altarX(server, key)) === bx
+    && Number(LS.altarY(server, key)) === by
+    && Number(LS.altarZ(server, key)) === bz
+}
+
 // ── 제단 우클릭 클레임 (lodestone, /relic altar 로 배치) ──
 BlockEvents.rightClicked(event => {
   const b = event.block
@@ -196,20 +212,11 @@ BlockEvents.rightClicked(event => {
   //    로그에 아무것도 안 남는다 — 「들어온 자국은 있는데 나간 자국이 없는」 상태가 되고,
   //    그때 남는 단서가 0 이다. 2026-08-13 에 여기서 세 번 헛짚었다.
   try {
-    // ⚠️ 좌표 비교에 `===` 를 쓰지 않는다. 한쪽은 블록에서 온 값이고 다른 쪽은 자바
-    //    브릿지가 돌려준 값이라, 같은 숫자라도 «타입이 달라» 엄격 비교가 어긋날 수 있다.
-    //    `Number(...)` 로 둘 다 끌어내려 비교한다 — 좌표는 정수라 정밀도 문제가 없다.
     var bx = Number(b.x), by = Number(b.y), bz = Number(b.z)
-    function rlAt(key) {
-      return LS.hasAltar(server, key)
-        && Number(LS.altarX(server, key)) === bx
-        && Number(LS.altarY(server, key)) === by
-        && Number(LS.altarZ(server, key)) === bz
-    }
 
     // 공용 제단을 **먼저** 본다. 같은 블록에 둘이 걸려 있으면(등록 검사를 우회해 직접
     // 데이터를 만졌다면) 「가호가 안 맞는다」로 막히는 쪽이 이기면 안 된다.
-    if (rlAt(RL_SHARED)) {
+    if (rlAltarAt(server, RL_SHARED, bx, by, bz)) {
       event.cancel()
       console.log(`[LS-RELIC] shared altar hit by ${player.username} @ ${bx},${by},${bz}`)
       rlGrant(server, player, false)   // 가호는 안 본다 — rlGrant 가 그 사람의 가호로 고른다
@@ -218,7 +225,7 @@ BlockEvents.rightClicked(event => {
     const keys = Object.keys(RELICS)
     for (let i = 0; i < keys.length; i++) {
       var fate = keys[i]
-      if (!rlAt(fate)) continue
+      if (!rlAltarAt(server, fate, bx, by, bz)) continue
       event.cancel()
       var pf = String(LS.fate(server, player.username) || '')
       if (pf !== fate) { player.tell(Text.of(`§7이 제단은 §r${RELICS[fate].name}§7의 것 — 당신의 길이 아니다.`)); return }
