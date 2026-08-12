@@ -151,7 +151,31 @@ function rlGrant(server, player, force) {
   return 1
 }
 
-// ── 제단 우클릭 클레임 (lodestone, 리셋 후 /relic altar 로 배치) ──
+// ── 공용 제단 ──
+// 열두 제단을 «성벽 안 한 자리»에 모아 두면 나눠 놓은 값이 사라진다 —
+// 「이 제단은 네 길이 아니다」는 제단끼리 멀 때만 뜻이 있는 문장이고,
+// 한 방에 열둘이 서 있으면 그냥 «내 것을 찾아 12번 우클릭하는» 일이 된다.
+//
+// 그래서 «가호 무관» 제단 하나를 둘 수 있게 한다. 우클릭한 사람의 가호를 보고
+// 그에 맞는 유물을 준다 — 지급 규칙(rlGrant)은 원래부터 가호를 보고 있었으므로
+// 바뀌는 것은 «어느 블록이 문을 여는가» 하나뿐이다.
+//
+// ⚠️ 예약 키다. `RELICS` 에 절대 이 이름을 쓰지 말 것 — 가호 하나가 통째로 가려진다.
+//
+// ⚠️ **이 선언은 아래 우클릭 핸들러보다 «위»에 있어야 한다.** 처음엔 핸들러 아래에
+//    뒀는데, 그러면 KubeJS(Rhino)에서 핸들러가 볼 때 값이 안 잡혀 비교가 통째로
+//    빗나갔다 — 오류도 안 나고 그냥 «우클릭해도 아무 일이 없는» 상태가 된다.
+//    ls_siege.js 머리말이 경고하는 그 자리다(「최상위 스코프에서 읽으면 조용히 undefined」).
+const RL_SHARED = '__shared'
+
+function rlAltarLabel(key) {
+  return key === RL_SHARED ? '§b공용 제단' : (RELICS[key] ? RELICS[key].name : key)
+}
+// 등록된 제단 열쇠 전부 (가호 12 + 공용 1). 중복 검사·현황이 같은 목록을 봐야
+// 「공용이랑 겹쳐 놨는데 아무도 모르는」 상태가 안 생긴다.
+function rlAltarKeys() { return Object.keys(RELICS).concat([RL_SHARED]) }
+
+// ── 제단 우클릭 클레임 (lodestone, /relic altar 로 배치) ──
 BlockEvents.rightClicked(event => {
   const b = event.block
   if (!b || b.id !== 'minecraft:lodestone') return
@@ -159,6 +183,7 @@ BlockEvents.rightClicked(event => {
   if (!player) return
   const server = player.server
   if (!server) return
+
   // ⚠️ 공용 제단을 **먼저** 본다. 같은 블록에 둘이 걸려 있을 때(등록 검사를 우회해
   //    직접 데이터를 만졌다면) 「가호가 안 맞는다」로 막히는 쪽이 이기면 안 된다.
   if (LS.hasAltar(server, RL_SHARED)
@@ -184,30 +209,21 @@ BlockEvents.rightClicked(event => {
       return
     }
   }
+
+  // ── 자석석인데 어느 제단도 아니다 ──
+  // 여기까지 오면 «등록이 안 됐거나 좌표가 어긋난» 것이다. 조용히 지나가면
+  // 「우클릭해도 아무 일이 없다」와 구분이 안 된다. 등록된 좌표를 같이 찍어
+  // 무엇과 어긋났는지 눈으로 볼 수 있게 한다.
+  var known = []
+  rlAltarKeys().forEach(k => {
+    if (LS.hasAltar(server, k)) known.push(`${k}=${LS.altarX(server, k)},${LS.altarY(server, k)},${LS.altarZ(server, k)}`)
+  })
+  console.log(`[LS-RELIC] lodestone ${b.x},${b.y},${b.z} 는 제단이 아님 · 등록됨: ${known.join(' · ') || '없음'}`)
 })
 
 // ── 제단 등록 본체 ──
 // 서 있는 자리에서 찾아 넣든 좌표로 찍어 넣든 **검사는 한 곳에서** 한다.
 // 두 벌로 두면 한쪽에만 검사가 붙어 「좌표로 넣은 것만 조용히 어긋나는」 상태가 된다.
-// ── 공용 제단 ──
-// 열두 제단을 «성벽 안 한 자리»에 모아 두면 나눠 놓은 값이 사라진다 —
-// 「이 제단은 네 길이 아니다」는 제단끼리 멀 때만 뜻이 있는 문장이고,
-// 한 방에 열둘이 서 있으면 그냥 «내 것을 찾아 12번 우클릭하는» 일이 된다.
-//
-// 그래서 «가호 무관» 제단 하나를 둘 수 있게 한다. 우클릭한 사람의 가호를 보고
-// 그에 맞는 유물을 준다 — 지급 규칙(rlGrant)은 원래부터 가호를 보고 있었으므로
-// 바뀌는 것은 «어느 블록이 문을 여는가» 하나뿐이다.
-//
-// ⚠️ 예약 키다. `RELICS` 에 절대 이 이름을 쓰지 말 것 — 가호 하나가 통째로 가려진다.
-const RL_SHARED = '__shared'
-
-function rlAltarLabel(key) {
-  return key === RL_SHARED ? '§b공용 제단' : (RELICS[key] ? RELICS[key].name : key)
-}
-// 등록된 제단 열쇠 전부 (가호 12 + 공용 1). 중복 검사·현황이 같은 목록을 봐야
-// 「공용이랑 겹쳐 놨는데 아무도 모르는」 상태가 안 생긴다.
-function rlAltarKeys() { return Object.keys(RELICS).concat([RL_SHARED]) }
-
 function rlAltarPut(src, server, level, fate, x, y, z) {
   var b = null
   try { b = level.getBlock(x, y, z) } catch (e) { lsWarn('ls_relic:altar-block', e) }
