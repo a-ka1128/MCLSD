@@ -560,6 +560,67 @@ public final class LSCommands {
             Commands.literal("town")
                 .executes(ctx -> openTown(ctx.getSource()))
                 .then(Commands.literal("info").executes(ctx -> townInfo(ctx.getSource())))
+                // ── 구조물 앵커 ──
+                // 그 자리에 «서서» 잡는다. 좌표를 손으로 계산하면 한 칸씩 틀리고,
+                // 틀린 걸 눈으로 확인할 방법이 없다.
+                //
+                // ⚠️ 저장되는 건 성역 기준 «상대» 좌표다 — 성역을 옮겨도 건물이 따라온다.
+                .then(Commands.literal("anchor").requires(s -> s.hasPermission(2))
+                    .then(Commands.argument("track", StringArgumentType.word())
+                        .suggests((c, b) -> {
+                            for (var t : com.laststardust.relics.data.TownCatalog.ALL) b.suggest(t.key());
+                            return b.buildFuture();
+                        })
+                        .executes(ctx -> {
+                            var src = ctx.getSource();
+                            ServerPlayer p = src.getPlayer();
+                            if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                            String track = StringArgumentType.getString(ctx, "track");
+                            if (com.laststardust.relics.data.TownCatalog.byKey(track) == null) {
+                                src.sendFailure(Component.literal("§c그런 트랙이 없다: " + track)); return 0;
+                            }
+                            var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                            if (!data.hasSanctuary()) {
+                                src.sendFailure(Component.literal("§c성역이 먼저다 — §e/sanctuary set")); return 0;
+                            }
+                            var s0 = data.sanctuary();
+                            var here = p.blockPosition();
+                            int dx = here.getX() - s0.getX(), dy = here.getY() - s0.getY(), dz = here.getZ() - s0.getZ();
+                            data.town().setAnchor(track, dx, dy, dz);
+                            // 파일을 다시 넣었을 수 있으니 «지어진 단계»도 잊는다 — 안 그러면
+                            // 앵커만 옮기고 건물은 옛 자리에 남는다.
+                            data.town().setBuiltLevel(track, 0);
+                            data.dirty();
+                            src.sendSuccess(() -> Component.literal(
+                                "§a" + track + " 앵커 = 성역 기준 " + dx + ", " + dy + ", " + dz
+                                + " §7(다음 §e/town build " + track + "§7 에서 세운다)"), false);
+                            return 1;
+                        })))
+                // 지금 레벨의 구조물을 «다시» 세운다. 구조물 파일을 고친 뒤에 쓴다 —
+                // reconcile 은 레벨이 바뀔 때만 도므로 파일만 바꿔서는 아무 일도 안 일어난다.
+                .then(Commands.literal("build").requires(s -> s.hasPermission(2))
+                    .then(Commands.argument("track", StringArgumentType.word())
+                        .suggests((c, b) -> {
+                            for (var t : com.laststardust.relics.data.TownCatalog.ALL) b.suggest(t.key());
+                            return b.buildFuture();
+                        })
+                        .executes(ctx -> {
+                            var src = ctx.getSource();
+                            String track = StringArgumentType.getString(ctx, "track");
+                            var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                            int lv = data.town().level(track);
+                            boolean ok = com.laststardust.relics.town.TownBuild.place(src.getServer(), track, lv);
+                            if (ok) {
+                                data.town().setBuiltLevel(track, lv);
+                                data.dirty();
+                                src.sendSuccess(() -> Component.literal("§a" + track + " " + lv + "단계 세움"), false);
+                            } else {
+                                // 왜 안 됐는지는 로그에 남는다. 여기서도 어디를 보라고 말해 준다.
+                                src.sendFailure(Component.literal(
+                                    "§c못 세웠다 — 앵커가 없거나 구조물 파일이 없다. §7logs/latest.log 의 §e[마을건축]§7 을 보세요."));
+                            }
+                            return ok ? 1 : 0;
+                        })))
                 .then(Commands.literal("treasury")
                     .executes(ctx -> {
                         var s2 = ctx.getSource();

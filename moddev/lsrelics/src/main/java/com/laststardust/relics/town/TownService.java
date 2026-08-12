@@ -79,6 +79,9 @@ public final class TownService {
         for (TownCatalog.Track t : TownCatalog.ALL) {
             grantOnUpgrade(server, t.key(), town.level(t.key()));
         }
+        // 세계 쪽도 같이 맞춘다 — 「레벨은 3인데 건물은 2단계」가 남지 않게.
+        // 여기 둔 이유는 위와 같다: 어느 경로로 레벨이 올랐든 이 함수를 지나간다.
+        TownBuild.reconcile(server);
     }
 
     // 이미 갖고 있으면 주지 않는다 — 쿨다운이 아이템에 붙어 있어서 여러 개는 의미가 없고,
