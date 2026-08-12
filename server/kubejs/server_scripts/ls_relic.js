@@ -158,6 +158,33 @@ BlockEvents.rightClicked(event => {
   }
 })
 
+// ── 제단 등록 본체 ──
+// 서 있는 자리에서 찾아 넣든 좌표로 찍어 넣든 **검사는 한 곳에서** 한다.
+// 두 벌로 두면 한쪽에만 검사가 붙어 「좌표로 넣은 것만 조용히 어긋나는」 상태가 된다.
+function rlAltarPut(src, server, level, fate, x, y, z) {
+  var b = null
+  try { b = level.getBlock(x, y, z) } catch (e) { lsWarn('ls_relic:altar-block', e) }
+  if (!b || b.id !== 'minecraft:lodestone') {
+    src.sendSystemMessage(Text.of(`§c${x}, ${y}, ${z} 는 lodestone(자석석)이 아닙니다 §8(${b ? b.id : '읽기 실패'})`))
+    return 0
+  }
+  // 같은 블록에 두 가호를 등록하면 우클릭 판정이 «먼저 걸린 쪽»만 잡는다.
+  // 열둘을 짓다 보면 한 번쯤 나오는 실수고, 증상은 「어떤 직업만 유물을 못 받는다」다.
+  var dup = null
+  Object.keys(RELICS).forEach(k => {
+    if (k === fate || dup || !LS.hasAltar(server, k)) return
+    if (LS.altarX(server, k) === x && LS.altarY(server, k) === y && LS.altarZ(server, k) === z) dup = k
+  })
+  if (dup) {
+    src.sendSystemMessage(Text.of(`§c이 블록은 이미 §r${RELICS[dup].name}§c 의 제단입니다 — 다른 곳에 놓으세요.`))
+    return 0
+  }
+  LS.setAltar(server, fate, x, y, z)
+  src.sendSystemMessage(Text.of(`§a${RELICS[fate].name}§a 제단 등록: ${x}, ${y}, ${z}`))
+  console.log(`[LS-RELIC] altar ${fate} @ ${x},${y},${z}`)
+  return 1
+}
+
 // ── 명령어 ──
 ServerEvents.commandRegistry(event => {
   const { commands: Commands, arguments: Arguments } = event
@@ -221,6 +248,20 @@ ServerEvents.commandRegistry(event => {
         })
         ctx.source.sendSystemMessage(Text.of(`§7${rlLsDone} / ${rlLsKeys.length} 등록됨`))
         if (rlLsDone < rlLsKeys.length) ctx.source.sendSystemMessage(Text.of('§8   등록: 자석석 위에 서서 §7/relic altar <가호>'))
+        // ── 복구용 목록을 로그에 남긴다 ──
+        // 제단 좌표는 laststardust.dat 안에 있다. 플레이 데이터를 정리하려고 그 파일을 지우면
+        // **자석석은 그대로인데 등록만 사라진다** — 열두 번 다시 서서 다시 찍어야 한다.
+        // 여기서 좌표판 명령을 통째로 뽑아 두면 붙여넣기 열두 줄로 끝난다.
+        // 채팅이 아니라 로그로 보내는 이유: 채팅은 스크롤로 사라지고 복사가 안 된다.
+        if (rlLsDone > 0) {
+          console.log('[LS-RELIC] ── 제단 복구용 (그대로 붙여넣으면 재등록된다) ──')
+          rlLsKeys.forEach(k => {
+            if (LS.hasAltar(s, k)) {
+              console.log(`/relic altar ${k} ${LS.altarX(s, k)} ${LS.altarY(s, k)} ${LS.altarZ(s, k)}`)
+            }
+          })
+          ctx.source.sendSystemMessage(Text.of('§8   복구용 좌표 목록을 §7서버 로그§8에 남겼습니다 (latest.log)'))
+        }
         return 1
       })
       .then(fateArg().executes(ctx => {
@@ -245,24 +286,36 @@ ServerEvents.commandRegistry(event => {
           return 0
         }
 
-        // 같은 블록에 두 가호를 등록하면 우클릭 판정이 «먼저 걸린 쪽»만 잡는다.
-        // 열둘을 짓다 보면 한 번쯤 나오는 실수고, 증상은 「어떤 직업만 유물을 못 받는다」다.
-        var rlAlDup = null
-        Object.keys(RELICS).forEach(k => {
-          if (k === fate || rlAlDup || !LS.hasAltar(s, k)) return
-          if (LS.altarX(s, k) === rlAlX && LS.altarY(s, k) === rlAlY && LS.altarZ(s, k) === rlAlZ) rlAlDup = k
-        })
-        if (rlAlDup) {
-          ctx.source.sendSystemMessage(Text.of(`§c이 블록은 이미 §r${RELICS[rlAlDup].name}§c 의 제단입니다 — 다른 곳에 놓으세요.`))
-          return 0
-        }
-
-        LS.setAltar(s, fate, rlAlX, rlAlY, rlAlZ)
-        ctx.source.sendSystemMessage(Text.of(`§a${RELICS[fate].name}§a 제단 등록: ${rlAlX}, ${rlAlY}, ${rlAlZ}`))
-        ctx.source.sendSystemMessage(Text.of('§8   그 자리에서 우클릭해 보면 바로 확인됩니다.'))
-        console.log(`[LS-RELIC] altar ${fate} @ ${rlAlX},${rlAlY},${rlAlZ}`)
-        return 1
-      })))
+        var rlAlOk = rlAltarPut(ctx.source, s, p.level, fate, rlAlX, rlAlY, rlAlZ)
+        if (rlAlOk) ctx.source.sendSystemMessage(Text.of('§8   그 자리에서 우클릭해 보면 바로 확인됩니다.'))
+        return rlAlOk
+      })
+        // ── 좌표로 등록 ──
+        // 서서 찍는 것만 있으면 **한 번 지운 뒤 열두 번 다시 걸어가야 한다.**
+        // 제단 좌표는 성역·성벽과 함께 laststardust.dat 한 파일에 있어서, 플레이 데이터를
+        // 정리하려고 그 파일을 지우면 자석석은 남고 등록만 사라진다 — 그때 이게 있으면
+        // 인수 없는 `/relic altar` 가 로그에 남겨 둔 열두 줄을 붙여넣는 것으로 끝난다.
+        //
+        // 검사는 서서 찍는 쪽과 **같은 함수**를 쓴다. 자석석인지도 그대로 본다 —
+        // 좌표를 손으로 넣다 한 칸 틀리는 건 서서 찍는 것보다 오히려 잦다.
+        //
+        // ⚠️ `fateArg()` 를 형제로 하나 더 두지 않는다. Brigadier 는 이름이 같은 인수 노드를
+        //    «합쳐» 버려서 되기는 하는데, 읽는 사람에게는 같은 자리에 두 갈래가 있는 것처럼
+        //    보인다. 같은 노드 아래에 매다는 게 실제 구조 그대로다.
+        .then(Commands.argument('x', Arguments.INTEGER.create(event))
+          .then(Commands.argument('y', Arguments.INTEGER.create(event))
+            .then(Commands.argument('z', Arguments.INTEGER.create(event)).executes(ctx => {
+              const s = ctx.source.server
+              const fate = Arguments.STRING.getResult(ctx, 'fate')
+              if (!RELICS[fate]) { ctx.source.sendSystemMessage(Text.of('§c가호: ' + Object.keys(RELICS).join('/'))); return 0 }
+              // 콘솔에서도 부를 수 있어야 한다 — 붙여넣기 열두 줄이 이 명령의 존재 이유다.
+              const p = ctx.source.player
+              const lvl = (p && p.level) ? p.level : s.overworld()
+              return rlAltarPut(ctx.source, s, lvl, fate,
+                Arguments.INTEGER.getResult(ctx, 'x'),
+                Arguments.INTEGER.getResult(ctx, 'y'),
+                Arguments.INTEGER.getResult(ctx, 'z'))
+            }))))))
     // ── 유물 회수 (OP) ──
     // /relic grant 는 본인 전용이라 남의 획득 상태를 되돌릴 방법이 없었다.
     // /fate set 으로 직업을 바꿔주면 유물 플래그만 옛 직업에 남아 어긋난다.
