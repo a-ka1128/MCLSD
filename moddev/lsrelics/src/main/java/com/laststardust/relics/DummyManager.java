@@ -362,8 +362,15 @@ public final class DummyManager {
         float total = totalDamage();
 
         out.add(Component.literal("§6═══ ✦ DPS 측정 결과 ═══"));
+        // ── 준 피해가 0 이어도 «받은 피해»는 내놓는다 (2026-08-12) ──
+        // 초판은 여기서 통째로 돌아섰다. 그런데 **방어 측정에는 준 피해가 필요 없고**,
+        // 이지스의 「우클릭 방어」 판은 아예 **때릴 수가 없다**(우클릭을 쥐고 있으니 좌클릭이 안 나간다).
+        // 그래서 5성 2단 −16% 를 재려던 판이 「기록된 피해가 없다」 한 줄만 남기고 사라졌다.
+        // **못 잰 게 아니라, 잰 것을 안 보여준 것이다.**
         if (total <= 0) {
-            out.add(Component.literal("§7기록된 피해가 없다. §8(/dummy start 후 더미를 때려야 한다)"));
+            out.add(Component.literal("§7준 피해 없음 §8— 방어 측정이면 정상이다 (우클릭 방어 중엔 평타가 안 나간다)"));
+            if (rawFirst > 0) { damageTakenLines(out); return out; }
+            out.add(Component.literal("§8받은 피해도 없다. §7/dummy hit 으로 되받아치기를 켰는지 확인할 것."));
             return out;
         }
         out.add(Component.literal(String.format("§7경과 §e%.1f초 §7· 총 피해 §e%,.0f", secs, total)));
@@ -425,8 +432,29 @@ public final class DummyManager {
                     natural, natural / secs)));
             }
         }
-        // 되받아친 판이면 조건을 같이 남긴다 — 안 남기면 나중에 「왜 이 판만 보호막이 떴지」가 된다.
-        if (retaliateDmg > 0) {
+        damageTakenLines(out);
+
+        out.add(Component.literal("§8──────────────"));
+        out.add(Component.literal(String.format(
+            "§7보스 체력 환산 §8— 60초 §f%,.0f §8· 90초 §f%,.0f §8· 120초 §f%,.0f",
+            total / secs * 60, total / secs * 90, total / secs * 120)));
+        return out;
+    }
+
+    /**
+     * 「받은 피해」 묶음. <b>준 피해가 0 인 판에서도 이걸 내놓아야 한다</b> —
+     * 방어 측정에는 준 피해가 필요 없고, 이지스의 우클릭 방어 판은 아예 때릴 수가 없다.
+     *
+     * <p>세 값의 뜻을 헷갈리면 결론이 통째로 뒤집힌다:
+     * <ul>
+     *   <li><b>원본 → 감쇄 전</b> = <b>이벤트 핸들러</b>가 먹은 몫 (별의 축복 · 5성 2단 · 패링·방어)
+     *   <li><b>감쇄 전 → 실제</b> = <b>방어도·흡수</b>가 먹은 몫
+     * </ul>
+     * 그래서 <b>2단의 피해 감소는 첫 구간에서 읽는다.</b> 갑옷은 둘째 구간이라 벗을 필요가 없다.
+     */
+    private static void damageTakenLines(List<Component> out) {
+        if (retaliateDmg <= 0 && rawFirst <= 0) return;
+
             out.add(Component.literal(String.format(
                 "§8되받아치기 %.0f × %.1f초 주기 §7· 내 최대 체력 §f%,.0f",
                 retaliateDmg, retaliateEvery / 20.0f, maxHpOfFirstPlayer())));
@@ -446,13 +474,6 @@ public final class DummyManager {
             out.add(Component.literal(other > 0.5f
                 ? String.format("§c  └ 그 밖의 피해 %,.0f §8— 공격자 없는 피해가 섞였다", other)
                 : "§8  └ 그 밖의 피해 없음"));
-        }
-
-        out.add(Component.literal("§8──────────────"));
-        out.add(Component.literal(String.format(
-            "§7보스 체력 환산 §8— 60초 §f%,.0f §8· 90초 §f%,.0f §8· 120초 §f%,.0f",
-            total / secs * 60, total / secs * 90, total / secs * 120)));
-        return out;
     }
 
     // ── 집계 ──
