@@ -201,7 +201,28 @@ ServerEvents.commandRegistry(event => {
     //
     // 그래서 좌표를 짐작하지 않고 **lodestone 을 직접 찾는다** — 발밑(-1), 선 자리(0),
     // 반블록/카펫을 밟고 선 경우(-2)까지. 못 찾으면 등록하지 않고 이유를 말한다.
+    //
+    // ── 이름을 하나로 둔다 ──
+    // 잠깐 `altar`(등록) 옆에 `altars`(현황)를 뒀는데, 한 글자 차이인 데다 한쪽만 인수를
+    // 받아서 `/relic altars chiron` 이 그냥 «잘못된 인수» 로 튕겼다. 탭 완성으로도 안 갈린다.
+    // 그래서 리터럴 하나로 합쳤다 — **인수가 있으면 등록, 없으면 현황.**
     .then(Commands.literal('altar').requires(s => s.hasPermission(2))
+      .executes(ctx => {
+        const s = ctx.source.server
+        var rlLsKeys = Object.keys(RELICS), rlLsDone = 0
+        ctx.source.sendSystemMessage(Text.of('§6═══ ✦ 유물 제단 ═══'))
+        rlLsKeys.forEach(k => {
+          if (LS.hasAltar(s, k)) {
+            rlLsDone++
+            ctx.source.sendSystemMessage(Text.of(`§a ✔ §r${RELICS[k].name} §8(${k}) §7${LS.altarX(s, k)}, ${LS.altarY(s, k)}, ${LS.altarZ(s, k)}`))
+          } else {
+            ctx.source.sendSystemMessage(Text.of(`§c ✘ §r${RELICS[k].name} §8(${k}) §c미등록`))
+          }
+        })
+        ctx.source.sendSystemMessage(Text.of(`§7${rlLsDone} / ${rlLsKeys.length} 등록됨`))
+        if (rlLsDone < rlLsKeys.length) ctx.source.sendSystemMessage(Text.of('§8   등록: 자석석 위에 서서 §7/relic altar <가호>'))
+        return 1
+      })
       .then(fateArg().executes(ctx => {
         const s = ctx.source.server; const p = ctx.source.player
         if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
@@ -242,23 +263,6 @@ ServerEvents.commandRegistry(event => {
         console.log(`[LS-RELIC] altar ${fate} @ ${rlAlX},${rlAlY},${rlAlZ}`)
         return 1
       })))
-    // ── 제단 현황 ──
-    // 열두 개를 손으로 짓는 동안 «어디까지 했더라»를 볼 방법이 없었다.
-    .then(Commands.literal('altars').requires(s => s.hasPermission(2)).executes(ctx => {
-      const s = ctx.source.server
-      var rlLsKeys = Object.keys(RELICS), rlLsDone = 0
-      ctx.source.sendSystemMessage(Text.of('§6═══ ✦ 유물 제단 ═══'))
-      rlLsKeys.forEach(k => {
-        if (LS.hasAltar(s, k)) {
-          rlLsDone++
-          ctx.source.sendSystemMessage(Text.of(`§a ✔ §r${RELICS[k].name} §8(${k}) §7${LS.altarX(s, k)}, ${LS.altarY(s, k)}, ${LS.altarZ(s, k)}`))
-        } else {
-          ctx.source.sendSystemMessage(Text.of(`§c ✘ §r${RELICS[k].name} §8(${k}) §c미등록`))
-        }
-      })
-      ctx.source.sendSystemMessage(Text.of(`§7${rlLsDone} / ${rlLsKeys.length} 등록됨`))
-      return 1
-    }))
     // ── 유물 회수 (OP) ──
     // /relic grant 는 본인 전용이라 남의 획득 상태를 되돌릴 방법이 없었다.
     // /fate set 으로 직업을 바꿔주면 유물 플래그만 옛 직업에 남아 어긋난다.
