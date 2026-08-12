@@ -10,8 +10,8 @@
     variantType:"STEVE",
     version:"1.0.0"
   },
-  data:{
-    ActionData:{
+  id:"easy_npc:humanoid",
+  ActionData:{
       ActionEventSet:{
         ON_INTERACTION:[{
           Type:"OPEN_DEFAULT_DIALOG"
@@ -19,21 +19,9 @@
       },
       ActionPermissionLevel:3
     },
-    ArmorDropChances:[0.085f,0.085f,0.085f,0.085f],
-    ArmorItems:[{},{},{},{}],
-    Attributes:[{
-    Base:0.0d,Name:"minecraft:generic.movement_speed"
-  },{
-    Base:20.0d,Name:"minecraft:generic.max_health"
-  }],
-    Brain:{
-      memories:{}
-    },
-    CanPickUpLoot:0b,
-    CanUpdate:1b,
-    CustomName:'{"color":"#FFFF00","text":"린케우스"}',
-    CustomNameVisible:1b,
-    DialogData:{
+  CustomName:'{"color":"#FFFF00","text":"린케우스"}',
+  CustomNameVisible:1b,
+  DialogData:{
       DialogDataSet:[{
         Label:"start",
         Name:"첫 만남",
@@ -105,79 +93,10 @@
         }]
       }]
     },
-    DisplayAttribute:[{
-      Bool:1b,Type:"VISIBLE"
-    },{
-      Bool:1b,Type:"VISIBLE_AT_DAY"
-    },{
-      Bool:1b,Type:"VISIBLE_AT_NIGHT"
-    },{
-      Bool:1b,Type:"VISIBLE_IN_CREATIVE"
-    },{
-      Bool:1b,Type:"VISIBLE_IN_SPECTATOR"
-    },{
-      Bool:1b,Type:"VISIBLE_IN_STANDARD"
-    },{
-      Bool:1b,Type:"VISIBLE_TO_OWNER"
-    },{
-      Bool:1b,Type:"VISIBLE_TO_TEAM"
-    },{
-      Int:9,Type:"LIGHT_LEVEL"
-    },{
-      Text:"ALWAYS",Type:"NAME_VISIBILITY"
-    }],
-    EasyNPCVersion:3,
-    EntityAttribute:{
-      CanBeHitByProjectile:0b,
-      CanBeLeashed:0b,
-      CanBreatheUnderwater:0b,
-      CanCloseDoor:1b,
-      CanFloat:1b,
-      CanOpenDoor:1b,
-      CanPassDoor:1b,
-      CanUseNetherPortal:0b,
-      Freefall:0b,
-      HealthRegeneration:0.0d,
-      IsAttackableByMonsters:0b,
-      IsAttackableByPlayers:0b,
-      IsInvulnerable:1b,
-      IsPushable:0b,
-      NoGravity:0b,
-      PushEntities:0b
-    },
-    HandDropChances:[0.085f,0.085f],
-    HandItems:[{},{}],
-    Health:20.0f,
-    Invulnerable:1b,
-    LeftHanded:0b,
-    ModelData:{
-    DefaultPose:"STANDING",
-    Pose:"STANDING",
-    Position:{},
-    Rotation:{},
-    Scale:{},
-    Visible:{}
-  },
-    Navigation:{
-      Home:{
-        X:0,
-        Y:64,
-        Z:0
-      }
-    },
-    ObjectiveData:{
-      HasObjectives:1b,
-      ObjectiveDataSet:[{
-        Prio:9,Type:"LOOK_AT_PLAYER"
-      },{
-        Prio:9,Type:"LOOK_AT_RESET"
-      }]
-    },
-    OnGround:1b,
-    PersistenceRequired:1b,
-    Profession:"NONE",
-    RenderData:{},
-    SkinData:{
+  Invulnerable:1b,
+  NoAI:1b,
+  Silent:1b,
+  SkinData:{
       Content:"",
       DisableLayers:0b,
       Name:"HRSSamuelTTV",
@@ -186,25 +105,22 @@
       UUID:[I;-215787416,-1924641877,-1413010573,-1263525539],
       Timestamp:1786512306354L
     },
-    SoundData:{
-      SoundDataSet:[{
-        Name:"minecraft:entity.villager.ambient",Type:"AMBIENT"
-      },{
-        Name:"minecraft:entity.player.death",Type:"DEATH"
-      },{
-        Name:"minecraft:entity.player.hurt",Type:"HURT"
-      },{
-        Name:"minecraft:entity.villager.yes",Type:"TRADE_YES"
-      },{
-        Name:"minecraft:entity.villager.no",Type:"TRADE_NO"
-      }]
-    },
-    Status:{
-      finalized:1b
-    },
-    VariantType:"STEVE",
-    id:"easy_npc:humanoid",
-    NoAI:1b,
-    Silent:1b
-  }
+  VariantType:"STEVE",
+  Profession:"NONE",
+  ArmorItems:[{},{},{},{}],
+  HandItems:[{},{}],
+  Attributes:[{
+    Base:0.0d,Name:"minecraft:generic.movement_speed"
+  },{
+    Base:20.0d,Name:"minecraft:generic.max_health"
+  }],
+  ModelData:{
+    DefaultPose:"STANDING",
+    Pose:"STANDING",
+    Position:{},
+    Rotation:{},
+    Scale:{},
+    Visible:{}
+  },
+  PersistenceRequired:1b
 }
