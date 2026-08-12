@@ -105,19 +105,19 @@ public final class RelicPanel {
         if (stack.isEmpty()) return;
         String user = p.getGameProfile().getName();
 
-        double atk = p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-        double spd = p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
-        row(user, "§8── 지금 든 무기 ──", "", 0x6B7280);
-        row(user, "공격력", fmt(atk), 0xFFD98A);
-        row(user, "공격 속도", fmt(spd) + "/초", 0xC7CDD6);
-        // 초당 피해는 «평타만» 이다. 스킬·투사체는 각자 계산식이 달라 한 줄로 못 줄인다 —
-        // 합쳐서 한 숫자로 내면 그게 곧 거짓말이 된다.
-        row(user, "평타 초당 피해", fmt(atk * spd), 0xE08A8A);
+        var skills = RelicSkillTable.of(stack);
+        if (skills.isEmpty()) return;   // 유물이 아니면 아무 줄도 안 붙인다
 
-        float asc = com.laststardust.relics.item.RelicSkills.ascension(stack);
-        row(user, "각성 배율", "×" + fmt(asc), 0xFFD98A);
-        row(user, "전역 배율", "×" + fmt(com.laststardust.relics.item.RelicSkills.GLOBAL_POWER), 0x9AA4B2);
-        row(user, "스킬 총배율", "×" + fmt(com.laststardust.relics.item.RelicSkills.power(stack)), 0xC08AE0);
+        // ⚠️ 기본값이 아니라 **최종 피해**를 보여준다. {@code RelicSkills.dmg} 를 그대로
+        //    통과시키므로 각성 배율·전역 배율·무기 어픽스가 실제 전투와 «같은 식»으로 얹힌다.
+        //    표의 숫자를 그냥 찍으면 5성인데 1성 값이 보인다.
+        row(user, "§8── 스킬 피해 (지금 든 유물) ──", "", 0x6B7280);
+        for (RelicSkillTable.Skill s : skills) {
+            row(user, s.label(), fmt(com.laststardust.relics.item.RelicSkills.dmg(stack, s.base())), 0xE08A8A);
+        }
+        // 배율은 마지막에 한 줄. 「왜 이 숫자인가」를 설명해 주는 자리다.
+        row(user, "§8적용 배율", "§8×" + fmt(com.laststardust.relics.item.RelicSkills.power(stack))
+            + " §8(각성 ×" + fmt(com.laststardust.relics.item.RelicSkills.ascension(stack)) + ")", 0x6B7280);
     }
 
     /** 소수 첫째 자리까지, 딱 떨어지면 정수로. 「4.0」보다 「4」가 표로 읽기 좋다. */
