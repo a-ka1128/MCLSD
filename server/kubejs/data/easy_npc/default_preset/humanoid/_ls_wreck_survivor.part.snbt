@@ -27,9 +27,7 @@
       Name:"첫 만남",
       Priority:100,
       Texts:[{
-        Text:"이런 곳에 생존자가 있을 줄이야… 별의 가호를 받았나보구만."
-      },{
-        Text:"이 비행선은 성역으로 향하는 비행선이야."
+        Text:"이런 곳에 생존자가 있을 줄이야… 별의 가호를 받았나보구만.\\n이 비행선은 성역으로 향하는 비행선이야."
       }],
       Buttons:[{
         Label:"b_isee",
@@ -41,9 +39,7 @@
       Name:"이름을 묻다",
       Priority:1,
       Texts:[{
-        Text:"너를 뭐라고 불러야 할지 모르겠군."
-      },{
-        Text:"\"/닉네임 원하는닉네임\" 으로 이름을 알려주게나."
+        Text:"너를 뭐라고 불러야 할지 모르겠군.\\n\\n\"/닉네임 원하는닉네임\" 으로 이름을 알려주게나."
       }],
       Buttons:[{
         Label:"b_ok",
@@ -60,7 +56,7 @@
       Buttons:[{
         Label:"b_go",
         Name:"§7[ 잠시 눈을 감는다 ]",
-        Actions:[{ Cmd:"/lsonboard @initiator",Type:"COMMAND" }]
+        Actions:[{ Cmd:"/lsonboard @initiator",Type:"COMMAND" },{ Type:"CLOSE_DIALOG" }]
       }]
     }]
   },
