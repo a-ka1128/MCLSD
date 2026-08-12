@@ -192,41 +192,52 @@ BlockEvents.rightClicked(event => {
     + ` player=${player ? player.username : '없음'} server=${server ? '있음' : '없음'}`)
   if (!player || !server) return
 
-  // ⚠️ 공용 제단을 **먼저** 본다. 같은 블록에 둘이 걸려 있을 때(등록 검사를 우회해
-  //    직접 데이터를 만졌다면) 「가호가 안 맞는다」로 막히는 쪽이 이기면 안 된다.
-  if (LS.hasAltar(server, RL_SHARED)
-      && b.x === LS.altarX(server, RL_SHARED)
-      && b.y === LS.altarY(server, RL_SHARED)
-      && b.z === LS.altarZ(server, RL_SHARED)) {
-    event.cancel()
-    // 「블록이 안 맞은 것」과 「맞았는데 거절된 것」을 로그로 가를 수 있어야 한다.
-    // 이게 없으면 둘 다 «아무 일도 안 일어남» 으로 똑같이 보인다.
-    console.log(`[LS-RELIC] shared altar hit by ${player.username} @ ${b.x},${b.y},${b.z}`)
-    rlGrant(server, player, false)   // 가호는 안 본다 — rlGrant 가 그 사람의 가호로 고른다
-    return
-  }
-  const keys = Object.keys(RELICS)
-  for (let i = 0; i < keys.length; i++) {
-    var fate = keys[i]
-    if (!LS.hasAltar(server, fate)) continue
-    if (b.x === LS.altarX(server, fate) && b.y === LS.altarY(server, fate) && b.z === LS.altarZ(server, fate)) {
+  // ⚠️ **여기부터는 통째로 감싼다.** 이 안에서 예외가 나면 KubeJS 가 그걸 삼켜서
+  //    로그에 아무것도 안 남는다 — 「들어온 자국은 있는데 나간 자국이 없는」 상태가 되고,
+  //    그때 남는 단서가 0 이다. 2026-08-13 에 여기서 세 번 헛짚었다.
+  try {
+    // ⚠️ 좌표 비교에 `===` 를 쓰지 않는다. 한쪽은 블록에서 온 값이고 다른 쪽은 자바
+    //    브릿지가 돌려준 값이라, 같은 숫자라도 «타입이 달라» 엄격 비교가 어긋날 수 있다.
+    //    `Number(...)` 로 둘 다 끌어내려 비교한다 — 좌표는 정수라 정밀도 문제가 없다.
+    var bx = Number(b.x), by = Number(b.y), bz = Number(b.z)
+    function rlAt(key) {
+      return LS.hasAltar(server, key)
+        && Number(LS.altarX(server, key)) === bx
+        && Number(LS.altarY(server, key)) === by
+        && Number(LS.altarZ(server, key)) === bz
+    }
+
+    // 공용 제단을 **먼저** 본다. 같은 블록에 둘이 걸려 있으면(등록 검사를 우회해 직접
+    // 데이터를 만졌다면) 「가호가 안 맞는다」로 막히는 쪽이 이기면 안 된다.
+    if (rlAt(RL_SHARED)) {
+      event.cancel()
+      console.log(`[LS-RELIC] shared altar hit by ${player.username} @ ${bx},${by},${bz}`)
+      rlGrant(server, player, false)   // 가호는 안 본다 — rlGrant 가 그 사람의 가호로 고른다
+      return
+    }
+    const keys = Object.keys(RELICS)
+    for (let i = 0; i < keys.length; i++) {
+      var fate = keys[i]
+      if (!rlAt(fate)) continue
       event.cancel()
       var pf = String(LS.fate(server, player.username) || '')
       if (pf !== fate) { player.tell(Text.of(`§7이 제단은 §r${RELICS[fate].name}§7의 것 — 당신의 길이 아니다.`)); return }
       rlGrant(server, player, false)
       return
     }
-  }
 
-  // ── 자석석인데 어느 제단도 아니다 ──
-  // 여기까지 오면 «등록이 안 됐거나 좌표가 어긋난» 것이다. 조용히 지나가면
-  // 「우클릭해도 아무 일이 없다」와 구분이 안 된다. 등록된 좌표를 같이 찍어
-  // 무엇과 어긋났는지 눈으로 볼 수 있게 한다.
-  var known = []
-  rlAltarKeys().forEach(k => {
-    if (LS.hasAltar(server, k)) known.push(`${k}=${LS.altarX(server, k)},${LS.altarY(server, k)},${LS.altarZ(server, k)}`)
-  })
-  console.log(`[LS-RELIC] lodestone ${b.x},${b.y},${b.z} 는 제단이 아님 · 등록됨: ${known.join(' · ') || '없음'}`)
+    // ── 자석석인데 어느 제단도 아니다 ──
+    // 조용히 지나가면 「우클릭해도 아무 일이 없다」와 구분이 안 된다.
+    // 등록된 좌표를 같이 찍어 무엇과 어긋났는지 눈으로 볼 수 있게 한다.
+    var known = []
+    rlAltarKeys().forEach(k => {
+      if (LS.hasAltar(server, k)) known.push(`${k}=${LS.altarX(server, k)},${LS.altarY(server, k)},${LS.altarZ(server, k)}`)
+    })
+    console.log(`[LS-RELIC] lodestone ${bx},${by},${bz} 는 제단이 아님 · 등록됨: ${known.join(' · ') || '없음'}`)
+  } catch (e) {
+    console.log('[LS-RELIC] ✘ 제단 판정 중 예외: ' + e)
+    lsWarn('ls_relic:altar-click', e)
+  }
 })
 
 // ── 제단 등록 본체 ──
