@@ -60,24 +60,36 @@ public final class FateAutoOpen {
     private static final String K_SEEN = "lsPrologueSeen";
 
     // ── 프롤로그 본문 ──
-    // 문단 단위로 끊는다. 한 문단 안은 «읽는 속도»로, 문단 사이는 «숨 쉬는 속도»로 벌린다.
+    // **문단은 통째로 한 번에 뜬다.** 한 줄씩 흘리면 읽는 사람이 다음 줄을 «기다리게» 되고,
+    // 그러면 글이 아니라 로딩 바가 된다. 문단이 한 덩어리로 서 있어야 눈이 자기 속도로 읽는다.
+    //
+    // ⚠️ **줄바꿈은 문장 경계에서 끊는다.** 예전엔 채팅 폭에 맞춰 문장 중간에서 잘랐는데
+    //    (「…그 빛 아래에서 / 잠들었다.」), 한 줄씩 흐를 땐 안 보이던 그 이음매가
+    //    문단이 한꺼번에 서면 그대로 보인다.
+    //
+    // ⚠️ 한 줄은 **50자 안쪽**으로 둔다. 넘으면 채팅이 알아서 접는데, 그 접힘은 문장을
+    //    아무 데서나 자른다 — 여기서 맞춘 줄바꿈이 무의미해진다.
+    //
     // 마지막 한 줄만 흰색이다 — 앞이 전부 회색이라 거기서 눈이 멈춘다.
     private static final String[][] PROLOGUE = {
-        {"§7하늘에는 본래 여러 개의 별이 있었다. 별들은 밤마다 세계를 내려다보았고, 세계는 그 빛 아래에서",
-         "§7잠들었다. 어둠은 어디에나 있었지만, 어디에서도 주인이 아니었다."},
+        {"§7하늘에는 본래 여러 개의 별이 있었다.",
+         "§7별들은 밤마다 세계를 내려다보았고, 세계는 그 빛 아래에서 잠들었다.",
+         "§7어둠은 어디에나 있었지만, 어디에서도 주인이 아니었다."},
         {"§7첫 번째 별이 꺼졌을 때, 사람들은 구름이라 했다.",
          "§7세 번째 별이 꺼졌을 때, 학자들은 별의 순환이라 했다."},
-        {"§7하늘에 하나만 남았을 때 더는 아무도 아무 말도 하지 않았다. 밤이 낮을 밀어내고",
-         "§7있었다. 땅이 갈라진 자리마다 빛이 닿지 않는 검은 틈이 벌어졌고, 그 안에서 무언가가",
-         "§7기어 나왔다. 별을 삼킨 것이 이번에는 세계를 삼키러 온 것이다."},
+        {"§7하늘에 하나만 남았을 때 더는 아무도 아무 말도 하지 않았다. 밤이 낮을 밀어내고 있었다.",
+         "§7땅이 갈라진 자리마다 빛이 닿지 않는 검은 틈이 벌어졌고, 그 안에서 무언가가 기어 나왔다.",
+         "§7별을 삼킨 것이 이번에는 세계를 삼키러 온 것이다."},
         {"§7그리고 마지막 밤. 그 하나마저 떨어졌다.",
          "§7별은 하늘을 가로질러 이 땅 어딘가에 부딪혀 부서졌고 — 세계는 어둠에 잠겼다."},
         {"§f하지만 부서진 별의 잔해는, 아직 빛나고 있다."},
     };
 
     private static final int START_TICKS = 60;   // 3초 — 로딩 메시지가 지나가길 기다린다
-    private static final int LINE_TICKS = 32;    // 한 줄 읽는 시간
-    private static final int PARA_TICKS = 46;    // 문단 사이의 숨
+    // 문단이 통째로 뜨므로 이건 «한 줄 흘리는 간격»이 아니라 **읽는 데 걸리는 시간**이다.
+    // 줄 수를 곱해서 문단이 서 있을 시간을 잡는다 — 긴 문단은 저절로 더 오래 남는다.
+    private static final int LINE_TICKS = 40;    // 2초 — 한 줄 읽는 시간
+    private static final int PARA_TICKS = 60;    // 3초 — 다 읽고 나서 다음 문단까지의 숨
     private static final int TITLE_GAP = 70;     // 마지막 줄 → 타이틀
     private static final int SCREEN_GAP = 90;    // 타이틀 → 선택 화면
 
@@ -128,15 +140,18 @@ public final class FateAutoOpen {
         final int t0 = t;
         out.add(new Cue(t0, p -> { say(p, ""); say(p, ""); }));
         t += 10;
-        for (String[] para : PROLOGUE) {
-            for (String line : para) {
-                final String l = line;
-                out.add(new Cue(t, p -> say(p, l)));
-                t += LINE_TICKS;
-            }
-            final int gap = t;
-            out.add(new Cue(gap, p -> say(p, "")));
-            t += PARA_TICKS;
+        // 문단 하나 = 큐 하나. 같은 틱에 전부 내보내야 한 덩어리로 «선다».
+        // 사이의 빈 줄은 다음 문단과 **함께** 보낸다 — 따로 보내면 빈 줄만 먼저 떠서
+        // 「뭔가 오다 말았다」로 보인다.
+        for (int i = 0; i < PROLOGUE.length; i++) {
+            final String[] para = PROLOGUE[i];
+            final boolean lead = i > 0;
+            out.add(new Cue(t, p -> {
+                if (lead) say(p, "");
+                for (String l : para) say(p, l);
+            }));
+            t += para.length * LINE_TICKS;                  // 이 문단을 읽는 시간
+            if (i < PROLOGUE.length - 1) t += PARA_TICKS;   // 다음 문단까지의 숨
         }
         t += TITLE_GAP;
         out.add(new Cue(t, FateAutoOpen::showTitle));
