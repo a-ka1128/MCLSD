@@ -74,9 +74,22 @@ public final class LSCommands {
                     return 1;
                 })
                 .then(Commands.argument("who", EntityArgument.player()).executes(ctx -> {
-                    ServerPlayer t = EntityArgument.getPlayer(ctx, "who");
-                    com.laststardust.relics.shop.ShopService.open(t);
-                    return 1;
+                    // ⚠️ 감싼다. 이 명령은 **Easy NPC 대화 버튼**이 부르는데, Easy NPC 는
+                    //    예외를 삼키고 「명령어 실행 중 예상치 못한 오류」만 띄운다 —
+                    //    로그에 아무 자국이 안 남아서 무엇이 터졌는지 알 방법이 없다.
+                    //    (2026-08-13, 여기서 한 번 막혔다. 오늘 같은 모양이 세 번째다.)
+                    try {
+                        ServerPlayer t = EntityArgument.getPlayer(ctx, "who");
+                        com.laststardust.relics.shop.ShopService.open(t);
+                        return 1;
+                    } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+                        throw e;   // 인수 오류는 그대로 — 이건 원래 사람에게 보여야 한다
+                    } catch (Exception e) {
+                        LOG.error("[상점] /shop 실행 중 예외", e);
+                        ctx.getSource().sendFailure(Component.literal(
+                            "§c상점을 여는 중 오류 — §7logs/latest.log 의 §e[상점]§7 을 보세요."));
+                        return 0;
+                    }
                 })));
 
         // ── 개인 지갑 ──
