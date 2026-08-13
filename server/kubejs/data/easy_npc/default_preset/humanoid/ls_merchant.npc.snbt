@@ -44,7 +44,7 @@
       Buttons:[{
         Label:"b_shop",
         Name:"§a[ 물건을 본다 ]",
-        Actions:[{ Cmd:"/shop @initiator",Type:"COMMAND" },{ Type:"CLOSE_DIALOG" }]
+        Actions:[{ Cmd:"/shop @initiator",Type:"COMMAND" }]
       },{
         Label:"b_bye",
         Name:"둘러보기만 하겠습니다",
