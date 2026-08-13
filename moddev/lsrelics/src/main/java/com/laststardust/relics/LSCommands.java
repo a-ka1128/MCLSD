@@ -560,6 +560,47 @@ public final class LSCommands {
             Commands.literal("town")
                 .executes(ctx -> openTown(ctx.getSource()))
                 .then(Commands.literal("info").executes(ctx -> townInfo(ctx.getSource())))
+                // ── 귀환 지점 ──
+                // 귀환석(공방 4단계 「귀환의 요람」)이 데려가는 자리. 성역 «중심»과 따로 둔다 —
+                // 성역은 공성 반경·관문 거리의 기준점이라 건물 한복판이거나 공중일 수 있는데,
+                // 귀환석은 사람이 발을 딛는 자리여야 한다.
+                //
+                // 안 잡으면 성역으로 보낸다. 「자리를 안 잡아서 귀환석이 안 듣는다」가
+                // 되면 안 되기 때문이다.
+                .then(Commands.literal("hearth").requires(s -> s.hasPermission(2))
+                    .executes(ctx -> {
+                        var src = ctx.getSource();
+                        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                        var h = data.hearth();
+                        src.sendSuccess(() -> Component.literal(data.hasHearth()
+                            ? "§7귀환 지점: §e" + h.getX() + ", " + h.getY() + ", " + h.getZ()
+                            : "§7귀환 지점이 따로 없습니다 — §f성역§7으로 보냅니다. §8(" + h.getX()
+                              + ", " + h.getY() + ", " + h.getZ() + ")"), false);
+                        return 1;
+                    })
+                    .then(Commands.literal("set").executes(ctx -> {
+                        var src = ctx.getSource();
+                        ServerPlayer p = src.getPlayer();
+                        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                        var at = p.blockPosition();
+                        // 발밑이 아니라 «서 있는 칸»을 적는다. 도착할 때 +1 을 얹으므로
+                        // 여기서 또 내리면 바닥에 파묻힌다.
+                        data.setHearth(at.getX(), at.getY() - 1, at.getZ());
+                        data.dirty();
+                        src.sendSuccess(() -> Component.literal(
+                            "§a귀환 지점 지정: " + at.getX() + ", " + at.getY() + ", " + at.getZ()
+                            + " §7(귀환석이 여기로 데려옵니다)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("clear").executes(ctx -> {
+                        var src = ctx.getSource();
+                        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                        data.clearHearth();
+                        data.dirty();
+                        src.sendSuccess(() -> Component.literal("§7귀환 지점을 지웠습니다 — 다시 성역으로 보냅니다."), false);
+                        return 1;
+                    })))
                 // ── 구조물 앵커 ──
                 // 그 자리에 «서서» 잡는다. 좌표를 손으로 계산하면 한 칸씩 틀리고,
                 // 틀린 걸 눈으로 확인할 방법이 없다.

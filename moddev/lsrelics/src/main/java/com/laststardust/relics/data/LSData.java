@@ -129,6 +129,26 @@ public class LSData extends SavedData {
         sancX = x; sancY = y; sancZ = z; sancSet = true;
     }
 
+    // ── 귀환 지점 (귀환석이 데려가는 자리) ──
+    // 성역 «중심»과 따로 둔다. 성역 좌표는 공성 반경·관문 거리·구조물 앵커의 «기준점»이라
+    // 건물 한복판이나 공중일 수 있는데, 귀환석은 사람이 «발을 딛는» 자리여야 한다
+    // (귀환의 요람 — 공방 4단계). 둘을 한 값으로 쓰면 하나를 옮길 때 다른 하나가 망가진다.
+    //
+    // 안 정하면 성역으로 보낸다 — 공방 4단계를 열어 놓고 자리를 안 잡았을 때
+    // 「귀환석이 아무 데도 안 간다」가 되면 안 되기 때문이다.
+    private int hearthX, hearthY, hearthZ;
+    private boolean hearthSet;
+
+    public boolean hasHearth() { return hearthSet; }
+    /** 귀환 지점. 안 정했으면 성역을 돌려준다. */
+    public net.minecraft.core.BlockPos hearth() {
+        return hearthSet ? new net.minecraft.core.BlockPos(hearthX, hearthY, hearthZ) : sanctuary();
+    }
+    public void setHearth(int x, int y, int z) {
+        hearthX = x; hearthY = y; hearthZ = z; hearthSet = true;
+    }
+    public void clearHearth() { hearthSet = false; }
+
     public int progress() { return progress; }
     public void setProgress(int n) {
         progress = Math.max(0, Math.min(MAX_PROGRESS, n));
@@ -169,6 +189,11 @@ public class LSData extends SavedData {
         data.sancX = s.getInt("x");
         data.sancY = s.getInt("y");
         data.sancZ = s.getInt("z");
+        CompoundTag h = tag.getCompound("hearth");
+        data.hearthSet = h.getBoolean("set");
+        data.hearthX = h.getInt("x");
+        data.hearthY = h.getInt("y");
+        data.hearthZ = h.getInt("z");
         data.setProgress(tag.getInt("progress"));   // 없으면 0 — 새 월드의 정상값이다
         return data;
     }
@@ -194,6 +219,13 @@ public class LSData extends SavedData {
         s.putInt("y", sancY);
         s.putInt("z", sancZ);
         tag.put("sanctuary", s);
+
+        CompoundTag h = new CompoundTag();
+        h.putBoolean("set", hearthSet);
+        h.putInt("x", hearthX);
+        h.putInt("y", hearthY);
+        h.putInt("z", hearthZ);
+        tag.put("hearth", h);
         tag.putInt("progress", progress);
         return tag;
     }
