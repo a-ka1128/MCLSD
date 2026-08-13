@@ -24,6 +24,7 @@ const BT_EVERY = 3      // 갱신 주기(일) — 하루가 실시간 18분이�
 const BT_REWARD_MULT = 1.5  // 보상 배율 (ls_siege.js REWARD_MULT와 동일 기조)
 const BT_ESS = 'kubejs:rift_essence'
 const BT_ELITE_ESS = 1      // 정예(토벌) 현상금 완료 시 지급하는 별의 파편
+const BT_ELITE_DUCAT = 25   // 같은 완료에 개인 지갑으로 주는 Ducat
 
 // ── 현상금 풀 ──
 // 사냥: 흔한 적 다수 처치. 납품: 자원 제출. 정예: 위험 몹 소수 처치(고보상).
@@ -119,6 +120,8 @@ function btComplete(server, i, b, playerName) {
     // 마무리한 사람은 방금 처치/납품을 했으므로 반드시 접속 중 — give로 충분하다
     server.runCommandSilent(`give ${playerName} ${BT_ESS} ${BT_ELITE_ESS}`)
     btSay(server, `§5✦ 별의 파편 +${BT_ELITE_ESS} §7— 정예 토벌의 대가 (${playerName})`)
+    // 개인 지갑도 같이. 파편은 «진행»(유물·각성·원정), Ducat 은 «편의»라 겹치지 않는다.
+    try { LS.walletAdd(server, String(playerName), BT_ELITE_DUCAT) } catch (e) { lsWarn('ls_bounty:wage', e) }
     btPlay(server, 'minecraft:block.amethyst_block.chime', 0.8, 0.7)
   }
   console.log(`[LS-BOUNTY] #${i} complete by ${playerName}`)

@@ -47,6 +47,10 @@ const GRAND_EVERY = 12
 // ※ SIEGE_EVERY 는 승리 시 위협도 감소량으로도 쓰인다(`finishSiege`) — 「한 번 이기면 그동안
 //   쌓인 만큼을 되돌린다」가 성립하려면 주기와 같은 값이어야 하므로, 여기만 고치면 같이 따라간다.
 const REWARD_MULT = 1.5      // 보상 배율 — Ducat이 거래에도 쓰이므로 유입 상향
+// 공성을 막아낸 사람이 개인 지갑으로 받는 Ducat. 상점 값(40~260)과 같은 눈금이다 —
+// 한 판이 화살 한 뭉치(40)쯤, 대공세가 그 두 배.
+const SIEGE_WAGE = 40
+const SIEGE_WAGE_GRAND = 80
 const GRAND_ESS = 2          // 대공세 격퇴 시 별의 파편
 const HIGH_THREAT_ESS = 7    // 이 위협도 이상에서 일반 공성을 격퇴하면 정수를 준다
 const HIGH_THREAT_ESS_AMT = 1
@@ -743,6 +747,17 @@ function finishSiege(server, outcome) {
       say(server, `§5✦ 별의 파편 +${ess} §7— ${grand ? '대공세를' : `위협도 ${threat}의 공세를`} 격퇴한 대가 (성역에 떨어졌다)`)
       playAll(server, 'minecraft:block.amethyst_block.chime', 0.9, 0.7)
     }
+    // ── 개인 지갑 ── (2026-08-13)
+    // 금고는 마을 몫, 이건 «막아낸 사람» 몫이다. 둘은 다른 주머니다(WalletData 머리말).
+    // 관전자는 뺀다 — activePlayers 와 같은 기준이라야 「구경만 하고 받는다」가 안 생긴다.
+    try {
+      var sgPay = grand ? SIEGE_WAGE_GRAND : SIEGE_WAGE
+      server.players.forEach(p => {
+        if (p.isSpectator()) return
+        LS.walletAdd(server, String(p.username), sgPay)
+        p.tell(Text.of(`§e+${sgPay} Ducat §7— 성역을 지킨 대가`))
+      })
+    } catch (e) { lsWarn('ls_siege:wage', e) }
     console.log(`[LS-SIEGE] WIN reward=${reward} grand=${grand}`)
   } else if (result === 'dawn') {
     // accrued 는 const 라 재할당하지 않는다 — 'win' 분기가 reward 를 따로 두는 것과 같은 구조.

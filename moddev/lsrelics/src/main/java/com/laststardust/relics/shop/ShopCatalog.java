@@ -45,31 +45,27 @@ public final class ShopCatalog {
     }
 
     // 순서가 화면 순서다. 묶음별로 모아 둔다.
+    //
+    // ⚠️ 2026-08-13 유저가 골라낸 목록이다. 뺀 것들(모루·소고기·깃발·화분·랜턴·그림·
+    //    철 주괴·흑요석)은 «가서 캐거나 만들면 되는 것»이라 상점에 있으면 오히려
+    //    나가서 무언가 할 이유를 지운다. 파는 것은 «구하기 번거로운데 파워는 아닌 것»으로 좁힌다.
     public static final List<Entry> ALL = List.of(
         // ── 편의 ── 노가다를 줄여 주는 것들. 파워가 아니라 «시간»을 산다.
         new Entry("minecraft:ender_chest",  1,  180, "편의"),
-        new Entry("minecraft:anvil",        1,  120, "편의"),
+        new Entry("minecraft:shulker_box",  1,  260, "편의"),
         new Entry("minecraft:name_tag",     1,   60, "편의"),
         new Entry("minecraft:saddle",       1,   50, "편의"),
-        new Entry("minecraft:shulker_box",  1,  260, "편의"),
 
         // ── 소모품 ── 원정·공성 준비물.
         new Entry("minecraft:golden_apple",       4,  90, "소모품"),
         new Entry("minecraft:arrow",             64,  40, "소모품"),
-        new Entry("minecraft:cooked_beef",       32,  30, "소모품"),
         new Entry("minecraft:experience_bottle", 16,  70, "소모품"),
 
-        // ── 재료 ── 캐러 다니는 시간을 줄이는 용도. 값을 일부러 후하게 매기지 않는다.
-        new Entry("minecraft:obsidian", 8, 100, "재료"),
-        new Entry("minecraft:emerald",  4,  80, "재료"),
-        new Entry("minecraft:iron_ingot", 16, 60, "재료"),
+        // ── 재료 ── 거래에 쓰는 것만 남긴다.
+        new Entry("minecraft:emerald", 4, 80, "재료"),
 
         // ── 치장 ── 개인 지갑의 «본래» 쓰임.
-        new Entry("minecraft:firework_rocket", 16, 40, "치장"),
-        new Entry("minecraft:white_banner",     1, 25, "치장"),
-        new Entry("minecraft:flower_pot",       4, 20, "치장"),
-        new Entry("minecraft:lantern",         16, 45, "치장"),
-        new Entry("minecraft:painting",         4, 30, "치장")
+        new Entry("minecraft:firework_rocket", 16, 40, "치장")
     );
 
     /** 실제로 존재하는 아이템만 남긴다. 없는 것은 로그로 알리고 뺀다. */

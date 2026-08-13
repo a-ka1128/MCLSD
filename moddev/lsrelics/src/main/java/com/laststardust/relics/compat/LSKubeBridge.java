@@ -183,6 +183,21 @@ public class LSKubeBridge implements KubeJSPlugin {
             data.dirty();
         }
 
+        // ── 개인 지갑 (Ducat) ──
+        // ⚠️ 마을 금고(treasury)와 «다른 주머니»다. 섞으면 개인 치장에 마을 돈이 나간다.
+        // 보상을 주는 코드는 각자 자기 파일에 있으므로(공성·현상금) 여기로 끌어오지 않고
+        // 그쪽에서 이걸 부른다 — 한 보상이 두 곳에서 나가면 언젠가 두 번 나간다.
+        public int walletGet(MinecraftServer server, String username) {
+            return server == null ? 0 : LSData.get(server).wallet().get(username);
+        }
+
+        public void walletAdd(MinecraftServer server, String username, int amount) {
+            if (server == null || amount == 0) return;
+            LSData data = LSData.get(server);
+            data.wallet().add(username, amount);
+            data.dirty();
+        }
+
         // ── 유물 제단 화면 ──
         // 수치가 KubeJS 에 살기 때문에 «무엇을 보여줄지»는 그쪽이 채우고 자바는 그리기만 한다.
         // 왜 그렇게 나눴는지는 RelicView 머리말에 있다 — 표를 자바로 복사하면 두 곳이 갈라진다.
