@@ -39,6 +39,15 @@ public final class LSNetwork {
         reg.playToClient(RelicViewPayload.TYPE, RelicViewPayload.STREAM_CODEC, LSNetwork::handleRelicView);
         reg.playToClient(ShopViewPayload.TYPE, ShopViewPayload.STREAM_CODEC, LSNetwork::handleShopView);
         reg.playToServer(ShopBuyPayload.TYPE, ShopBuyPayload.STREAM_CODEC, LSNetwork::handleShopBuy);
+        reg.playToServer(ShopSellPayload.TYPE, ShopSellPayload.STREAM_CODEC, LSNetwork::handleShopSell);
+    }
+
+    private static void handleShopSell(ShopSellPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (!(ctx.player() instanceof ServerPlayer player)) return;
+            String fail = com.laststardust.relics.shop.ShopService.sell(player, payload.index());
+            if (fail != null) player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c" + fail));
+        });
     }
 
     // ── 상인 광장 ──

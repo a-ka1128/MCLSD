@@ -68,6 +68,66 @@ public final class ShopCatalog {
         new Entry("minecraft:firework_rocket", 16, 40, "치장")
     );
 
+    // ── 파는 쪽 (플레이어 → 상인) ──
+    //
+    // 광물과 전리품. «쌓이기만 하고 쓸 데 없는 것»에 값을 붙여 주는 자리다 —
+    // 썩은 살점 한 무더기가 화살 한 뭉치가 되면 창고를 비울 이유가 생긴다.
+    //
+    // ⚠️ 값을 후하게 매기면 몹 농장 하나로 상점이 끝난다. 전리품은 1~3 으로 낮게 두고,
+    //    캐야 나오는 광물에 무게를 준다 — 「나가서 무언가 한 대가」가 커야 한다.
+    //
+    // ⚠️ 사는 값과 파는 값을 겹치게 두면 안 된다. 예를 들어 에메랄드를 4개 80(개당 20)에
+    //    팔면서 개당 20에 사들이면 무한 순환이 된다. 파는 값은 반드시 더 싸다.
+    public record Sell(String id, int unit, String group) {
+        public net.minecraft.world.item.Item item() {
+            var rl = ResourceLocation.tryParse(id);
+            return rl == null ? null : BuiltInRegistries.ITEM.get(rl);
+        }
+    }
+
+    public static final List<Sell> SELLABLE = List.of(
+        // ── 광물 ──
+        new Sell("minecraft:coal",            1, "광물"),
+        new Sell("minecraft:copper_ingot",    2, "광물"),
+        new Sell("minecraft:redstone",        2, "광물"),
+        new Sell("minecraft:lapis_lazuli",    2, "광물"),
+        new Sell("minecraft:iron_ingot",      3, "광물"),
+        new Sell("minecraft:gold_ingot",      5, "광물"),
+        new Sell("minecraft:emerald",        12, "광물"),   // 사는 값 개당 20 보다 싸다
+        new Sell("minecraft:diamond",        25, "광물"),
+        new Sell("minecraft:netherite_scrap", 90, "광물"),
+
+        // ── 전리품 ── 몹에서 나오는 것. 값이 낮은 이유는 위 주석에.
+        new Sell("minecraft:rotten_flesh",   1, "전리품"),
+        new Sell("minecraft:bone",           1, "전리품"),
+        new Sell("minecraft:string",         1, "전리품"),
+        new Sell("minecraft:spider_eye",     2, "전리품"),
+        new Sell("minecraft:gunpowder",      3, "전리품"),
+        new Sell("minecraft:slime_ball",     3, "전리품"),
+        new Sell("minecraft:ender_pearl",    8, "전리품"),
+        new Sell("minecraft:blaze_rod",     10, "전리품"),
+        new Sell("minecraft:ghast_tear",    15, "전리품"),
+        new Sell("minecraft:phantom_membrane", 6, "전리품")
+    );
+
+    public static List<Sell> resolveSell() {
+        var out = new java.util.ArrayList<Sell>();
+        for (Sell s : SELLABLE) {
+            var it = s.item();
+            if (it == null || it == net.minecraft.world.item.Items.AIR) {
+                LOG.warn("[상점] 매입 목록에서 뺀다(아이템 없음): {}", s.id());
+                continue;
+            }
+            out.add(s);
+        }
+        return out;
+    }
+
+    public static Sell sellByIndex(int i) {
+        var list = resolveSell();
+        return (i < 0 || i >= list.size()) ? null : list.get(i);
+    }
+
     /** 실제로 존재하는 아이템만 남긴다. 없는 것은 로그로 알리고 뺀다. */
     public static List<Entry> resolve() {
         var out = new java.util.ArrayList<Entry>();
