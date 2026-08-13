@@ -36,6 +36,10 @@ max-players=8
 powershell -ExecutionPolicy Bypass -File tools\deploy_mod.ps1
 ```
 
+> 📄 **`.mrpack` 으로 통째로 내보낼 거면 `docs/RELEASE.md` 를 먼저 훑을 것.**
+> 개발 중 켜 둔 것들(FancyMenu 에디터 바·바닐라 메뉴 음악 등)이 그대로 나가면
+> 친구들 화면에 개발용 UI 가 뜬다. 그 문서가 그것만 다룬다.
+
 > ⚠️ **서버가 켜진 채로 jar 을 바꾸지 마라.** 돌고 있는 인스턴스가 쥔 jar 이 발밑에서
 > 바뀌어 리소스 읽기가 깨진다(`ZipException: invalid stored block lengths`).
 > 증상이 인게임에서 「명령어 실행 중 예상치 못한 오류」로 나와 **코드 버그처럼 보인다.**
@@ -158,7 +162,7 @@ UI 쪽은 오히려 잘 갖춰져 있다 — 마을 화면(**M**) · `/bless` �
 ```
 
 구조물 파일은 `server/kubejs/data/lsrelics/structure/town/<트랙>_<단계>.nbt`.
-자세한 절차와 함정은 **`docs/TOWN-BUILD.md`** 에 있다.
+자세한 절차와 함정은 **`docs/TOWN.md`** 「레벨이 오르면 구조물이 세계에 선다」에 있다.
 
 > **남은 건 「무엇이 자라는가」다.** 공방은 2026-08-13 유저 결정으로 «단계만 오르고
 > 구조물은 그대로» 가기로 했다 — 대신 철창에 문이 달려 안팎이 갈린다.

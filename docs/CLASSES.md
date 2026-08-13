@@ -10,7 +10,7 @@
 > 그래서 번호를 그대로 뒀다 — **「케이론 §4」처럼 가호 이름과 함께 읽는다.**
 >
 > ## 이 문서에 없는 것
-> - **[CLASS-RESEARCH.md](CLASS-RESEARCH.md)** — 아키타입 조사·빈칸 분석. 사양이 아니라 «근거»다
+> - **[CLASS-RESEARCH.md](archive/CLASS-RESEARCH.md)** — 아키타입 조사·빈칸 분석. 사양이 아니라 «근거»다
 > - **[CLASS-DELETED.md](CLASS-DELETED.md)** — 폐기된 설계(12번 므네모시네)와 접은 이유
 > - **1~8번째 가호** — 문서가 없다. 사양은 코드와 `ls_fate.js` 가 원본이다
 >
@@ -45,14 +45,14 @@
 > **구현 쪽으로 통일했다**(유저 결정) — 갈린 내역은 §1 바로 아래에 있다.
 > 하르모니아는 원안 그대로 들어갔다.
 >
-> 관련 문서: [CLASS-RESEARCH.md](CLASS-RESEARCH.md) (아래 §0 반드시 먼저 읽을 것) ·
+> 관련 문서: [CLASS-RESEARCH.md](archive/CLASS-RESEARCH.md) (아래 §0 반드시 먼저 읽을 것) ·
 > [STORY.md](STORY.md) (기존 8가호 서사) · [BLESSING.md](BLESSING.md) §「/dummy 실측 재보정」
 
 ---
 
 ## 0. ⚠️ 먼저 — 이 문서는 CLASS-RESEARCH.md 의 권고와 정반대다
 
-`docs/CLASS-RESEARCH.md` §6「하지 말 것」첫 줄은 이렇게 돼 있다:
+`docs/archive/CLASS-RESEARCH.md` §6「하지 말 것」첫 줄은 이렇게 돼 있다:
 
 > **9번째·10번째 가호 추가** — 3~6인 서버에서 8도 이미 과잉이다. 인원보다 직업이 많으면
 > "저 직업 아무도 안 함"이 생기고, 그 직업에 들인 개발 비용이 통째로 사장된다.
@@ -357,7 +357,7 @@
 | | 상태 |
 |---|---|
 | 11번째 **네메시스** (패링 대검 탱커) | **설계 확정 · 코드 0줄** — 「네메시스」 |
-| 12번째 | 미정 — 후보는 「설치·함정」/「소환·강령」 (`CLASS-RESEARCH.md` §5 1순위) |
+| 12번째 | 미정 — 후보는 「설치·함정」/「소환·강령」 (`archive/CLASS-RESEARCH.md` §5 1순위) |
 
 **→ `/dummy` 재보정은 12번째까지 확정한 뒤에 한 번에 돈다.** 지금 10종으로 재면
 11·12 가 붙을 때 하루짜리 측정을 또 하게 된다. 그게 이 절이 처음부터 경고한 바로 그것이다.
@@ -384,7 +384,7 @@ py post_classes.py         # 10종 전부 (웹훅 빈 클래스는 조용히 건
 ---
 
 *8가호 정의는 [STORY.md](STORY.md) 5장, 유물·스킬 구현은
-`moddev/lsrelics/.../item/RelicSkills.java`, 직업 조사는 [CLASS-RESEARCH.md](CLASS-RESEARCH.md).*
+`moddev/lsrelics/.../item/RelicSkills.java`, 직업 조사는 [CLASS-RESEARCH.md](archive/CLASS-RESEARCH.md).*
 
 
 ---
@@ -394,7 +394,7 @@ py post_classes.py         # 10종 전부 (웹훅 빈 클래스는 조용히 건
 
 > 작성 2026-08-09. **설계 확정 · 코드 0줄.** 이 문서만 읽고 구현에 들어갈 수 있게 썼다.
 >
-> 관련: [CLASS-RESEARCH.md](CLASS-RESEARCH.md) §3-1·§4 (근거) ·
+> 관련: [CLASS-RESEARCH.md](archive/CLASS-RESEARCH.md) §3-1·§4 (근거) ·
 > 「헤카테·하르모니아」 §4 (재보정 경고) · [TEST-PLAN.md](TEST-PLAN.md) §2-B
 
 ---
@@ -402,7 +402,7 @@ py post_classes.py         # 10종 전부 (웹훅 빈 클래스는 조용히 건
 ## 0. 이 직업은 조사와 «맞다» — 9·10번째와 다른 점
 
 「헤카테·하르모니아」 §0 은 「조사 권고를 유저 결정이 덮었다」로 시작한다. **이 문서는 반대다.**
-`CLASS-RESEARCH.md` 가 직접 꼽은 빈칸을 채운다:
+`archive/CLASS-RESEARCH.md` 가 직접 꼽은 빈칸을 채운다:
 
 > §3-1 전위 — #4 **자해형 탱커** ❌ 없음 / #5 **회피 탱커** ❌ 없음
 >
@@ -760,14 +760,14 @@ nemesis:  { 1: 0, 2: 14, 3: 30, 4: 44, 5: 60 }, // 10/17/25/32/40칸 — 패링 
 
 > 작성 2026-08-10. **설계 · 코드 0줄.** 이 문서만 읽고 구현에 들어갈 수 있게 썼다.
 >
-> 관련: [CLASS-RESEARCH.md](CLASS-RESEARCH.md) §4 관찰2 · §5 (#19) · §6 ·
+> 관련: [CLASS-RESEARCH.md](archive/CLASS-RESEARCH.md) §4 관찰2 · §5 (#19) · §6 ·
 > 「네메시스」 (직전 직업) · [CLASS-DELETED.md](CLASS-DELETED.md) (폐기된 12번 소환사)
 
 ---
 
 ## 0. 이 직업은 조사와 «맞다» — 그리고 조사의 경고도 같이 지킨다
 
-`CLASS-RESEARCH.md` 관찰 2:
+`archive/CLASS-RESEARCH.md` 관찰 2:
 
 > **히기에이아 1인 과부하.** 힐 + 버프 + 쉴드 + 부활을 혼자 감당한다.
 > 3~6인 서버에서 힐러가 결석하면 파티가 성립하지 않는 **단일 장애점**이다.
@@ -1348,7 +1348,7 @@ R·C·X 의 회복은 정상적으로 위협도를 낸다(그건 별도 행동�
 |---|---|
 | **가호 선택** ← 첫 부착 | `ls_fate.js ftChoose` |
 | `/fate set` · `/fate reset` | `ls_fate.js` |
-| 유물 지급 | `ls_relic.js:114` → `asStamp` |
+| 유물 지급 | `ls_relic.js` 의 `rlGrant` → `asStamp` |
 | 각성 성공 | `ls_ascend.js` |
 | 접속 (40틱 뒤) · 부활 (5틱 뒤) | `ls_ascend.js` |
 

@@ -445,7 +445,7 @@ R·V·C·X 를 각각. **여기서 보는 건 「도는가」이지 수치가 �
 ### 걸린 것 둘 (2026-08-11)
 
 **① `server.getPlayer(name)` 은 UUID 전용이다.**
-`ls_util.js:189` 가 이 함정을 **같은 에러 문구까지 그대로** 적어 두고 `lsPlayerByName` 을
+`ls_util.js` 의 `lsPlayerByName` 주석이 이 함정을 **같은 에러 문구까지 그대로** 적어 두고 `lsPlayerByName` 을
 만들어 놨는데, 새 파일에서 그대로 밟았다(도박장이 예전에 죽었던 자리다).
 → **이름으로 플레이어를 찾을 땐 언제나 `lsPlayerByName`.**
 
