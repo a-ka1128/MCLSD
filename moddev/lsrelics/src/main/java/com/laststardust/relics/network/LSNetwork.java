@@ -37,6 +37,23 @@ public final class LSNetwork {
         reg.playToClient(BlessViewPayload.TYPE, BlessViewPayload.STREAM_CODEC, LSNetwork::handleBlessView);
         reg.playToClient(RelicAnimPayload.TYPE, RelicAnimPayload.STREAM_CODEC, LSNetwork::handleAnim);
         reg.playToClient(RelicViewPayload.TYPE, RelicViewPayload.STREAM_CODEC, LSNetwork::handleRelicView);
+        reg.playToClient(ShopViewPayload.TYPE, ShopViewPayload.STREAM_CODEC, LSNetwork::handleShopView);
+        reg.playToServer(ShopBuyPayload.TYPE, ShopBuyPayload.STREAM_CODEC, LSNetwork::handleShopBuy);
+    }
+
+    // ── 상인 광장 ──
+    private static void handleShopView(ShopViewPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> com.laststardust.relics.client.ShopScreens.show(payload.view()));
+    }
+
+    // 규칙은 전부 ShopService 에 있다. 여기서는 «누가 무엇을» 만 넘긴다 —
+    // 값과 아이템을 클라가 실어 보내게 두면 1 Ducat 짜리 다이아를 막을 방법이 없다.
+    private static void handleShopBuy(ShopBuyPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (!(ctx.player() instanceof ServerPlayer player)) return;
+            String fail = com.laststardust.relics.shop.ShopService.buy(player, payload.index());
+            if (fail != null) player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c" + fail));
+        });
     }
 
     // ── 유물 제단 화면 ──

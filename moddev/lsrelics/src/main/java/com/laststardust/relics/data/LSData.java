@@ -38,6 +38,8 @@ public class LSData extends SavedData {
     private final CasinoData casino = new CasinoData();
     private final RescueData rescue = new RescueData();
     private final VoiceData voice = new VoiceData();
+    // 개인 지갑 — 공동 금고(TownData.treasury)와 «다른 주머니»다. WalletData 머리말 참고.
+    private final WalletData wallet = new WalletData();
 
     // 성역 좌표 — 여러 시스템이 공유하는 가장 넓게 퍼진 상태다.
     // (공성·관문·구출·통계·귀환석이 전부 이걸 본다)
@@ -46,6 +48,11 @@ public class LSData extends SavedData {
 
     public TownData town() {
         return town;
+    }
+
+    /** 개인 지갑(Ducat). 마을 금고는 {@link #town()} 쪽이다 — 섞지 말 것. */
+    public WalletData wallet() {
+        return wallet;
     }
 
     // 가호·유물·각성 — 사람에 붙는 성장 상태 (이관 3단계).
@@ -184,6 +191,7 @@ public class LSData extends SavedData {
         data.casino.load(tag.getCompound("casino"), registries);
         data.rescue.load(tag.getCompound("rescue"), registries);
         data.voice.load(tag.getCompound("voice"), registries);
+        data.wallet.load(tag.getCompound("wallet"), registries);
         CompoundTag s = tag.getCompound("sanctuary");
         data.sancSet = s.getBoolean("set");
         data.sancX = s.getInt("x");
@@ -213,6 +221,7 @@ public class LSData extends SavedData {
         tag.put("casino", casino.save(registries));
         tag.put("rescue", rescue.save(registries));
         tag.put("voice", voice.save(registries));
+        tag.put("wallet", wallet.save(registries));
         CompoundTag s = new CompoundTag();
         s.putBoolean("set", sancSet);
         s.putInt("x", sancX);

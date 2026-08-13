@@ -60,6 +60,53 @@ public final class LSCommands {
                     return 1;
                 })));
 
+        // ── 상인 광장 ──
+        // 권한을 안 건다. 상인 NPC 의 대화 버튼이 `/shop @initiator` 로 부르는데,
+        // 권한을 걸면 일반 플레이어에게는 상점이 통째로 안 열린다.
+        //
+        // 인수는 EntityArgument — 선택자와 맨 이름을 둘 다 받는다(/lsonboard 와 같은 이유).
+        event.getDispatcher().register(
+            Commands.literal("shop")
+                .executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    com.laststardust.relics.shop.ShopService.open(p);
+                    return 1;
+                })
+                .then(Commands.argument("who", EntityArgument.player()).executes(ctx -> {
+                    ServerPlayer t = EntityArgument.getPlayer(ctx, "who");
+                    com.laststardust.relics.shop.ShopService.open(t);
+                    return 1;
+                })));
+
+        // ── 개인 지갑 ──
+        event.getDispatcher().register(
+            Commands.literal("wallet")
+                .executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    int bal = com.laststardust.relics.data.LSData.get(p.getServer())
+                        .wallet().get(p.getGameProfile().getName());
+                    ctx.getSource().sendSystemMessage(Component.literal(
+                        "§7개인 지갑: §e" + bal + " Ducat §8(마을 금고는 /town treasury)"));
+                    return 1;
+                })
+                .then(Commands.literal("give").requires(s -> s.hasPermission(2))
+                    .then(Commands.argument("who", EntityArgument.player())
+                        .then(Commands.argument("amount", IntegerArgumentType.integer(1))
+                            .executes(ctx -> {
+                                ServerPlayer t = EntityArgument.getPlayer(ctx, "who");
+                                int n = IntegerArgumentType.getInteger(ctx, "amount");
+                                var data = com.laststardust.relics.data.LSData.get(ctx.getSource().getServer());
+                                String nm = t.getGameProfile().getName();
+                                data.wallet().add(nm, n);
+                                data.dirty();
+                                t.sendSystemMessage(Component.literal("§e+" + n + " Ducat §7(개인 지갑)"));
+                                ctx.getSource().sendSuccess(() -> Component.literal(
+                                    "§a" + nm + " 에게 " + n + " Ducat §7— 잔액 " + data.wallet().get(nm)), false);
+                                return 1;
+                            })))));
+
         // ── 부르는 이름 ──
         // **권한을 안 건다.** 이건 관리 도구가 아니라 첫 대화에서 린케우스가 시키는 일이고,
         // 일반 플레이어가 못 쓰면 온보딩이 거기서 멈춘다.
