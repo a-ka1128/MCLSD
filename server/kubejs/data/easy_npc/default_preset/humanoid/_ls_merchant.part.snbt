@@ -1,0 +1,73 @@
+{
+  PresetMetadata:{
+    author:"Last Stardust",
+    category:"Quest",
+    created:1786538762004L,
+    description:"상인 광장의 상인. 클릭하면 Ducat 상점(/shop)이 열린다.",
+    entityTypeId:"easy_npc:humanoid",
+    modified:1786538762004L,
+    name:"엠포로스 — 상인",
+    variantType:"STEVE",
+    version:"1.0.0"
+  },
+  id:"easy_npc:humanoid",
+  ActionData:{
+    ActionEventSet:{
+      ON_INTERACTION:[{
+        Type:"OPEN_DEFAULT_DIALOG"
+      }]
+    },
+    ActionPermissionLevel:3
+  },
+  CustomName:'{"color":"#7FD98A","text":"엠포로스"}',
+  CustomNameVisible:1b,
+  DialogData:{
+    DialogDataSet:[{
+      Label:"start",
+      Name:"상인",
+      Priority:100,
+      Texts:[{
+        Text:"별이 꺼져도 장사는 하는 법이지.\\n무엇이 필요한가?"
+      }],
+      Buttons:[{
+        Label:"b_shop",
+        Name:"§a[ 물건을 본다 ]",
+        Actions:[{ Cmd:"/shop @initiator",Type:"COMMAND" },{ Type:"CLOSE_DIALOG" }]
+      },{
+        Label:"b_bye",
+        Name:"둘러보기만 하겠습니다",
+        Actions:[{ Type:"CLOSE_DIALOG" }]
+      }]
+    }]
+  },
+  Invulnerable:1b,
+  NoAI:1b,
+  Silent:1b,
+  SkinData:{
+    Content:"",
+    DisableLayers:0b,
+    Name:"",
+    Type:"DEFAULT",
+    URL:"",
+    UUID:[I;0,0,0,0],
+    Timestamp:1786512306354L
+  },
+  VariantType:"STEVE",
+  Profession:"NONE",
+  ArmorItems:[{},{},{},{}],
+  HandItems:[{},{}],
+  Attributes:[{
+    Base:0.0d,Name:"minecraft:generic.movement_speed"
+  },{
+    Base:20.0d,Name:"minecraft:generic.max_health"
+  }],
+  ModelData:{
+    DefaultPose:"STANDING",
+    Pose:"STANDING",
+    Position:{},
+    Rotation:{},
+    Scale:{},
+    Visible:{}
+  },
+  PersistenceRequired:1b
+}
