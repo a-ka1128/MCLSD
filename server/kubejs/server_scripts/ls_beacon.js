@@ -199,7 +199,9 @@ ServerEvents.commandRegistry(event => {
       })
       return 1
     })
-    .then(Commands.literal('light').then(Commands.argument('name', Arguments.STRING.create(event)).executes(ctx => {
+    // ⚠️ greedyString — 봉화 이름은 한글이라 Arguments.STRING 으로는 안 들어간다.
+    //    `/riftnode add` · `/lsonboard @p` · `/닉네임` 과 같은 함정이다.
+    .then(Commands.literal('light').then(Commands.argument('name', Arguments.GREEDY_STRING.create(event)).executes(ctx => {
       const p = ctx.source.player
       if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
       return pbRegister(ctx.source.server, p, Arguments.STRING.getResult(ctx, 'name'))
@@ -215,7 +217,7 @@ ServerEvents.commandRegistry(event => {
         `§b점화 물결 시험 §7— ${PB_WAVE_STEPS}단계 · ${(PB_WAVE_STEPS * PB_WAVE_GAP / 20).toFixed(1)}초 · 반경 ${PB_RADIUS}m §8(정화도 같이 돈다)`))
       return 1
     }))
-    .then(Commands.literal('remove').requires(s => s.hasPermission(2)).then(Commands.argument('name', Arguments.STRING.create(event))
+    .then(Commands.literal('remove').requires(s => s.hasPermission(2)).then(Commands.argument('name', Arguments.GREEDY_STRING.create(event))
       .suggests((ctx, b) => { pbNames(ctx.source.server).forEach(x => b.suggest(x)); return b.buildFuture() })
       .executes(ctx => {
         const s = ctx.source.server; const name = Arguments.STRING.getResult(ctx, 'name')

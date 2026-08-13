@@ -1397,7 +1397,12 @@ ServerEvents.commandRegistry(event => {
       ctx.source.sendSystemMessage(Text.of(`§5균열 노드 ${names.length}개: §7${names.join(', ') || '없음'}`))
       return 1
     }))
-    .then(Commands.literal('add').requires(s => s.hasPermission(2)).then(Commands.argument('name', Arguments.STRING.create(event)).executes(ctx => {
+    // ⚠️ 이름은 **greedyString** 이다. `Arguments.STRING` 은 따옴표가 없으면
+    //    `0-9A-Za-z_-.+` 만 읽어서 **한글 노드 이름이 통째로 안 들어간다**
+    //    (`/riftnode add 잿빛협곡` → 「인수를 끝내는 공백이 필요한데」).
+    //    같은 함정을 `/lsonboard @p` 와 `/닉네임` 에서 이미 두 번 밟았다.
+    //    greedy 라 뒤에 인수를 더 붙일 수 없는데, 노드 이름은 마지막 인수라 문제없다.
+    .then(Commands.literal('add').requires(s => s.hasPermission(2)).then(Commands.argument('name', Arguments.GREEDY_STRING.create(event)).executes(ctx => {
       const s = ctx.source.server; const name = Arguments.STRING.getResult(ctx, 'name')
       const names = nodeNames(s)
       if (names.indexOf(name) >= 0) { ctx.source.sendSystemMessage(Text.of('§c이미 있는 노드 이름')); return 0 }
@@ -1408,7 +1413,8 @@ ServerEvents.commandRegistry(event => {
       playAll(s, 'minecraft:block.end_portal.spawn', 0.6, 0.5)
       return 1
     })))
-    .then(Commands.literal('remove').requires(s => s.hasPermission(2)).then(Commands.argument('name', Arguments.STRING.create(event))
+    // 여기도 greedy — 노드 이름이 한글이면 STRING 으로는 안 들어간다(add 와 같은 이유).
+    .then(Commands.literal('remove').requires(s => s.hasPermission(2)).then(Commands.argument('name', Arguments.GREEDY_STRING.create(event))
       .suggests((ctx, b) => { nodeNames(ctx.source.server).forEach(x => b.suggest(x)); return b.buildFuture() })
       .executes(ctx => {
         const s = ctx.source.server; const name = Arguments.STRING.getResult(ctx, 'name')
