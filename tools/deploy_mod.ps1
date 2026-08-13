@@ -1,3 +1,5 @@
+﻿param([switch]$Force)
+
 # lsrelics 를 빌드해서 **서버와 클라 양쪽에** 넣는다.
 #
 #   py 대신 PowerShell 인 이유: 클라 인스턴스 경로가 %APPDATA% 아래라 셸이 더 편하다.
@@ -12,6 +14,26 @@
 # 그래서 한 번에 둘 다 넣는다.
 
 $ErrorActionPreference = 'Stop'
+
+# ── 서버가 돌고 있으면 멈춘다 ──
+# 2026-08-13, 서버가 켜진 채로 jar 을 갈아끼웠더니 돌고 있던 인스턴스가 쥔 jar 이
+# 발밑에서 바뀌어 리소스 읽기가 깨졌다:
+#   ZipException: invalid stored block lengths
+#   EOFException: Unexpected end of ZLIB input stream
+#   Couldn't parse data file lsrelics:...
+# 증상이 「명령어 실행 중 예상치 못한 오류」로 나와서 **코드 버그처럼 보인다.**
+# 실제로는 재시작만 하면 되는데, 그 사이에 멀쩡한 코드를 의심하게 된다.
+#
+# 그래서 여기서 막는다. -Force 로 넘길 수 있게 두되, 기본은 거부다.
+$serverUp = Get-CimInstance Win32_Process -Filter "Name='java.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -like '*CustomServer1*' -or $_.CommandLine -like '*nogui*' }
+if ($serverUp -and -not $Force) {
+    Write-Host '✘ 서버가 돌고 있다. 끄고 다시 실행할 것.' -ForegroundColor Red
+    Write-Host '   켜진 채로 jar 을 바꾸면 리소스 읽기가 깨지고, 그 증상이' -ForegroundColor Yellow
+    Write-Host '   「명령어 실행 중 예상치 못한 오류」로 나와 코드 버그처럼 보인다.' -ForegroundColor Yellow
+    Write-Host '   정말 바꾸려면:  ... -File tools\deploy_mod.ps1 -Force' -ForegroundColor DarkGray
+    exit 1
+}
 $root   = Split-Path -Parent $PSScriptRoot
 $jar    = Join-Path $root 'moddev\lsrelics\build\libs\lsrelics-1.0.0.jar'
 $server = Join-Path $root 'server\mods\lsrelics-1.0.0.jar'
