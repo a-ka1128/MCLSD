@@ -1,4 +1,12 @@
-# 마을 구조물 — 레벨이 오르면 여기 있는 것이 세계에 선다
+# 마을 구조물 — 레벨이 오르면 구조물이 세계에 선다
+
+> 구조물 파일이 들어가는 곳: **`server/kubejs/data/lsrelics/structure/town/`**
+>
+> ⚠️ **그 폴더에는 `.nbt` 말고 아무것도 넣지 마라.** KubeJS 는 데이터팩 경로의
+> **대문자 파일명을 거부**하고, 거부하는 방식이 「경고」가 아니라 **서버 기동 실패**다.
+> 2026-08-13 에 이 문서를 거기 `README.md` 로 뒀다가 서버가 안 켜졌다
+> (`! Invalid file name: Uppercase 'R'` → KubeJS 스타트업 오류 → FML 크래시).
+> 그래서 설명은 여기 `docs/` 에 있다.
 
 파일 이름은 **`<트랙>_<단계>.nbt`** 다. 트랙 키는 `ramparts` · `workshop` · `sanctum` · `district`.
 
