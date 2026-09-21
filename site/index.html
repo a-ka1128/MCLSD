@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Last Stardust — 별이 꺼진 세계</title>
+<meta name="description" content="Last Stardust 서버 안내 — 실행 방법, 스토리, 별의 가호 12종">
+<meta property="og:title" content="Last Stardust — 별이 꺼진 세계">
+<meta property="og:description" content="세상이 어둠에 삼켜지던 날, 별들은 각자의 유물을 남겼다.">
+<meta name="theme-color" content="#07080c">
+<style>
+/* ── 어둠이 삼킨 세계 ──
+   테마 전환은 없다. 게임의 분위기를 그대로 입는 안내서라 밝은 배경에서는 뜻이 달라진다. */
+:root{
+  --bg:#07080c; --panel:rgba(15,18,26,.86); --line:#232838; --line2:#333a50;
+  --fg:#dfe3ec; --dim:#98a0b2; --dim2:#6b7488; --gold:#ffd98a;
+  --accent:var(--gold);
+  --pad:clamp(16px,4vw,28px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:"Pretendard","Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  line-height:1.7; -webkit-text-size-adjust:100%; overflow-x:hidden;
+}
+/* 배경은 고정. 스크롤해도 세계가 따라오지 않는다 */
+#bg{position:fixed;inset:0;z-index:-2;background:#07080c center/cover no-repeat}
+#veil{position:fixed;inset:0;z-index:-1;
+  background:linear-gradient(180deg,rgba(7,8,12,.72),rgba(7,8,12,.90) 55%,rgba(7,8,12,.97))}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:960px;margin:0 auto;padding:0 var(--pad)}
+.hide{display:none !important}
+
+/* ── 닉네임 관문 ── */
+#gate{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:24px;
+  background:linear-gradient(180deg,rgba(7,8,12,.55),rgba(7,8,12,.93))}
+#gate .box{width:min(440px,100%);text-align:center}
+#gate img.logo{width:min(300px,72%);margin-bottom:6px;filter:drop-shadow(0 6px 24px rgba(0,0,0,.7))}
+#gate h1{margin:0 0 10px;font-size:clamp(20px,5vw,26px);letter-spacing:.1em;color:var(--gold);font-weight:700}
+#gate p{color:var(--dim);font-size:14px;margin:.3em 0}
+#gate .row{display:flex;gap:8px;margin-top:22px}
+#gate input{flex:1;padding:13px 15px;border-radius:11px;border:1px solid var(--line2);
+  background:rgba(10,12,18,.9);color:var(--fg);font:inherit;font-size:15px;text-align:center}
+#gate input:focus{outline:none;border-color:var(--gold)}
+#gate input::placeholder{color:var(--dim2)}
+#gate button{padding:13px 22px;border-radius:11px;border:1px solid var(--gold);
+  background:var(--gold);color:#171009;font-weight:700}
+#gate .err{color:#e08a8a;font-size:13px;min-height:1.4em;margin-top:9px}
+
+/* ── 상단 바 ── */
+#top{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px);
+  background:rgba(7,8,12,.8);border-bottom:1px solid var(--line)}
+#top .in{max-width:960px;margin:0 auto;padding:11px var(--pad);display:flex;align-items:center;gap:12px}
+#top .brand{font-weight:700;letter-spacing:.1em;color:var(--gold);font-size:14px;
+  background:none;border:none;padding:0}
+#top .sp{flex:1}
+#top .who{color:var(--dim);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44vw}
+#top .who b{color:var(--fg);font-weight:600}
+#top .ghost{border:1px solid var(--line2);background:transparent;color:var(--dim);
+  border-radius:9px;padding:5px 10px;font-size:12px}
+#top .ghost:hover{color:var(--fg);border-color:var(--dim)}
+.back{display:inline-flex;align-items:center;gap:6px;border:none;background:none;
+  color:var(--dim);padding:18px 0 4px;font-size:13.5px}
+.back:hover{color:var(--fg)}
+
+/* ── 홈 ── */
+#home .hero{padding:min(9vh,64px) 0 26px;text-align:center}
+#home .hero img{width:min(360px,80%);filter:drop-shadow(0 8px 30px rgba(0,0,0,.75))}
+#home .hero p{color:var(--dim);margin:.3em 0;font-size:clamp(13.5px,2.8vw,15.5px)}
+.menu{display:grid;gap:13px;padding:8px 0 40px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.tile{position:relative;display:block;width:100%;text-align:left;border:1px solid var(--line);
+  border-radius:15px;background:var(--panel);padding:20px 20px 18px;overflow:hidden;
+  transition:border-color .16s,transform .16s}
+.tile:hover{border-color:var(--accent);transform:translateY(-2px)}
+.tile::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--accent)}
+.tile .n{font-size:17.5px;font-weight:700}
+.tile .d{color:var(--dim);font-size:13.5px;margin-top:5px}
+.tile .tag{position:absolute;top:16px;right:16px;font-size:11px;color:var(--dim2);
+  border:1px solid var(--line2);border-radius:999px;padding:2px 9px}
+.tile.mine{--accent:var(--c)}
+.tile.mine .n{color:var(--c)}
+
+/* ── 공통 문서 ── */
+h2.sec{font-size:clamp(21px,4.6vw,27px);margin:6px 0 4px;letter-spacing:.02em}
+p.lead{color:var(--dim);margin:0 0 26px;font-size:14px}
+.block{border:1px solid var(--line);border-radius:14px;background:var(--panel);
+  padding:18px var(--pad);margin-bottom:14px}
+.block h3{margin:0 0 12px;font-size:16px;color:var(--gold)}
+.block ul{margin:0;padding-left:19px}
+.block li{margin:.45em 0;font-size:14.5px}
+.warn{border:1px solid #4a3a22;background:rgba(70,52,26,.3);border-radius:11px;
+  padding:11px 14px;margin:12px 0 2px;font-size:14px;color:#f0d9ae}
+.warn::before{content:"⚠ ";opacity:.85}
+
+.block h3 .cnt{margin-left:8px;font-size:11.5px;color:var(--dim2);font-weight:400}
+.bl{list-style:none;margin:0;padding:0}
+.bl li{display:grid;grid-template-columns:auto auto;gap:2px 10px;
+  padding:11px 0;border-bottom:1px solid var(--line)}
+.bl li:last-child{border-bottom:none}
+.bl .bn{font-weight:700;font-size:15px}
+.bl .bs{justify-self:end;color:var(--gold);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bl .bd{grid-column:1/-1;color:var(--dim);font-size:13.5px;word-break:keep-all}
+
+/* ── 스토리 ── */
+.chapters{display:grid;gap:10px;padding-bottom:44px}
+.ch{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:12px;
+  background:var(--panel);padding:15px 18px;transition:border-color .16s}
+.ch:hover{border-color:var(--gold)}
+.ch .t{font-size:15.5px;font-weight:600}
+.ch .s{color:var(--dim2);font-size:12.5px;margin-top:3px;
+  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.read{max-width:660px;margin:0 auto;padding-bottom:60px}
+.read .guide{display:flex;align-items:center;gap:13px;margin:4px 0 22px;
+  padding-bottom:16px;border-bottom:1px solid var(--line)}
+.read .guide img{width:56px;height:56px;border-radius:50%;object-fit:cover;
+  border:1px solid var(--line2);background:#0a0c11}
+.read .guide span{color:var(--dim2);font-size:12.5px}
+.read p{font-size:15.5px;margin:1.15em 0;word-break:keep-all}
+.read p.q{color:var(--dim2);font-style:italic;border-left:2px solid var(--line2);
+  padding-left:13px;font-size:13.5px}
+.nav2{display:flex;gap:10px;margin-top:34px}
+.nav2 button{flex:1;border:1px solid var(--line2);background:transparent;color:var(--dim);
+  border-radius:11px;padding:12px;font-size:13.5px}
+.nav2 button:hover:not(:disabled){color:var(--fg);border-color:var(--dim)}
+.nav2 button:disabled{opacity:.3;cursor:default}
+
+/* ── 스토리 블록 ── */
+.sys{border:1px solid rgba(255,217,138,.22);background:rgba(255,217,138,.05);
+  border-radius:11px;padding:13px 16px;margin:1.4em 0}
+.sys div{color:var(--gold);font-size:13px;letter-spacing:.02em;opacity:.9;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.slist{list-style:none;margin:1.3em 0;padding:0}
+.slist li{display:flex;gap:11px;align-items:baseline;margin:.62em 0;font-size:14.5px;
+  word-break:keep-all;color:var(--fg)}
+.slist .bul{flex:none;width:1.25em;text-align:center;color:var(--gold);opacity:.8}
+
+/* ── 가호 ── */
+.list{display:grid;gap:8px;padding-bottom:48px}
+.frow{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  border:1px solid var(--line);border-radius:12px;background:var(--panel);
+  padding:13px 15px;transition:border-color .16s,background .16s}
+.frow:hover{border-color:var(--accent);background:rgba(20,24,34,.9)}
+.frow .ico{flex:none;font-size:23px;width:30px;text-align:center}
+.frow .txt{flex:1;min-width:0;display:block}
+.frow .nm{display:block;font-size:16px;font-weight:700}
+.frow .nm .en{margin-left:7px;font-size:10.5px;letter-spacing:.13em;color:var(--dim2);font-weight:400}
+.frow .sub{display:block;color:var(--dim);font-size:12.5px;margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow .chk{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line2);
+  position:relative;transition:border-color .14s,background .14s}
+.frow[aria-checked="true"]{border-color:var(--accent);background:rgba(22,27,38,.95)}
+.frow[aria-checked="true"] .chk{border-color:var(--accent);background:var(--accent)}
+.frow[aria-checked="true"] .chk::after{content:"";position:absolute;left:7px;top:3px;
+  width:5px;height:10px;border:solid #171009;border-width:0 2px 2px 0;transform:rotate(43deg)}
+.frow[aria-checked="true"] .nm{color:var(--accent)}
+/* 확정 막대 — 스크롤 끝까지 내려가지 않아도 언제나 손에 닿는 자리에 둔다 */
+.bar{position:sticky;bottom:0;z-index:30;padding:10px 0 max(14px,env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,transparent,rgba(7,8,12,.92) 38%);
+  opacity:.55;transition:opacity .16s}
+.bar.on{opacity:1}
+.bar .in{display:flex;align-items:center;gap:12px;border:1px solid var(--line2);
+  border-radius:13px;background:rgba(12,15,22,.96);padding:11px 12px 11px 16px}
+.bar #barTxt{flex:1;min-width:0;color:var(--dim);font-size:14px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar #ok{flex:none;border:1px solid var(--gold);background:var(--gold);color:#171009;
+  font-weight:700;border-radius:10px;padding:10px 26px;font-size:14.5px}
+.bar #ok:disabled{background:transparent;color:var(--dim2);border-color:var(--line2);cursor:default}
+.frow .pick{flex:none;font-size:11px;color:#171009;background:var(--accent);
+  border-radius:999px;padding:2px 9px;font-weight:700}
+.grid{display:grid;gap:13px;padding-bottom:48px;grid-template-columns:repeat(auto-fill,minmax(232px,1fr))}
+.card{position:relative;border:1px solid var(--line);border-radius:14px;background:var(--panel);
+  padding:17px 17px 15px;text-align:left;overflow:hidden;transition:border-color .16s,transform .16s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--accent)}
+.card .ico{font-size:25px;line-height:1}
+.card .nm{margin-top:7px;font-size:17.5px;font-weight:700}
+.card .en{margin-left:6px;font-size:11px;letter-spacing:.13em;color:var(--dim2);font-weight:400}
+.card .ep{margin-top:2px;color:var(--accent);font-size:13px}
+.card .ro{margin-top:8px;color:var(--dim);font-size:12.5px;border-top:1px solid var(--line);padding-top:8px}
+.card .pick{position:absolute;top:14px;right:14px;font-size:11px;color:#171009;
+  background:var(--accent);border-radius:999px;padding:2px 9px;font-weight:700}
+
+.detail{padding-bottom:64px}
+.dhead{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:20px}
+.dhead .ico{font-size:34px}
+.dhead h2{margin:7px 0 2px;font-size:clamp(24px,5.4vw,30px)}
+.dhead h2 small{margin-left:9px;font-size:12px;letter-spacing:.14em;color:var(--dim2);font-weight:400}
+.dhead .ep{color:var(--accent);font-size:15px}
+.dhead .ro{color:var(--dim);font-size:13.5px}
+.art{width:100%;max-height:min(52vh,420px);object-fit:contain;background:rgba(6,8,12,.6);
+  border:1px solid var(--line);border-radius:13px;margin-bottom:22px}
+.lore{border-left:2px solid var(--line2);padding-left:15px;margin:0 0 18px;color:var(--dim)}
+.lore p{margin:.35em 0;font-size:14.5px;word-break:keep-all}
+.relic{color:var(--gold);font-size:16px;font-weight:700;margin:22px 0 3px}
+.echo{color:var(--dim2);font-size:13px;font-style:italic;margin:0 0 22px}
+.echo span{font-style:normal;opacity:.7}
+.keys{color:var(--dim2);font-size:12px;margin:0 0 10px}
+.tbl{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:540px;font-size:13.5px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+th{color:var(--dim2);font-weight:500;font-size:11.5px;letter-spacing:.05em;white-space:nowrap;
+  background:rgba(8,10,15,.5)}
+td.k{white-space:nowrap;color:var(--dim)}
+td.n{white-space:nowrap;font-weight:700;color:var(--accent)}
+td.cd{white-space:nowrap;color:var(--dim);font-variant-numeric:tabular-nums}
+.kbd{display:inline-block;min-width:17px;padding:1px 5px;margin-right:6px;border:1px solid var(--line2);
+  border-radius:4px;background:#0a0c11;color:var(--gold);font-size:11px;text-align:center}
+.choose{display:flex;gap:10px;flex-wrap:wrap;margin-top:30px}
+.choose button{flex:1 1 200px;border-radius:12px;padding:14px;font-size:14.5px;font-weight:600;
+  border:1px solid var(--accent);background:var(--accent);color:#171009}
+.choose button.alt{background:transparent;color:var(--dim);border-color:var(--line2);font-weight:400}
+.choose button.alt:hover{color:var(--fg);border-color:var(--dim)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;
+  padding:1px 6px;border-radius:5px;background:rgba(255,217,138,.10);
+  border:1px solid rgba(255,217,138,.20);color:var(--gold);white-space:nowrap}
+.block b,.read b,.lore b,.warn b{color:#fff;font-weight:700}
+.read a,.block a{color:var(--gold);text-underline-offset:3px}
+footer{padding:26px 0 46px;text-align:center;color:var(--dim2);font-size:12px;border-top:1px solid var(--line)}
+@media (max-width:600px){ .read p{font-size:15px} }
+</style>
+</head>
+<body>
+<div id="bg"></div><div id="veil"></div>
+
+<!-- 닉네임 관문 -->
+<div id="gate">
+  <div class="box">
+    <img class="logo" id="gateLogo" alt="Last Stardust" hidden>
+    <h1>별이 꺼진 세계</h1>
+    <p>이 안내서를 보기 전에,</p>
+    <p>당신의 <b>마인크래프트 닉네임</b>을 알려주세요.</p>
+    <div class="row">
+      <input id="nick" type="text" placeholder="닉네임" autocomplete="off"
+             autocapitalize="off" spellcheck="false" maxlength="16">
+      <button id="enter">들어가기</button>
+    </div>
+    <div class="err" id="gerr"></div>
+  </div>
+</div>
+
+<!-- 상단 -->
+<div id="top" class="hide">
+  <div class="in">
+    <button class="brand" data-go="#/">✦ LAST STARDUST</button>
+    <div class="sp"></div>
+    <div class="who" id="who"></div>
+    <button class="ghost" id="reset">변경</button>
+  </div>
+</div>
+
+<main id="app" class="wrap hide"></main>
+<footer class="wrap hide" id="foot">Last Stardust</footer>
+
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+var D  = window.LS_DATA || {};
+var CL = D.classes || [], ART = D.art || {};
+var NICK_KEY = 'ls.nick', FATE_KEY = 'ls.fate';
+
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+// ── 인라인 마크다운 ──
+// 원본(`docs/NOTICE.md`·`STORY.md`·디스코드 카드)은 전부 마크다운으로 쓰여 있다.
+// 그대로 esc 만 하면 `**굵게**` 와 백틱이 **글자 그대로** 보인다.
+//
+// ⚠️ **반드시 esc 를 먼저** 한다. 원본을 그대로 HTML 로 흘리면 문서 한 줄이 스크립트가 된다.
+//    여기서 만드는 태그는 b·i·code·a 넷뿐이고, 나머지는 전부 escape 를 거친다.
+//
+// 코드 조각(`…`)을 먼저 떼어내는 이유: 그 안의 `**` 는 강조가 아니라 «보여줘야 할 글자»다.
+// 예) `**` 가 들어간 명령어를 설명하는 줄.
+function md(s){
+  var out = '', parts = String(s==null?'':s).split(/(`[^`]+`)/);
+  for (var i=0;i<parts.length;i++){
+    var p = parts[i];
+    if (p.length>2 && p.charAt(0)==='`' && p.charAt(p.length-1)==='`'){
+      out += '<code>'+esc(p.slice(1,-1))+'</code>';
+      continue;
+    }
+    out += esc(p)
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+               '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>');
+  }
+  return out;
+}
+function store(k,v){ try{ v===null?localStorage.removeItem(k):localStorage.setItem(k,v); }catch(e){} }
+function read(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
+function byKey(k){ for(var i=0;i<CL.length;i++) if(CL[i].key===k) return CL[i]; return null; }
+
+// 스킬 «종류» → 조작키. 원본은 lsdiscord.CONTROLS ("R 기본 · V 이동 · C 추가 · X 궁극").
+var KEY = {'기본':'R','이동':'V','추가':'C','궁극':'X'};
+
+// ── 배경 ──
+// 홈·관문은 타이틀 배경, 나머지는 일반 배경. 글을 읽는 화면에서 그림이 세면 글이 안 읽힌다.
+function setBg(which){
+  var f = which === 'title' ? (ART.bgTitle || ART.bg) : (ART.bg || ART.bgTitle);
+  $('bg').style.backgroundImage = f ? 'url("art/'+f+'")' : 'none';
+  $('veil').style.opacity = which === 'title' ? '.82' : '1';
+}
+
+// ── 관문 ──
+if (ART.logo){ $('gateLogo').src = 'art/'+ART.logo; $('gateLogo').hidden = false; }
+function submitNick(){
+  var v = $('nick').value.trim();
+  if (v.length < 2){ $('gerr').textContent = '닉네임을 입력해 주세요.'; return; }
+  if (/\s/.test(v)){ $('gerr').textContent = '닉네임에는 띄어쓰기가 들어가지 않습니다.'; return; }
+  store(NICK_KEY, v);
+  openApp();
+}
+$('enter').addEventListener('click', submitNick);
+$('nick').addEventListener('keydown', function(e){ if(e.key==='Enter') submitNick(); });
+$('reset').addEventListener('click', function(){
+  // 가호까지 지운다. 닉네임만 바꾸고 남의 가호가 「내 가호」로 남아 있으면 더 헷갈린다.
+  store(NICK_KEY,null); store(FATE_KEY,null);
+  $('nick').value=''; $('gerr').textContent='';
+  $('gate').classList.remove('hide'); $('top').classList.add('hide');
+  $('app').classList.add('hide'); $('foot').classList.add('hide');
+  setBg('title'); $('nick').focus();
+});
+
+function openApp(){
+  $('gate').classList.add('hide');
+  $('top').classList.remove('hide'); $('app').classList.remove('hide'); $('foot').classList.remove('hide');
+  route();
+}
+
+// ── 라우팅 ──
+// 해시를 쓰는 이유: 정적 호스팅이라 서버 rewrite 없이도 뒤로가기와 링크 공유가 된다.
+// 「/#/fate/chiron」 을 디스코드에 던지면 그 가호가 바로 열린다.
+document.addEventListener('click', function(e){
+  var b = e.target.closest('[data-go]'); if (!b) return;
+  e.preventDefault(); location.hash = b.dataset.go;
+});
+window.addEventListener('hashchange', route);
+
+function route(){
+  if (!read(NICK_KEY)) return;
+  var h = (location.hash || '#/').replace(/^#/,'');
+  var seg = h.split('/').filter(Boolean);
+  window.scrollTo(0,0);
+  $('who').innerHTML = '<b>'+esc(read(NICK_KEY))+'</b>';
+  if (seg[0] === 'notice') return viewDoc(D.notice, '공지사항', '실행 방법과 주의사항입니다.');
+  if (seg[0] === 'systems') return viewDoc(D.systems, '시스템 안내', '이 서버에 무엇이 있고 어떻게 쓰는지.');
+  if (seg[0] === 'bless')  return viewBless();
+  if (seg[0] === 'story')  return seg[1] ? viewChapter(+seg[1]) : viewStory();
+  if (seg[0] === 'fate'){
+    // 가호를 «정한 뒤»에는 목록도 남의 가호도 열리지 않는다 — 이 안내서는
+    // 열두 개를 견주는 도감이 아니라 «내 가호를 읽는 곳»이 된다.
+    var mine = read(FATE_KEY);
+    if (mine){
+      if (seg[1] !== mine){ location.replace('#/fate/'+mine); return; }
+      return viewFate(mine);
+    }
+    return seg[1] ? viewFate(seg[1]) : viewFates();
+  }
+  return viewHome();
+}
+
+function backBtn(to, label){
+  return '<button class="back" data-go="'+to+'">← '+esc(label)+'</button>';
+}
+
+// ── 홈 ──
+function viewHome(){
+  setBg('title');
+  var mine = byKey(read(FATE_KEY));
+  var h = '<div class="hero">'
+    + (ART.logo ? '<img src="art/'+ART.logo+'" alt="Last Stardust">' : '<h2 class="sec">Last Stardust</h2>')
+    + (D.intro||[]).map(function(l){ return '<p>'+md(l)+'</p>'; }).join('')
+    + '</div><div class="menu">';
+
+  h += '<button class="tile" data-go="#/notice"><div class="n">공지사항</div>'
+     + '<div class="d">실행 방법과 주의사항. 들어오기 전에 한 번 읽어주세요.</div></button>';
+  h += '<button class="tile" data-go="#/systems"><div class="n">시스템 안내</div>'
+     + '<div class="d">무엇이 있고 어떻게 쓰는지. 명령어와 규칙을 한자리에.</div>'
+     + '<div class="tag">'+ (D.systems||[]).length +'묶음</div></button>';
+  h += '<button class="tile" data-go="#/bless"><div class="n">별의 축복</div>'
+     + '<div class="d">각성마다 열리는 무작위 부가효과 '
+     + (D.bless||[]).reduce(function(a,x){ return a + x.items.length; }, 0) + '종.</div></button>';
+  h += '<button class="tile" data-go="#/story"><div class="n">스토리</div>'
+     + '<div class="d">이 세계에 무슨 일이 있었는가. 필수는 아니지만 읽으면 훨씬 재밌습니다.</div>'
+     + '<div class="tag">'+ (D.story||[]).length +'장</div></button>';
+
+  if (mine){
+    h += '<button class="tile mine" style="--c:'+esc(mine.color)+'" data-go="#/fate/'+esc(mine.key)+'">'
+       + '<div class="n">'+esc(mine.icon)+' '+esc(mine.name)+'</div>'
+       + '<div class="d">'+esc(mine.epithet)+' · '+esc(mine.role)+'</div>'
+       + '<div class="tag">내 가호</div></button>';
+  } else {
+    h += '<button class="tile" data-go="#/fate"><div class="n">가호 선택</div>'
+       + '<div class="d">12종 중 하나를 고르면 유물·스킬·성장을 볼 수 있습니다.</div>'
+       + '<div class="tag">'+CL.length+'종</div></button>';
+  }
+  $('app').innerHTML = h + '</div>';
+}
+
+// ── 문서 (공지·시스템 공용) ──
+// 같은 서식(## 묶음 · - 항목 · > 상자)을 쓰는 페이지가 둘이라 뷰도 하나로 둔다.
+function viewDoc(secs, title, lead){
+  setBg('page');
+  var h = backBtn('#/','처음으로') + '<h2 class="sec">'+esc(title)+'</h2>'
+        + '<p class="lead">'+esc(lead)+'</p>';
+  (secs||[]).forEach(function(s){
+    h += '<div class="block"><h3>'+esc(s.title)+'</h3><ul>';
+    var warns = '';
+    s.items.forEach(function(it){
+      if (it.warn) warns += '<div class="warn">'+md(it.text)+'</div>';
+      else h += '<li>'+md(it.text)+'</li>';
+    });
+    h += '</ul>'+warns+'</div>';
+  });
+  if (!(secs||[]).length) h += '<div class="block">준비 중입니다.</div>';
+  $('app').innerHTML = h;
+}
+
+// ── 별의 축복 ──
+// 굴림 폭(min~max)을 그대로 보여준다. 「6~11%」가 곧 «운의 폭»이라, 숨기면
+// 좋은 축복이 붙었는지 판단할 근거가 사라진다.
+function viewBless(){
+  setBg('page');
+  var h = backBtn('#/','처음으로') + '<h2 class="sec">별의 축복</h2>'
+    + '<p class="lead">각성 한 단계마다 슬롯이 하나씩 열리고, 그 칸에 축복이 <b>무작위로</b> 붙습니다. '
+    + '괄호 안은 굴림 폭입니다 — 같은 축복이라도 값이 다릅니다.</p>';
+  (D.bless||[]).forEach(function(ax){
+    h += '<div class="block"><h3>'+esc(ax.title)+' <span class="cnt">'+ax.items.length+'종</span></h3><ul class="bl">';
+    ax.items.forEach(function(b){
+      h += '<li><span class="bn">'+esc(b.name)+'</span>'
+         + '<span class="bs">'+esc(b.span)+'%</span>'
+         + '<span class="bd">'+md(b.desc)+'</span></li>';
+    });
+    h += '</ul></div>';
+  });
+  if (!(D.bless||[]).length) h += '<div class="block">준비 중입니다.</div>';
+  $('app').innerHTML = h;
+}
+
+// ── 스토리 ──
+function viewStory(){
+  setBg('page');
+  var h = backBtn('#/','처음으로') + '<h2 class="sec">스토리</h2>'
+        + '<p class="lead">읽지 않아도 게임은 되지만, 읽으면 왜 이러고 있는지 알게 됩니다.</p>'
+        + '<div class="chapters">';
+  (D.story||[]).forEach(function(c,i){
+    var first = (c.paras.filter(function(p){ return p.t === 'p'; })[0]||{}).text || '';
+    h += '<button class="ch" data-go="#/story/'+i+'"><div class="t">'+esc(c.title)+'</div>'
+       + '<div class="s">'+esc(first.replace(/[`*]/g,''))+'</div></button>';
+  });
+  $('app').innerHTML = h + '</div>';
+}
+
+function viewChapter(i){
+  setBg('page');
+  var S = D.story||[], c = S[i];
+  if (!c) return (location.hash = '#/story');
+  var h = backBtn('#/story','스토리 목록') + '<div class="read">'
+    + '<h2 class="sec">'+esc(c.title)+'</h2>'
+    + (ART.guide ? '<div class="guide"><img src="art/'+ART.guide+'" alt="호데고스">'
+        + '<span>호데고스 — 길을 잃은 자에게 길을 보여주는 자</span></div>' : '');
+  c.paras.forEach(function(b){
+    if (b.t === 'sys'){
+      // 시스템 목소리 — STORY.md 의 세 목소리 중 하나라 산문과 같은 서식이면 안 된다.
+      h += '<div class="sys">' + b.items.map(function(l){
+        return '<div>'+esc(l)+'</div>'; }).join('') + '</div>';
+    } else if (b.t === 'list'){
+      h += '<ul class="slist">' + b.items.map(function(l){
+        var m = l.match(/^(\S)\s+(.*)$/);
+        return '<li><span class="bul">'+esc(m?m[1]:'')+'</span>'+md(m?m[2]:l)+'</li>';
+      }).join('') + '</ul>';
+    } else if (b.t === 'q'){
+      h += '<p class="q">'+md(b.text)+'</p>';
+    } else {
+      h += '<p>'+md(b.text)+'</p>';
+    }
+  });
+  h += '<div class="nav2">'
+     + '<button '+(i<=0?'disabled':'data-go="#/story/'+(i-1)+'"')+'>← 이전 장</button>'
+     + '<button '+(i>=S.length-1?'disabled':'data-go="#/story/'+(i+1)+'"')+'>다음 장 →</button>'
+     + '</div></div>';
+  $('app').innerHTML = h;
+}
+
+// ── 가호 ──
+function viewFates(){
+  setBg('page');
+  // 누르는 즉시 확정하지 않는다. 「선택은 되돌릴 수 없습니다」가 이 세계의 규칙이라
+  // (STORY.md 3장) 한 번 더 확인하는 걸음을 둔다 — 잘못 누르고 끝나면 안 된다.
+  var sel = '';
+  var h = backBtn('#/','처음으로') + '<h2 class="sec">별의 가호</h2>'
+    + '<p class="lead">하나를 고르면 그 가호의 유물·스킬·성장을 볼 수 있습니다. '
+    + '여기서 고르는 것은 <b>읽을 페이지를 정하는 것</b>이지 예약이 아닙니다 — '
+    + '실제 직업은 게임에 처음 들어가면 뜨는 선택 화면에서 정하고, 같은 직업은 한 사람만 가질 수 있습니다.</p>'
+    + '<div class="list" id="picks">';
+  CL.forEach(function(c){
+    // 목록에는 «고르는 데 필요한 만큼»만 둔다. 유물·스킬·로어는 고른 뒤에 나온다 —
+    // 열두 개를 한 화면에서 견줘야 하는데 항목마다 정보가 많으면 아무것도 안 읽힌다.
+    h += '<button class="frow" style="--accent:'+esc(c.color)+'" data-k="'+esc(c.key)+'"'
+       + ' role="radio" aria-checked="false">'
+       + '<span class="ico">'+esc(c.icon)+'</span>'
+       + '<span class="txt"><span class="nm">'+esc(c.name)
+       +   '<span class="en">'+esc(c.en)+'</span></span>'
+       +   '<span class="sub">'+esc(c.epithet)+' · '+esc(c.role)+'</span></span>'
+       + '<span class="chk" aria-hidden="true"></span></button>';
+  });
+  h += '</div><div class="bar" id="bar"><div class="in">'
+     + '<span id="barTxt">고를 가호를 눌러주세요</span>'
+     + '<button id="ok" disabled>선택</button></div></div>';
+  $('app').innerHTML = h;
+
+  $('picks').addEventListener('click', function(e){
+    var b = e.target.closest('.frow'); if (!b) return;
+    sel = b.dataset.k;
+    Array.prototype.forEach.call(this.querySelectorAll('.frow'), function(x){
+      x.setAttribute('aria-checked', String(x.dataset.k === sel)); });
+    var c = byKey(sel);
+    $('barTxt').innerHTML = '<b style="color:'+esc(c.color)+'">'+esc(c.icon)+' '+esc(c.name)+'</b>';
+    $('ok').disabled = false;
+    $('bar').classList.add('on');
+  });
+  $('ok').addEventListener('click', function(){
+    if (!sel) return;
+    store(FATE_KEY, sel);
+    location.hash = '#/fate/'+sel;
+  });
+}
+
+function viewFate(key){
+  setBg('page');
+  var c = byKey(key);
+  if (!c) return (location.hash = '#/fate');
+  var mine = read(FATE_KEY) === c.key;
+  var rows = (c.rows||[]).map(function(r){
+    var k = KEY[r[0]] ? '<span class="kbd">'+KEY[r[0]]+'</span>' : '';
+    return '<tr><td class="k">'+k+esc(r[0])+'</td><td class="n">'+esc(r[1])+'</td>'
+         + '<td>'+md(r[2])+'</td><td class="cd">'+esc(r[3]||'—')+'</td></tr>';
+  }).join('');
+  var h = '<div class="detail" style="--accent:'+esc(c.color)+'">'
+    + backBtn(mine ? '#/' : '#/fate', mine ? '처음으로' : '가호 목록')
+    + '<div class="dhead"><div class="ico">'+esc(c.icon)+'</div>'
+    +   '<h2>'+esc(c.name)+'<small>'+esc(c.en)+'</small></h2>'
+    +   '<div class="ep">'+esc(c.epithet)+'</div><div class="ro">'+esc(c.role)+'</div></div>'
+    + (c.art ? '<img class="art" src="art/'+esc(c.art)+'" alt="'+esc(c.name)+'">' : '')
+    + '<div class="lore">'+(c.lore||[]).map(function(l){ return '<p>'+md(l)+'</p>'; }).join('')+'</div>'
+    + (c.relic ? '<div class="relic">유물 — '+esc(c.relic)+'</div>' : '')
+    + (c.echo ? '<p class="echo">"'+esc(c.echo)+'" <span>— 이 무기를 마지막으로 쥐었던 자</span></p>' : '')
+    + '<p class="keys">'+esc(D.controls||'')+'</p>'
+    + '<div class="tbl"><table><thead><tr><th>종류</th><th>이름</th><th>설명</th><th>쿨타임</th></tr></thead>'
+    +   '<tbody>'+rows+'</tbody></table></div>'
+    + '<div class="choose">'
+    +   (mine ? '<button class="alt" id="unpick">가호 다시 고르기</button>'
+            : '<button id="pick">이 가호로 정하기</button>')
+    + '</div></div>';
+  $('app').innerHTML = h;
+  var pk = $('pick'), un = $('unpick');
+  if (pk) pk.addEventListener('click', function(){ store(FATE_KEY, c.key); location.hash = '#/'; });
+  // 되돌릴 길은 남긴다. 잘못 고른 채로 갇히면 그게 제일 나쁘다.
+  if (un) un.addEventListener('click', function(){ store(FATE_KEY, null); location.hash = '#/fate'; });
+}
+
+// ── 시작 ──
+setBg('title');
+if (read(NICK_KEY)) openApp();
+else setTimeout(function(){ $('nick').focus(); }, 120);
+})();
+</script>
+</body>
+</html>
