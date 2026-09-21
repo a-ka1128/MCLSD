@@ -1,10 +1,10 @@
 @echo off
 setlocal
 rem ============================================================
-rem  Last Stardust ì„œë²„ ë°±ì—… (world + config + kubejs + properties)
-rem  - ë”ë¸”í´ë¦­ìœ¼ë¡œ ì‹¤í–‰. backups\ í´ë”ì— íƒ€ì„ìŠ¤íƒ¬í”„ zip ìƒì„±, ìµœê·¼ 14ê°œ ìœ ì§€
-rem  - ì„œë²„ ì‹¤í–‰ ì¤‘ì—ë„ ëŒ€ì²´ë¡œ ë™ì‘í•˜ì§€ë§Œ, ì½˜ì†”ì—ì„œ save-all ì…ë ¥ í›„ ì‹¤í–‰ ê¶Œì¥
-rem    (ì„œë²„ê°€ êº¼ì§„ ìƒíƒœê°€ ê°€ì¥ ì•ˆì „)
+rem  Last Stardust ¼­¹ö ¹é¾÷ (world + config + kubejs + properties)
+rem  - ´õºíÅ¬¸¯À¸·Î ½ÇÇà. backups\ Æú´õ¿¡ Å¸ÀÓ½ºÅÆÇÁ zip »ı¼º, ÃÖ±Ù 14°³ À¯Áö
+rem  - ¼­¹ö ½ÇÇà Áß¿¡µµ ´ëÃ¼·Î µ¿ÀÛÇÏÁö¸¸, ÄÜ¼Ö¿¡¼­ save-all ÀÔ·Â ÈÄ ½ÇÇà ±ÇÀå
+rem    (¼­¹ö°¡ ²¨Áø »óÅÂ°¡ °¡Àå ¾ÈÀü)
 rem ============================================================
 set "SRC=%~dp0"
 set "DEST=%SRC%backups"
@@ -13,20 +13,20 @@ for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss
 if not exist "%DEST%" mkdir "%DEST%"
 if exist "%STAGE%" rmdir /s /q "%STAGE%"
 
-echo [1/3] íŒŒì¼ ìˆ˜ì§‘ ì¤‘...
+echo [1/3] ÆÄÀÏ ¼öÁı Áß...
 robocopy "%SRC%world" "%STAGE%\world" /MIR /XF session.lock /R:0 /W:0 /NFL /NDL /NJH /NJS >nul
 robocopy "%SRC%config" "%STAGE%\config" /MIR /R:0 /W:0 /NFL /NDL /NJH /NJS >nul
 robocopy "%SRC%kubejs" "%STAGE%\kubejs" /MIR /R:0 /W:0 /NFL /NDL /NJH /NJS >nul
 copy /y "%SRC%server.properties" "%STAGE%\" >nul 2>nul
 
-echo [2/3] ì••ì¶• ì¤‘...
+echo [2/3] ¾ĞÃà Áß...
 powershell -NoProfile -Command "Compress-Archive -Path '%STAGE%\*' -DestinationPath '%DEST%\backup_%TS%.zip' -CompressionLevel Optimal -Force"
 rmdir /s /q "%STAGE%"
 
-echo [3/3] ì˜¤ë˜ëœ ë°±ì—… ì •ë¦¬ (ìµœê·¼ 14ê°œ ìœ ì§€)...
+echo [3/3] ¿À·¡µÈ ¹é¾÷ Á¤¸® (ÃÖ±Ù 14°³ À¯Áö)...
 powershell -NoProfile -Command "Get-ChildItem '%DEST%\backup_*.zip' | Sort-Object LastWriteTime -Descending | Select-Object -Skip 14 | Remove-Item -Force"
 
 echo.
-echo  [Last Stardust] ë°±ì—… ì™„ë£Œ: %DEST%\backup_%TS%.zip
+echo  [Last Stardust] ¹é¾÷ ¿Ï·á: %DEST%\backup_%TS%.zip
 echo.
 pause
