@@ -682,7 +682,7 @@ public final class LSCommands {
                             }
                             var data = com.laststardust.relics.data.LSData.get(src.getServer());
                             if (!data.hasSanctuary()) {
-                                src.sendFailure(Component.literal("§c성역이 먼저다 — §e/sanctuary set")); return 0;
+                                src.sendFailure(Component.literal("§c성역이 먼저다 — §e/sanctuary here")); return 0;
                             }
                             var s0 = data.sanctuary();
                             var here = p.blockPosition();

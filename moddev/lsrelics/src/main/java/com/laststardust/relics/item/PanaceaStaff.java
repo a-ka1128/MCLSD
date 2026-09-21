@@ -214,4 +214,23 @@ public class PanaceaStaff extends Item implements RelicActions {
         RelicSkills.sanctuary(level, player, stack);
     }
 
+
+    // ── 인챈트 테이블에서도 걸리게 (2026-08-18) ──
+    // 바닐라 기본값은 «스택1 && 내구도 있음»이라, 내구도가 없는 유물 9종은
+    // 인챈트 테이블도 모루도 통째로 거부했다. 유물은 닳아 없어지면 안 되는 물건이라
+    // 내구도를 주는 대신 여기만 연다.
+    //
+    // ⚠️ **무엇이 붙을지는 여기서 안 정한다.** 그건 데이터팩(`tools/gen_relic_enchants.py`)이
+    //    인챈트의 `supported_items` 로 정한다 — 데미지 계열 17종은 거기서 막힌다.
+    //    여기서 true 만 돌려주면 「테이블에 올라갈 자격」이 생길 뿐이다.
+    @Override
+    public boolean isEnchantable(ItemStack stack) {
+        return stack.getCount() == 1;
+    }
+
+    // 인챈트 «잘 걸리는» 정도. 네더라이트와 같은 15 — 금(22)은 운이 과하고 돌(5)은 답답하다.
+    @Override
+    public int getEnchantmentValue(ItemStack stack) {
+        return 15;
+    }
 }

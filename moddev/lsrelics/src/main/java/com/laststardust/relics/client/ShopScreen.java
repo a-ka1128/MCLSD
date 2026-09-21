@@ -150,8 +150,18 @@ public class ShopScreen extends Screen {
                 ShopView.Row r = view.buy().get(i + scroll);
                 group = r.group();
                 st = r.stack();
-                name = Component.literal(st.getHoverName().getString()
-                    + (r.count() > 1 ? " ×" + r.count() : ""));
+                // ── 마법책은 «무슨» 인챈트인지가 이름이다 ──
+                // 그냥 두면 「마법이 부여된 책」 두 줄이 나란히 서서 구분이 안 된다.
+                // 책 자체를 클라에서 만들지는 않는다 — 인챈트는 레지스트리라 서버가 만들고,
+                // 여기서는 번역키로 «이름만» 붙인다. 그림은 빈 책이어도 뜻은 통한다.
+                if (!r.ench().isEmpty()) {
+                    name = Component.translatable(
+                        "enchantment." + r.ench().replace(':', '.'))
+                        .append(r.lvl() > 1 ? Component.literal(" " + r.lvl()) : Component.empty());
+                } else {
+                    name = Component.literal(st.getHoverName().getString()
+                        + (r.count() > 1 ? " ×" + r.count() : ""));
+                }
                 color = r.afford() ? C_BODY : C_DIM;
                 if (!r.afford()) note = Component.literal("부족");
             }

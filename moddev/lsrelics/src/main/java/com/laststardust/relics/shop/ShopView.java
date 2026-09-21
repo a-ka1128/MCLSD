@@ -21,7 +21,8 @@ public record ShopView(int balance, int treasury, int townCut,
      *               아이템 id 를 보내면 클라가 아무거나 적어 보낼 수 있다.
      * @param afford 지금 살 수 있는가. 판정은 서버가 하고 클라는 그리기만 한다.
      */
-    public record Row(int index, String id, int count, int price, String group, boolean afford) {
+    public record Row(int index, String id, int count, int price, String group, boolean afford,
+                      String ench, int lvl) {
         public net.minecraft.world.item.ItemStack stack() { return ShopView.stackOf(id, count); }
     }
 
@@ -50,9 +51,12 @@ public record ShopView(int balance, int treasury, int townCut,
             buf.writeVarInt(v.price());
             buf.writeUtf(v.group());
             buf.writeBoolean(v.afford());
+            buf.writeUtf(v.ench());
+            buf.writeVarInt(v.lvl());
         },
         buf -> new Row(buf.readVarInt(), buf.readUtf(), buf.readVarInt(),
-            buf.readVarInt(), buf.readUtf(), buf.readBoolean()));
+            buf.readVarInt(), buf.readUtf(), buf.readBoolean(),
+            buf.readUtf(), buf.readVarInt()));
 
     private static final StreamCodec<RegistryFriendlyByteBuf, SellRow> SROW = StreamCodec.of(
         (buf, v) -> {

@@ -191,15 +191,32 @@ public final class Telegraph {
 
     // 테두리를 그린다. 채우지 않는 이유: 바닥을 가득 칠하면 그 위에 선 몹·아이템이 안 보이고,
     // 셰이더에서 지면과 뭉개진다. 테두리는 어느 조명에서도 형태가 남는다.
+    //
+    // ── 2026-08-14: 바닥 한 줄 → 낮은 «울타리» ──
+    // 공성에서 「장판이 안 보인다」가 나왔다. 원인은 색이 아니라 **높이**다 —
+    // 바닥에 한 줄만 그리면 몹 스무 마리가 그 위에 서 있고, 셰이더가 지면을 어둡게 깔고,
+    // 밤이라 대비도 낮다. 그 셋이 겹치면 선이 사라진다.
+    // 위로 두 줄을 더 얹어 «울타리»로 만든다. 사람은 발밑보다 눈높이를 먼저 본다.
+    //
+    // ⚠️ 파티클 수가 곧 패킷 수다. 위 두 줄은 **절반 밀도로만** 찍는다 —
+    //    세 줄을 같은 밀도로 그리면 장판 하나에 초당 수백 패킷이 나가고, 공성처럼
+    //    장판이 여러 개 겹치는 밤에 그게 그대로 렉이 된다.
+    private static final double[] RING_HEIGHTS = { 0.9, 1.7 };
+
     private static void draw(Pending p) {
         // 남은 시간이 짧아질수록 촘촘해진다 — 초읽기가 눈에 보인다.
         int steps = 24 + (WARN_TICKS - p.left);
-        ParticleOptions dust = new DustParticleOptions(p.kind.color, 1.4f);
+        ParticleOptions dust = new DustParticleOptions(p.kind.color, 2.0f);
         for (int i = 0; i < steps; i++) {
             double a = Math.PI * 2 * i / steps;
             double x = p.center.x + Math.cos(a) * p.radius;
             double z = p.center.z + Math.sin(a) * p.radius;
             p.level.sendParticles(dust, x, p.center.y + 0.15, z, 1, 0, 0, 0, 0);
+            if (i % 2 == 0) {
+                for (double dy : RING_HEIGHTS) {
+                    p.level.sendParticles(dust, x, p.center.y + dy, z, 1, 0, 0, 0, 0);
+                }
+            }
         }
         // 뭉쳐라는 중심도 찍는다 — 어디로 모일지가 테두리만으로는 안 보인다.
         if (p.kind == Kind.STACK) {

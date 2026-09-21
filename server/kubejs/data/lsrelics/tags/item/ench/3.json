@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:enchantable/sharp_weapon",
+    "lsrelics:guardian",
+    "lsrelics:lancer",
+    "lsrelics:hecate",
+    "lsrelics:nemesis",
+    "lsrelics:assassin",
+    "lsrelics:chiron",
+    "lsrelics:pioneer"
+  ]
+}

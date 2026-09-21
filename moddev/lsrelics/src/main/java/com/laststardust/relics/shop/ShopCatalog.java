@@ -34,7 +34,20 @@ public final class ShopCatalog {
      * @param price 그 묶음의 값 (Ducat)
      * @param group 화면에서 묶어 보여줄 이름
      */
-    public record Entry(String id, int count, int price, String group) {
+    /**
+     * @param ench 마법책일 때 «부여할 인챈트» id (`minecraft:mending` 등). 아니면 빈 문자열.
+     * @param lvl  그 인챈트의 레벨
+     *
+     * <p>⚠️ 실제 책은 여기서 못 만든다 — 인챈트는 «데이터팩 레지스트리»라
+     * RegistryAccess 가 필요한데 이 record 는 서버를 모른다.
+     * 책은 {@code ShopService.buy} 가 서버를 들고 만들고, 화면 표시는 클라가
+     * 번역키로 이름만 붙인다. 그래서 여기엔 «무엇을 만들지»만 적는다.
+     */
+    public record Entry(String id, int count, int price, String group, String ench, int lvl) {
+        public Entry(String id, int count, int price, String group) {
+            this(id, count, price, group, "", 0);
+        }
+
         public ItemStack stack() {
             var rl = ResourceLocation.tryParse(id);
             if (rl == null) return ItemStack.EMPTY;
@@ -49,23 +62,38 @@ public final class ShopCatalog {
     // ⚠️ 2026-08-13 유저가 골라낸 목록이다. 뺀 것들(모루·소고기·깃발·화분·랜턴·그림·
     //    철 주괴·흑요석)은 «가서 캐거나 만들면 되는 것»이라 상점에 있으면 오히려
     //    나가서 무언가 할 이유를 지운다. 파는 것은 «구하기 번거로운데 파워는 아닌 것»으로 좁힌다.
+    // ── 2026-08-14: 사는 값 전부 ×5 ──
+    // 첫 세션에서 «너무 싸다»가 나왔다. 개인 지갑 수입이 공성 한 번에 40(대공세 80)에
+    // 판매액 70% 인데, 옛 값이면 밤 두어 번에 엔더 상자를 사고도 남았다.
+    // 파는 값(아래 SELL)은 «그대로» 둔다 — 여기만 올려야 「팔아서 산다」의 환율이 조여진다.
+    // 둘 다 올리면 아무것도 안 바뀐다.
     public static final List<Entry> ALL = List.of(
         // ── 편의 ── 노가다를 줄여 주는 것들. 파워가 아니라 «시간»을 산다.
-        new Entry("minecraft:ender_chest",  1,  180, "편의"),
-        new Entry("minecraft:shulker_box",  1,  260, "편의"),
-        new Entry("minecraft:name_tag",     1,   60, "편의"),
-        new Entry("minecraft:saddle",       1,   50, "편의"),
+        new Entry("minecraft:ender_chest",  1,  900, "편의"),
+        new Entry("minecraft:shulker_box",  1, 1300, "편의"),
+        new Entry("minecraft:name_tag",     1,  300, "편의"),
+        new Entry("minecraft:saddle",       1,  250, "편의"),
 
         // ── 소모품 ── 원정·공성 준비물.
-        new Entry("minecraft:golden_apple",       4,  90, "소모품"),
-        new Entry("minecraft:arrow",             64,  40, "소모품"),
-        new Entry("minecraft:experience_bottle", 16,  70, "소모품"),
+        new Entry("minecraft:golden_apple",       4, 450, "소모품"),
+        new Entry("minecraft:arrow",             64, 200, "소모품"),
+        new Entry("minecraft:experience_bottle", 16, 350, "소모품"),
 
         // ── 재료 ── 거래에 쓰는 것만 남긴다.
-        new Entry("minecraft:emerald", 4, 80, "재료"),
+        new Entry("minecraft:emerald", 4, 400, "재료"),
 
         // ── 치장 ── 개인 지갑의 «본래» 쓰임.
-        new Entry("minecraft:firework_rocket", 16, 40, "치장")
+        new Entry("minecraft:firework_rocket", 16, 200, "치장"),
+
+        // ── 마법책 ──
+        // 유물은 부술 수도 없고 새로 얻을 수도 없다. 그래서 «수리»가 다른 무기보다 훨씬 무겁다 —
+        // 상점에 두는 이유가 그것이다. 값은 편의품(엔더 상자 900)보다 위에 둔다.
+        //
+        // ⚠️ 인챈트 테이블에서도 나오지만 **무작위다.** 유물은 하나뿐이라 실패가 아프므로,
+        //    「확실하게 사는 길」에 값을 매긴다.
+        new Entry("minecraft:enchanted_book", 1, 1000, "마법책", "minecraft:mending", 1),
+        // 체력으로 수리한다(아포테오시스). 수선과 달리 경험치를 안 먹어서 각성과 안 겹친다.
+        new Entry("minecraft:enchanted_book", 1, 1400, "마법책", "apothic_enchanting:life_mending", 1)
     );
 
     // ── 파는 쪽 (플레이어 → 상인) ──
@@ -100,6 +128,10 @@ public final class ShopCatalog {
         // ── 전리품 ── 몹에서 나오는 것. 값이 낮은 이유는 위 주석에.
         new Sell("minecraft:rotten_flesh",   1, "전리품"),
         new Sell("minecraft:bone",           1, "전리품"),
+        // 화살: 사는 값이 64개 200(개당 3.125)이라 그보다 반드시 싸야 한다 — 위 ⚠️ 규칙.
+        // 1 로 두는 또 다른 이유: 화살은 부싯돌+막대기+깃털로 «만들 수도» 있어서,
+        // 값을 올리면 해골 농장이 아니라 «닭 농장»이 돈줄이 된다.
+        new Sell("minecraft:arrow",          1, "전리품"),
         new Sell("minecraft:string",         1, "전리품"),
         new Sell("minecraft:spider_eye",     2, "전리품"),
         new Sell("minecraft:gunpowder",      3, "전리품"),

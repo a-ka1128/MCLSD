@@ -62,7 +62,12 @@ public final class SiegeVanguardGimmick {
     public static final int INTERVAL    = 11 * 20;
     public static final double RADIUS   = 4.5;      // T1 과 같게. 여기서 익힌 크기가 관문에서 맞아야 한다
     public static final double RANGE    = 24.0;
-    public static final float DAMAGE    = 6.0f;     // T1 의 10 보다 낮다 — 위 주석
+    // ── 2026-08-14: 6.0 → 9.0 ──
+    // 잡몹 공격력을 일괄 ×1.5 한 날(`ls_config.js` mob.dmg) 같은 배수로 올렸다.
+    // 안 올리면 웨이브의 «평범한» 좀비가 선봉의 장판보다 아프게 되어, 「붉은 원을 피해라」를
+    // 가르치는 자리가 무시해도 되는 연출로 내려앉는다.
+    // ※ 여전히 T1 관문의 10 보다 낮다 — 연습은 시험보다 조금 너그러워야 한다.
+    public static final float DAMAGE    = 9.0f;
 
     private static final BossFightTracker TRACKER = new BossFightTracker(
         BOSS_ID, "균열의 선봉", TEST_TAG,

@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:enchantable/durability",
+    "lsrelics:pioneer",
+    "lsrelics:nemesis",
+    "lsrelics:chiron"
+  ]
+}

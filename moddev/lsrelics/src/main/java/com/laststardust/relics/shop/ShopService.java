@@ -41,7 +41,8 @@ public final class ShopService {
         var list = ShopCatalog.resolve();
         for (int i = 0; i < list.size(); i++) {
             var e = list.get(i);
-            buy.add(new ShopView.Row(i, e.id(), e.count(), e.price(), e.group(), bal >= e.price()));
+            buy.add(new ShopView.Row(i, e.id(), e.count(), e.price(), e.group(),
+                bal >= e.price(), e.ench(), e.lvl()));
         }
 
         var sell = new ArrayList<ShopView.SellRow>();
@@ -93,6 +94,18 @@ public final class ShopService {
         if (e == null) return "그런 물건이 없습니다.";
         var stack = e.stack();
         if (stack.isEmpty()) return "지금은 살 수 없는 물건입니다.";
+        // ── 마법책이면 여기서 인챈트를 붙인다 ──
+        // 인챈트는 «데이터팩 레지스트리»라 RegistryAccess 가 필요하다. 카탈로그(record)는
+        // 서버를 모르므로 만들 수 없고, 서버를 들고 있는 여기가 유일하게 만들 수 있는 자리다.
+        // ⚠️ 붙이는 데 실패하면 **팔지 않는다.** 맹탕 책을 1,000 Ducat 에 파는 것보다
+        //    「지금은 못 산다」가 낫다 — 돈을 물어줄 방법이 없다.
+        if (!e.ench().isEmpty()) {
+            stack = enchantedBook(server, e.ench(), e.lvl());
+            if (stack.isEmpty()) {
+                LOG.warn("[상점] 인챈트를 못 찾아 판매를 막는다: {}", e.ench());
+                return "지금은 살 수 없는 물건입니다.";
+            }
+        }
 
         String name = p.getGameProfile().getName();
         var data = LSData.get(server);
@@ -175,5 +188,25 @@ public final class ShopService {
         LOG.info("[상점] {} 판매 {} x{} (개인 +{} · 금고 +{})", name, e.id(), taken, mine, town);
         sync(p);
         return null;
+    }
+
+    /** 인챈트 하나가 든 마법책. 레지스트리에 없으면 EMPTY — 부르는 쪽이 판매를 막는다. */
+    private static net.minecraft.world.item.ItemStack enchantedBook(
+            MinecraftServer server, String id, int lvl) {
+        var rl = net.minecraft.resources.ResourceLocation.tryParse(id);
+        if (rl == null) return net.minecraft.world.item.ItemStack.EMPTY;
+        var reg = server.registryAccess()
+            .registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
+        var holder = reg.getHolder(
+            net.minecraft.resources.ResourceKey.create(
+                net.minecraft.core.registries.Registries.ENCHANTMENT, rl));
+        if (holder.isEmpty()) return net.minecraft.world.item.ItemStack.EMPTY;
+        var book = new net.minecraft.world.item.ItemStack(
+            net.minecraft.world.item.Items.ENCHANTED_BOOK);
+        var m = new net.minecraft.world.item.enchantment.ItemEnchantments.Mutable(
+            net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY);
+        m.set(holder.get(), Math.max(1, lvl));
+        book.set(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS, m.toImmutable());
+        return book;
     }
 }

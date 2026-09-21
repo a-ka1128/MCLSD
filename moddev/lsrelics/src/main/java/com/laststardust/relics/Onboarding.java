@@ -29,7 +29,7 @@ import com.laststardust.relics.data.LSData;
  * <b>절차는 코드에 두고 NPC 는 한 번만 부른다.</b>
  *
  * <p>── 왜 도착지가 «성역»인가 ──
- * 성역 좌표는 {@link LSData} 가 유일하게 갖는다({@code /sanctuary set}).
+ * 성역 좌표는 {@link LSData} 가 유일하게 갖는다({@code /sanctuary here}).
  * 귀환석({@code HearthStone})이 쓰는 것과 <b>같은 좌표</b>라, 첫 이동과 이후의 모든 귀환이
  * 자동으로 같은 자리를 가리킨다 — 여기 좌표를 따로 적어 두면 그 둘이 언젠가 갈라진다.
  */
@@ -74,7 +74,7 @@ public final class Onboarding {
         LSData data = LSData.get(server);
         if (!data.hasSanctuary()) {
             // 첫 세션 직전에 제일 흔한 실수다. 「어디로 보낼지 아무도 안 정했다」를 그대로 말한다.
-            return "성역이 아직 정해지지 않았다 — 먼저 §e/sanctuary set";
+            return "성역이 아직 정해지지 않았다 — 먼저 §e/sanctuary here";
         }
 
         // ── ① 눈을 감는다 ──
