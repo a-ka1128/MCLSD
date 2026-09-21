@@ -148,10 +148,25 @@ EntityEvents.spawned(event => {
     var a = defHp > 0 ? e.getAttribute('minecraft:generic.max_health') : null
     if (a) {
       var target = defHp * hpMul
+      // ── 체력은 «비율»로 옮긴다 (2026-08-14) ──
+      // 예전 조건은 `health > target || health <= 0` 일 때만 채웠다. 그래서 새로 태어난
+      // 좀비(24/24)에 목표 72 를 걸면 **최대치만 72 가 되고 현재 체력은 24 로 남아**
+      // 「24/72」로 스폰됐다. 다친 것처럼 보이는데 다친 게 아니고, 실제로는 배율을
+      // 올린 만큼 **더 약해진다** — 최대치만 커지고 실제 체력은 그대로니까.
+      //
+      // «다친 채로 재로드된 개체를 공짜로 회복시키지 않는다»는 원래 의도는 비율로 지킨다:
+      //   꽉 찬 몹 24/24  → 비율 1.0 → 72/72
+      //   반쯤 다친 12/24 → 비율 0.5 → 36/72
+      // 여러 번 돌아도 결과가 같다(비율이 1 이면 계속 1) — 복리가 안 붙는다.
+      //
+      // ⚠️ 비율은 **바꾸기 «전»** 의 최대치로 잡는다. setBaseValue 뒤에 읽으면
+      //    분모가 새 값이 되어 비율이 언제나 작아진다.
+      var curMax = Number(a.getValue())
+      var curHp = Number(e.health)
+      var ratio = (curMax > 0 && curHp > 0) ? Math.max(0, Math.min(1, curHp / curMax)) : 1
       a.setBaseValue(target)
-      // 다친 채로 재로드된 개체를 꽉 채우면 «재시작하면 몹이 회복된다»가 된다.
-      // 넘칠 때(또는 아직 0일 때)만 맞춘다.
-      if (Number(e.health) > target || Number(e.health) <= 0.0) e.setHealth(target)
+      // 장비·물약 보정을 태운 «실효» 최대치에 비율을 곱한다.
+      e.setHealth(Number(a.getValue()) * ratio)
     }
   }
   if (dmgMul !== 1.0) {
@@ -241,7 +256,12 @@ ServerEvents.commandRegistry(event => {
             if (!mfAttr) return
             if (Math.abs(mfAttr.getBaseValue() - mfWant) < 0.01) return
             mfAttr.setBaseValue(mfWant)
-            if (Number(en.health) > mfWant) en.setHealth(mfWant)
+            // ⚠️ 여기서는 **꽉 채운다** (2026-08-14).
+            // `fix` 는 「설정을 바꾼 뒤 이미 서 있는 몹을 새 값으로 되돌리는」 정비 명령이다.
+            // 옛 조건(`health > mfWant` 일 때만)으로는 24/72 같이 어중간하게 남은 개체를
+            // 못 고친다 — 고치려고 부른 명령이 정작 그 상태를 그대로 둔다.
+            // 전투 중에 쓰면 눈앞의 몹이 회복되지만, 그건 정비 명령의 값으로 치를 만하다.
+            en.setHealth(Number(mfAttr.getValue()))
             // 공격력도 같이 — 여기도 출고값에서 다시 계산한다
             var mfDefD = LS.defaultAttrBase(en, 'minecraft:generic.attack_damage')
             var mfD = mfDefD > 0 ? en.getAttribute('minecraft:generic.attack_damage') : null
@@ -254,7 +274,7 @@ ServerEvents.commandRegistry(event => {
         })
       } catch (err) { lsWarn('ls_mobscale:fix', err) }
       ctx.source.sendSystemMessage(Text.of(
-        `§a몹 스케일 정리 §7— 살펴본 ${mfSeen}기 중 §e${mfFixed}기§7를 되돌렸다 §8(티어 ${tier})`))
+        `§a몹 스케일 정리 §7— 살펴본 ${mfSeen}기 중 §e${mfFixed}기§7를 되돌렸다 §8(티어 ${tier} · 체력은 꽉 채운다)`))
       ctx.source.sendSystemMessage(Text.of('§8로드된 청크만 훑는다. 멀리 다녀온 뒤 한 번 더 돌릴 것.'))
       return 1
     })))

@@ -267,6 +267,16 @@ function completeTier(server) {
   // 보상: 월드티어 상승 + 공동 금고
   setWorldTier(server, t.tier)
   rfAddTreasury(server, t.reward)
+  // 부재자에게 「무슨 보스가 죽었는지」를 남긴다. 관문은 **한 번뿐인 사건**이라
+  // 횟수로 세면 뜻이 없다 — 이름이 남아야 「내가 없는 동안 세계가 어디까지 갔나」가 읽힌다.
+  // 월드 티어는 여기서 안 챙겨도 된다: 접속할 때 진행도에 맞춰 자동으로 맞춰진다(이 파일 아래 훅).
+  try {
+    awAll(server, (nm, online) => {
+      if (online) return
+      awBump(server, nm, 'boss', 1)
+      awLog(server, nm, `§d${t.bossName}§7 처치 — §f${t.name}§7 봉인 해방 (세계 등급 §e${t.tier}§7)`)
+    })
+  } catch (e) { lsWarn('ls_rift:away', e) }
   server.runCommandSilent(`title @a title {"text":"봉인 해방","color":"gold","bold":true}`)
   server.runCommandSilent(`title @a subtitle {"text":"${t.name}의 균열이 닫혔다 — 세계 등급 상승","color":"yellow"}`)
   rplay(server, 'minecraft:ui.toast.challenge_complete', 1, 1)
@@ -436,6 +446,34 @@ ServerEvents.commandRegistry(event => {
       setProgress(s, n); rfSetB(s, 'rf_active', false); rfSetB(s, 'rf_pending', false); rfSetB(s, 'rf_engaged', false)
       ctx.source.sendSystemMessage(Text.of(`§7진행도 = ${n}/${MAX_TIER}`)); return 1
     }))))
+})
+
+// ── 접속 시 월드 티어 따라잡기 ──
+//
+// ⚠️ `setWorldTier` 는 **그때 접속해 있던 사람에게만** `apoth set_world_tier` 를 돌린다.
+//    관문을 깰 때 자리에 없던 사람은 **영영 옛 티어에 머문다** — 월드 티어는 Apotheosis 의
+//    전리품·접두사 등급을 가르는 값이라, 같은 상자를 열어도 남들보다 계속 나쁜 게 나온다.
+//    그런데 그게 «아무 메시지도 없이» 벌어져서, 당사자는 운이 나쁘다고만 느낀다.
+//    친구끼리 시간을 맞춰 들어오는 서버에서 이건 언젠가 반드시 일어난다.
+//
+// 관문 진행도(`progress`)는 **공동 상태**다 — 서버가 이미 「지금 몇 티어여야 하는지」를 안다.
+// 그러니 접속할 때 한 번 맞춰 주면 끝난다. 여러 번 돌아도 안전하다(같은 값을 다시 넣을 뿐).
+//
+// 40틱 미루는 이유는 `ls_ascend.js` 의 로그인 훅과 같다 — 로그인 시점엔 클라가 아직
+// 월드에 들어오는 중이라, 그때 보낸 명령이 조용히 묻힌다.
+PlayerEvents.loggedIn(event => {
+  const p = event.player
+  if (!p) return
+  const server = p.server
+  if (!server) return
+  server.scheduleInTicks(40, () => {
+    try {
+      var rfDone = progress(server)
+      // 0 = 아직 아무 관문도 안 깼다 → Apotheosis 기본 티어.
+      var rfTier = rfDone > 0 ? TIERS[Math.min(rfDone, MAX_TIER) - 1].tier : 'haven'
+      server.runCommandSilent(`apoth set_world_tier ${p.username} ${rfTier}`)
+    } catch (e) { lsWarn('ls_rift:tier-login', e) }
+  })
 })
 
 console.log(`[Last Stardust] 균열 원정 로드됨 — 진행 게이트 ${MAX_TIER}종 (제단 랜덤 배치 2000~5000m)`)

@@ -214,4 +214,33 @@ function lsTargetArg(event, Commands, Arguments, argName) {
     })
 }
 
+// ── 월드 스폰 좌표 ──
+// 「스폰 근처에는 아무것도 짓지 않는다」를 판정하려면 스폰이 어디인지 알아야 한다.
+//
+// ── 왜 상수로 안 박나 ──
+// 지금 스폰은 -15, -14 지만 **오픈 절차가 `/setworldspawn` 을 비행선으로 옮긴다**
+// (`docs/LAUNCH.md` 초기화 ④). 상수로 박으면 그날 이 판정이 조용히 엉뚱한 데를 지킨다.
+//
+// ── 왜 실패하면 0,0 인가 ──
+// 못 읽었을 때 「제한 없음」으로 흘리면 막으려던 일이 그대로 일어난다. 0,0 은 원래
+// 스폰이 있던 자리이자 새 월드의 기본값이라, 모르면 그쪽을 지키는 게 안전한 쪽이다.
+function lsSpawnPos(server) {
+  var lsSp = { x: 0, z: 0 }
+  try {
+    var lsLv = server.overworld()
+    var lsB = null
+    if (lsLv.getSharedSpawnPos) lsB = lsLv.getSharedSpawnPos()
+    else if (lsLv.getLevelData && lsLv.getLevelData().getSpawnPos) lsB = lsLv.getLevelData().getSpawnPos()
+    if (lsB) lsSp = { x: Number(lsB.getX()), z: Number(lsB.getZ()) }
+  } catch (e) { lsWarn('ls_util:spawn-pos', e) }
+  return lsSp
+}
+
+// 그 좌표가 스폰에서 `keep` 칸 안인가. 배치 롤에서 「여긴 안 된다」를 묻는 한 곳.
+function lsNearSpawn(server, x, z, keep) {
+  var lsSpp = lsSpawnPos(server)
+  var lsDx = x - lsSpp.x, lsDz = z - lsSpp.z
+  return (lsDx * lsDx + lsDz * lsDz) < (keep * keep)
+}
+
 console.log('[Last Stardust] 공용 유틸 로드됨 — 인벤토리 개수/회수 · 이름으로 플레이어 찾기 · 대상 인자')

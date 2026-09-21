@@ -1,0 +1,272 @@
+{
+  "anvil_cost": 8,
+  "description": {
+    "translate": "enchantment.dungeons_arise.discharge",
+    "fallback": "Discharge"
+  },
+  "effects": {
+    "minecraft:post_attack": [
+      {
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "effects": {
+              "minecraft:speed": {
+                "amplifier": 4
+              }
+            }
+          }
+        },
+        "effect": {
+          "type": "minecraft:all_of",
+          "effects": [
+            {
+              "type": "minecraft:explode",
+              "attribute_to_user": false,
+              "damage_type": "minecraft:explosion",
+              "knockback_multiplier": 1.2,
+              "radius": 2,
+              "block_interaction": "none",
+              "small_particle": {
+                "type": "minecraft:gust"
+              },
+              "large_particle": {
+                "type": "minecraft:gust"
+              },
+              "sound": "minecraft:entity.lightning_bolt.impact"
+            },
+            {
+              "type": "minecraft:run_function",
+              "function": "dungeons_arise:discharge_thunder"
+            },
+            {
+              "type": "minecraft:summon_entity",
+              "entity": "minecraft:lightning_bolt"
+            }
+          ]
+        },
+        "enchanted": "attacker",
+        "affected": "victim"
+      },
+      {
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "effects": {
+              "minecraft:speed": {
+                "amplifier": 4
+              }
+            }
+          }
+        },
+        "effect": {
+          "type": "minecraft:all_of",
+          "effects": [
+            {
+              "type": "minecraft:apply_mob_effect",
+              "to_apply": "minecraft:speed",
+              "min_duration": 0,
+              "max_duration": 0,
+              "min_amplifier": 10,
+              "max_amplifier": 10
+            }
+          ]
+        },
+        "enchanted": "attacker",
+        "affected": "attacker"
+      },
+      {
+        "requirements": [
+          {
+            "condition": "minecraft:random_chance",
+            "chance": {
+              "type": "minecraft:enchantment_level",
+              "amount": {
+                "type": "minecraft:linear",
+                "base": 0.15,
+                "per_level_above_first": 0.15
+              }
+            }
+          },
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "attacker",
+            "predicate": {
+              "effects": {
+                "minecraft:speed": {
+                  "amplifier": 3
+                }
+              }
+            }
+          }
+        ],
+        "effect": {
+          "type": "minecraft:all_of",
+          "effects": [
+            {
+              "type": "minecraft:apply_mob_effect",
+              "to_apply": "minecraft:speed",
+              "min_duration": 6,
+              "max_duration": 6,
+              "min_amplifier": 4,
+              "max_amplifier": 4
+            },
+            {
+              "type": "minecraft:run_function",
+              "function": "dungeons_arise:discharge_ready"
+            }
+          ]
+        },
+        "enchanted": "attacker",
+        "affected": "attacker"
+      },
+      {
+        "requirements": [
+          {
+            "condition": "minecraft:random_chance",
+            "chance": {
+              "type": "minecraft:enchantment_level",
+              "amount": {
+                "type": "minecraft:linear",
+                "base": 0.15,
+                "per_level_above_first": 0.15
+              }
+            }
+          },
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "attacker",
+            "predicate": {
+              "effects": {
+                "minecraft:speed": {
+                  "amplifier": 2
+                }
+              }
+            }
+          }
+        ],
+        "effect": {
+          "type": "minecraft:apply_mob_effect",
+          "to_apply": "minecraft:speed",
+          "min_duration": 6,
+          "max_duration": 6,
+          "min_amplifier": 3,
+          "max_amplifier": 3
+        },
+        "enchanted": "attacker",
+        "affected": "attacker"
+      },
+      {
+        "requirements": [
+          {
+            "condition": "minecraft:random_chance",
+            "chance": {
+              "type": "minecraft:enchantment_level",
+              "amount": {
+                "type": "minecraft:linear",
+                "base": 0.15,
+                "per_level_above_first": 0.15
+              }
+            }
+          },
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "attacker",
+            "predicate": {
+              "effects": {
+                "minecraft:speed": {
+                  "amplifier": 1
+                }
+              }
+            }
+          }
+        ],
+        "effect": {
+          "type": "minecraft:apply_mob_effect",
+          "to_apply": "minecraft:speed",
+          "min_duration": 6,
+          "max_duration": 6,
+          "min_amplifier": 2,
+          "max_amplifier": 2
+        },
+        "enchanted": "attacker",
+        "affected": "attacker"
+      },
+      {
+        "requirements": [
+          {
+            "condition": "minecraft:random_chance",
+            "chance": {
+              "type": "minecraft:enchantment_level",
+              "amount": {
+                "type": "minecraft:linear",
+                "base": 0.15,
+                "per_level_above_first": 0.15
+              }
+            }
+          },
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "attacker",
+            "predicate": {
+              "effects": {
+                "minecraft:speed": {
+                  "amplifier": 0
+                }
+              }
+            }
+          }
+        ],
+        "effect": {
+          "type": "minecraft:apply_mob_effect",
+          "to_apply": "minecraft:speed",
+          "min_duration": 7,
+          "max_duration": 7,
+          "min_amplifier": 1,
+          "max_amplifier": 1
+        },
+        "enchanted": "attacker",
+        "affected": "attacker"
+      },
+      {
+        "affected": "attacker",
+        "effect": {
+          "type": "minecraft:apply_mob_effect",
+          "to_apply": "minecraft:speed",
+          "min_duration": 8,
+          "max_duration": 8,
+          "min_amplifier": 0,
+          "max_amplifier": 0
+        },
+        "enchanted": "attacker",
+        "requirements": {
+          "chance": {
+            "type": "minecraft:enchantment_level",
+            "amount": {
+              "type": "minecraft:linear",
+              "base": 0.15,
+              "per_level_above_first": 0.15
+            }
+          },
+          "condition": "minecraft:random_chance"
+        }
+      }
+    ]
+  },
+  "max_cost": {
+    "base": 60,
+    "per_level_above_first": 20
+  },
+  "max_level": 3,
+  "min_cost": {
+    "base": 10,
+    "per_level_above_first": 20
+  },
+  "slots": [
+    "any"
+  ],
+  "supported_items": "#lsrelics:ench/6",
+  "weight": 1
+}

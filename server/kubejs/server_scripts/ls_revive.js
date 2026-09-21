@@ -18,6 +18,43 @@ const RV_FRAIL_SEC = 60         // 별빛 쇠약 지속(초). ReviveRules.FRAILT
 const RV_FRAIL_PCT = 0.20       // 최대 체력 감소율 (최종값 기준 = add_multiplied_total)
 const RV_HP_MOD = 'last_stardust:frailty_health'
 
+// ── 죽어도 «레벨»은 남는다 (2026-08-18) ──
+//
+// 이 서버는 keepInventory 가 꺼져 있다 — 죽으면 들고 있던 걸 잃는 게 죽음의 무게다.
+// 그런데 «경험치»까지 같이 날리면 대가가 두 배로 붙는다:
+//   ① 유물 각성은 파편으로 사지만, 인챈트·수리는 경험치로 산다
+//   ② 그 경험치는 유물과 달리 **되찾을 방법이 없다** — 떨어진 구슬은 5분이면 사라지고,
+//      죽은 자리가 밤의 성벽 밖이면 애초에 되돌아갈 수가 없다
+// 아이템은 «다시 캐면» 되지만 레벨은 아니다. 그래서 레벨만 돌려준다.
+//
+// ⚠️ **죽을 때 0 으로 비우는 게 핵심이다.** 안 비우면 바닐라가 최대 100 포인트(≈7레벨)를
+//    구슬로 흘리고, 부활 때 우리가 원래 레벨을 «다시» 채워서 **죽을수록 이득**이 된다.
+//    비우는 시점은 사망 이벤트 — 바닐라가 구슬을 계산하기 «전»이다.
+const RV_XP_KEY = 'rv_xp_'      // + 아이디 → 레벨
+const RV_XPP_KEY = 'rv_xpp_'    // + 아이디 → 레벨 안 진행도(0~1)를 1000배 정수로
+
+EntityEvents.death(event => {
+  const e = event.entity
+  if (!e || String(e.type) !== 'minecraft:player') return
+  const server = e.server
+  if (!server) return
+  try {
+    // ⚠️ `var` 다. 반복 실행되는 블록의 const 는 Rhino 가 재선언으로 터뜨린다
+    //    (tools/scan_try_decls.py 가 잡았다).
+    var uname = String(e.username)
+    var lv = 0, prog = 0
+    try { lv = e.experienceLevel | 0 } catch (err) { lsWarn('ls_revive:xp-read', err) }
+    try { prog = Math.round((Number(e.experienceProgress) || 0) * 1000) } catch (err) { prog = 0 }
+    var st = server.overworld().persistentData
+    st.putInt(RV_XP_KEY + uname, lv)
+    st.putInt(RV_XPP_KEY + uname, prog)
+    // 구슬이 떨어지지 않게 비운다. 명령어로 하는 이유: 래퍼의 setter 이름이 버전마다
+    // 갈리는데 `/xp set` 은 안 바뀐다. 여기서 실패하면 «죽을수록 이득»이 되므로 안전한 쪽을 쓴다.
+    server.runCommandSilent(`xp set ${uname} 0 levels`)
+    server.runCommandSilent(`xp set ${uname} 0 points`)
+  } catch (err) { lsWarn('ls_revive:xp-save', err) }
+})
+
 function rvClearFrailty(server, uname) {
   try { server.runCommandSilent(`attribute ${uname} minecraft:generic.max_health modifier remove ${RV_HP_MOD}`) } catch (e) { lsWarn('ls_revive:14', e) }
 }
@@ -38,6 +75,28 @@ PlayerEvents.respawned(event => {
       server.runCommandSilent(`attribute ${uname} minecraft:generic.max_health modifier add ${RV_HP_MOD} -${RV_FRAIL_PCT} add_multiplied_total`)
       player.tell(Text.of(`§8[ §7별빛이 흐려졌습니다 — 별빛 쇠약 ${RV_FRAIL_SEC}초 §8(체력 -${Math.round(RV_FRAIL_PCT * 100)}% · 주는 피해 -25%) §8]`))
       player.tell(Text.of(`§8[ §7일어선 직후 §f${RV_INVULN_SEC}초 무적§7 — 공격하면 즉시 풀린다 §8]`))
+      // ── 레벨 되돌려주기 ──
+      // 부활 직후는 0 레벨이라 «더하기»가 아니라 «맞추기»다. 여기서 add 를 쓰면
+      // 부활이 두 번 겹치는 드문 경우에 두 배가 된다.
+      var rvLv = 0, rvPp = 0
+      try {
+        var rvSt = server.overworld().persistentData
+        rvLv = rvSt.getInt(RV_XP_KEY + uname) | 0
+        rvPp = rvSt.getInt(RV_XPP_KEY + uname) | 0
+        rvSt.putInt(RV_XP_KEY + uname, 0)
+        rvSt.putInt(RV_XPP_KEY + uname, 0)
+      } catch (err) { lsWarn('ls_revive:xp-load', err) }
+      if (rvLv > 0 || rvPp > 0) {
+        server.runCommandSilent(`xp set ${uname} ${rvLv} levels`)
+        if (rvPp > 0) {
+          // 레벨 안 진행도는 «그 레벨의 총 포인트 × 비율» 로 되돌린다.
+          // 레벨당 필요량은 구간마다 다르다(<16: 2L+7 · <31: 5L-38 · 그 이상: 9L-158).
+          var need = rvLv < 16 ? (2 * rvLv + 7) : (rvLv < 31 ? (5 * rvLv - 38) : (9 * rvLv - 158))
+          var pts = Math.floor(need * rvPp / 1000)
+          if (pts > 0) server.runCommandSilent(`xp add ${uname} ${pts} points`)
+        }
+        player.tell(Text.of(`§8[ §7경험치 §f${rvLv}레벨§7은 그대로 남았습니다 §8]`))
+      }
     } catch (e) { console.log('[LS-REVIVE] apply fail: ' + e) }
   })
 

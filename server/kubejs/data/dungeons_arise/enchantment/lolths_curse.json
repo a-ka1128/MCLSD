@@ -1,0 +1,107 @@
+{
+  "anvil_cost": 8,
+  "description": {
+    "translate": "enchantment.dungeons_arise.lolth_curse",
+    "fallback": "Curse of Lolth",
+    "color": "red"
+  },
+  "effects": {
+    "minecraft:post_attack": [
+      {
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "type": "minecraft:player"
+          }
+        },
+        "effect": {
+          "type": "minecraft:all_of",
+          "effects": [
+            {
+              "type": "minecraft:apply_mob_effect",
+              "to_apply": "minecraft:darkness",
+              "min_duration": 10,
+              "max_duration": 10,
+              "min_amplifier": 0,
+              "max_amplifier": 0
+            }
+          ]
+        },
+        "enchanted": "attacker",
+        "affected": "victim"
+      },
+      {
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "type": "#minecraft:arthropod"
+          }
+        },
+        "effect": {
+          "type": "minecraft:damage_entity",
+          "damage_type": "minecraft:thorns",
+          "min_damage": 4,
+          "max_damage": 8
+        },
+        "enchanted": "attacker",
+        "affected": "attacker"
+      },
+      {
+        "requirements": [
+          {
+            "condition": "minecraft:random_chance",
+            "chance": 0.2
+          },
+          {
+            "condition": "minecraft:inverted",
+            "term": {
+              "condition": "minecraft:entity_properties",
+              "entity": "this",
+              "predicate": {
+                "type": "#minecraft:arthropod"
+              }
+            }
+          }
+        ],
+        "effect": {
+          "type": "minecraft:summon_entity",
+          "entity": "minecraft:cave_spider"
+        },
+        "enchanted": "attacker",
+        "affected": "victim"
+      },
+      {
+        "requirements": {
+          "condition": "minecraft:random_chance",
+          "chance": 0.3
+        },
+        "effect": {
+          "type": "minecraft:apply_mob_effect",
+          "to_apply": "minecraft:regeneration",
+          "min_duration": 2,
+          "max_duration": 4,
+          "min_amplifier": 1,
+          "max_amplifier": 1
+        },
+        "enchanted": "attacker",
+        "affected": "attacker"
+      }
+    ]
+  },
+  "max_cost": {
+    "base": 60,
+    "per_level_above_first": 20
+  },
+  "max_level": 1,
+  "min_cost": {
+    "base": 10,
+    "per_level_above_first": 20
+  },
+  "slots": [
+    "any"
+  ],
+  "supported_items": "#lsrelics:ench/6",
+  "weight": 1
+}

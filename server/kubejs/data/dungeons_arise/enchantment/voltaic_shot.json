@@ -1,0 +1,87 @@
+{
+  "anvil_cost": 8,
+  "description": {
+    "translate": "enchantment.dungeons_arise.voltaic_shot",
+    "fallback": "Voltaic Shot"
+  },
+  "effects": {
+    "minecraft:projectile_spawned": [
+      {
+        "effect": {
+          "type": "minecraft:run_function",
+          "function": "dungeons_arise:voltaic_arrows"
+        }
+      }
+    ],
+    "minecraft:hit_block": [
+      {
+        "effect": {
+          "type": "minecraft:explode",
+          "attribute_to_user": true,
+          "damage_type": "minecraft:explosion",
+          "knockback_multiplier": 0.2,
+          "radius": 2,
+          "create_fire": false,
+          "block_interaction": "none",
+          "small_particle": {
+            "type": "minecraft:gust"
+          },
+          "large_particle": {
+            "type": "minecraft:gust"
+          },
+          "sound": "minecraft:entity.lightning_bolt.impact"
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:run_function",
+          "function": "dungeons_arise:voltaic_arrows_impact_particles"
+        }
+      }
+    ],
+    "minecraft:post_attack": [
+      {
+        "effect": {
+          "type": "minecraft:all_of",
+          "effects": [
+            {
+              "type": "minecraft:explode",
+              "attribute_to_user": false,
+              "damage_type": "minecraft:explosion",
+              "knockback_multiplier": 0.2,
+              "radius": 1,
+              "block_interaction": "none",
+              "small_particle": {
+                "type": "minecraft:gust"
+              },
+              "large_particle": {
+                "type": "minecraft:gust"
+              },
+              "sound": "minecraft:entity.lightning_bolt.impact"
+            },
+            {
+              "type": "minecraft:run_function",
+              "function": "dungeons_arise:voltaic_arrows_impact_particles"
+            }
+          ]
+        },
+        "enchanted": "attacker",
+        "affected": "victim"
+      }
+    ]
+  },
+  "max_cost": {
+    "base": 60,
+    "per_level_above_first": 20
+  },
+  "max_level": 1,
+  "min_cost": {
+    "base": 10,
+    "per_level_above_first": 20
+  },
+  "slots": [
+    "any"
+  ],
+  "supported_items": "#lsrelics:ench/1",
+  "weight": 1
+}

@@ -34,7 +34,12 @@ function townLvl(server, t) { return LS.townLevel(server, t) }
 // ── 튜닝 상수 ──
 const SPAWN_GAP = 8          // 성벽이 «닿는 끝»에서 이만큼 밖에 스폰한다
 const SANCTUARY_RADIUS = 64
-const MAX_WAVES = 5          // 일반 공성 최대 웨이브
+// ── 2026-08-18: 5 → 3 · 위협도 나눗수 3 → 4 ──
+// 위협도 9 에서 4웨이브(대공세 6)가 나와 밤이 너무 길어졌다. 정예를 크게 늘린 뒤로는
+// 한 물결 자체가 무거워져서, 물결 «수»까지 많으면 «어려운» 게 아니라 «오래 걸리는» 밤이 된다.
+// 난이도는 물결의 «무게»(정예 수·몹 배율)로 주고, 물결 수는 짧게 유지한다.
+const MAX_WAVES = 3          // 일반 공성 최대 웨이브
+const WAVE_PER_THREAT = 4    // 위협도 이만큼마다 물결 +1
 // ── 공성 리듬 (2026-08-08 유저 결정: 4일 주기 · 일반 2 → 대공세 1 반복) ──
 // 하루가 20분이므로 4일 = 실시간 약 1시간 20분에 한 번.
 //   공성일: 4, 8, 12, 16, 20, 24 …
@@ -136,14 +141,34 @@ function setSanc(server, x, y, z) { LS.setSanctuary(server, x, y, z) }
 // HP 0 = 성벽 붕괴 → 더 이상 막지 못하고 몹이 안으로 쏟아진다(내부 백병전). 수리 전까지 뚫린 채 유지.
 // 신호기 등 중심물은 장식 — 체력은 성벽 자체에 있다. 방벽(ramparts) 레벨 = 성벽 내구도.
 // 실제 몹 공격력으로 깎이므로(아래 bangDmg) 예전 값(150)과는 자릿수가 다르다.
-// 티어4 웨이브 12마리면 2초당 약 120 — 3,000 이면 대략 50초 버틴다(예전 체감과 같은 길이).
-const WALL_BASE_HP = 3000     // 최대 HP = 3000 + 방벽Lv×1000
+// 티어4 웨이브 12마리면 2초당 약 120 — 1,000 이면 대략 17초 버틴다.
+// ※ 2026-08-18: 정예를 늘리고 몹 공격력을 ×1.5 한 뒤 500 으로는 «즉시 붕괴»라 1000 으로 되돌렸다.
+//   성벽이 깎이는 속도는 «붙은 몹들의 공격력 합»이라, 몹을 세게 만든 날엔 여기도 같이 봐야 한다.
+//
+// ── 2026-08-14: 3000 → 2000 ──
+// 첫 세션에서 «성벽이 너무 안 깎인다»는 이야기가 나왔다. 성벽은 방어선이면서 동시에
+// **판돈**인데(잃으면 dawn 이 lose 로 강등되고 수리비가 나간다), 깎이질 않으니
+// 판돈이 걸려 있다는 감각이 안 생겼다. 몹이 벽을 두드리는 게 «연출»로만 보인 것이다.
+//
+// ⚠️ 이 값 하나가 세 가지를 동시에 움직인다 — 버티는 시간 · 수리비 · 승리 보수(최대치의 10%).
+//    수리비는 HP 비례(10HP당 1 Ducat)라 자동으로 같이 내려간다.
+//    더 조이고 싶으면 여기만 내린다.
+const WALL_BASE_HP = 1000     // 최대 HP = WALL_BASE_HP + 방벽Lv × WALL_PER_RAMPART
+
+// ── 방벽 레벨당 성벽 최대 HP 증가 ──
+// 2026-08-14: 1000 → 500. 기본이 3000 → 2000 으로 내려간 뒤에도 레벨당 +1000 이면
+// 방벽 두 단계에 성벽이 두 배가 된다 — 「기본을 낮춰서 판돈을 만들자」는 조정이
+// 마을 레벨 두 칸으로 통째로 되돌려지는 셈이었다.
+//
+// ⚠️ **상수로 뽑았다.** 예전엔 계산식·`/wall` 출력·주석 세 곳에 1000 이 각자 박혀 있었다.
+//    한 곳만 고치면 화면이 거짓말을 하게 된다 — 최대치는 2500 인데 안내는 3000 이라고 뜬다.
+const WALL_PER_RAMPART = 500
 
 // ── 성벽 수리 비용 ──
 // 금고(공동)와 재료(개인)를 둘 다 받는다. 금고만 받으면 "숫자만 있으면 되는" 일이 되어
 // 마을 밖에 나가 캘 이유가 사라진다.
 //   [아이템, 표시이름, HP당 개수의 역수]  — 예: 40이면 40HP당 1개
-// 완전 수리(3000) 기준 = 300 Ducat · 원목 75 · 철괴 30 · 조약돌 150.
+// 완전 수리(1000) 기준 = 100 Ducat · 원목 25 · 철괴 10 · 조약돌 50.
 // 원목/조약돌은 흔하고 철괴만 아프게 잡았다 — 철이 병목이 되어야 "준비"라는 게 생긴다.
 const WALL_REPAIR_PER_DUCAT = 10   // 10HP당 1 Ducat
 const WALL_REPAIR_MATS = [
@@ -189,7 +214,7 @@ function simWarn(src, server) {
 }
 // 방벽 레벨당 최대 내구도 +100 (기본 150 → 4레벨 550).
 // 방벽 트랙의 가장 직관적인 보상이라 눈에 띄게 올린다.
-function wallMax(server) { return WALL_BASE_HP + townLvl(server, 'ramparts') * 1000 }
+function wallMax(server) { return WALL_BASE_HP + townLvl(server, 'ramparts') * WALL_PER_RAMPART }
 // hp 0 에는 «아직 한 번도 안 정해짐»과 «부서짐» 두 뜻이 있다. 그 둘을 가르는 게 `wallInit` 이고,
 // 못 가리면 **새 월드의 성벽이 처음부터 부서진 상태로 시작한다.** 천장은 방벽 레벨에 걸려 있어
 // 스크립트가 계산해 넘긴다 — 자르는 건 모드가 한다(자르는 곳이 하나면 호출부가 빠뜨릴 수 없다).
@@ -391,8 +416,18 @@ function daysToSiege(day) {
 //
 // 방치 보정: 위협도 10+ 면 질도 한 단계 얹는다. 관문을 안 깨면 영원히 좀비만 오는
 // «안전한 정체»가 되어버려서, 방치에도 대가는 남긴다.
-function waveTier(prog, threat) {
-  return Math.min(5, (prog || 0) + 1 + (threat >= 10 ? 1 : 0))
+// ── 2026-08-14: 바닥 +1 → +2, 대공세는 +2 더 ──
+// 관문 0개일 때 tier 가 1 이라 **정예가 한 마리도 안 나왔다.** 공성에서 보이던 모드 몹은
+// 웨이브가 아니라 선봉(`ls_siege_boss`) 하나뿐이었다 — 「모드 몬스터가 1마리」의 정체다.
+// 바닥을 2 로 올려 시작부터 메마른 자·얼어붙은 궁수가 섞이고, 정예도 드물게 낀다.
+//
+// 대공세는 +2 를 더 얹는다. 「어둠의 총력」인데 일반 공성과 같은 종류가 오면 이름값을 못 한다.
+// 관문 0개에서도 대공세는 tier 4 — 광전사가 무리로 온다.
+//
+// ⚠️ 「양=위협도, 질=관문 진행도」라는 원칙은 그대로다. 바닥만 올렸지 진행의 대가는
+//    여전히 tier 를 올리는 유일한 «지속» 수단이다(대공세 보정은 그 밤에만 산다).
+function waveTier(prog, threat, grand) {
+  return Math.min(5, (prog || 0) + 2 + (threat >= 10 ? 1 : 0) + (grand ? 2 : 0))
 }
 const TIER_NEWS = {
   2: '§6⚠ 어둠이 짙어진다... §7메마른 자들과 얼어붙은 궁수가 공세에 섞여든다.',
@@ -443,16 +478,9 @@ const PARTY_PER_EXTRA = 1.0   // 추가 인원 1명당 +100%
 // ⚠️ WAVE_HARD_CAP 은 «난이도 손잡이»가 아니라 **서버가 죽는 걸 막는 마지막 빗장**이다.
 //    난이도를 올리고 싶으면 위협도·정예 예산을 만지고 여기는 그대로 둔다.
 const WAVE_HARD_CAP = 100     // 한 물결 절대 상한 (일반 포함) — 서버 보호
-const ELITE_PER_PLAYER = 3    // 인원 1명당 정예 예산
-const ELITE_HARD_CAP = 16     // 정예 절대 상한 (일반 공성)
-const ELITE_HARD_CAP_GRAND = 24  // 대공세는 정예가 주인공이라 더 준다
 // 정예로 치는 것 — 무거운 모드 몹. 여기 없는 건 «일반»으로 세고 안 막는다.
 const ELITE_IDS = ['cataclysm:ignited_berserker', 'cataclysm:ignited_revenant']
 
-function eliteBudget(grand, players) {
-  const cap = grand ? ELITE_HARD_CAP_GRAND : ELITE_HARD_CAP
-  return Math.min(cap, Math.round(ELITE_PER_PLAYER * (grand ? 1.5 : 1) * Math.max(1, players || 1)))
-}
 
 // ── 마지막 웨이브의 선봉 (관문 기믹의 연습장) ──
 // 종류와 표식은 모드의 SiegeVanguardGimmick 과 - 반드시 같아야 한다 - .
@@ -479,36 +507,68 @@ function partyCount(server) { return Math.max(1, activePlayers(server)) }
 // 한 웨이브 몹 목록. 마릿수는 위협도·인원이, 종류는 관문 진행도(prog)가 정한다.
 // prog 를 인자로 받는 이유: 이 함수는 /siege status 가 «가정하고» 부르기도 해서(인원 1명일 때 등)
 // 서버 상태를 안에서 읽으면 그 예측이 실제와 갈린다.
+// ── 정예 «수»는 인원이 정한다 (2026-08-18) ──
+//
+// 예전엔 「몇 번째마다 하나」라는 비율이었다(`i % 5 === 0` …). 그 방식의 문제는
+// **실제로 몇 마리가 나오는지 아무도 모른다**는 것이다 — 마릿수가 위협도·인원으로
+// 따로 정해지니, 비율을 조금만 건드려도 결과가 예측 못 할 만큼 흔들렸다.
+// 실제로 「일반 공성 정예 8마리가 전원 레버넌트」가 그렇게 나왔다.
+//
+// 이제 인원 구간마다 **정확한 수**를 적는다. 읽는 대로가 결과다.
+//   레버넌트는 방어 자세가 길어 여럿이 겹치면 「때릴 수 없는」 밤이 된다 —
+//   무게는 광전사가 지고 레버넌트는 리듬을 끊는 역할로 적게 둔다.
+const ELITE_BY_PARTY = [
+  //  인원        레버넌트  광전사
+  { upTo: 2,  rev: 0,  ber: 4 },
+  { upTo: 4,  rev: 2,  ber: 6 },
+  { upTo: 6,  rev: 4,  ber: 8 },
+  { upTo: 99, rev: 6,  ber: 12 }
+]
+// 대공세는 「어둠의 총력」이다. 예전 예산도 대공세에 ×1.5 를 줬으므로 그대로 잇는다.
+const ELITE_GRAND_MUL = 1.5
+
+function eliteCounts(grand, players) {
+  var n = Math.max(1, players || 1)
+  var row = ELITE_BY_PARTY[ELITE_BY_PARTY.length - 1]
+  for (var eci = 0; eci < ELITE_BY_PARTY.length; eci++) {
+    if (n <= ELITE_BY_PARTY[eci].upTo) { row = ELITE_BY_PARTY[eci]; break }
+  }
+  var m = grand ? ELITE_GRAND_MUL : 1
+  return { rev: Math.round(row.rev * m), ber: Math.round(row.ber * m) }
+}
+
 function buildWave(threat, grand, players, prog) {
   const mobs = []
   const mul = 1 + PARTY_PER_EXTRA * Math.max(0, (players || 1) - 1)
   // 마릿수는 위협도·인원이 그대로 정한다. 여기서 «무게» 때문에 깎지 않는다.
   const total = Math.min(WAVE_HARD_CAP, Math.round(((grand ? 5 : 3) + threat) * mul))
-  const tier = waveTier(prog, threat)
-  var elitesLeft = eliteBudget(grand, players)
+  const tier = waveTier(prog, threat, grand)
 
-  // 정예를 뽑되 예산이 없으면 일반 몹으로 대신한다.
-  // ⚠️ 자리를 «비우지» 않는다 — 비우면 마릿수가 줄어 인원 비례가 도로 깨진다.
-  function pick(id, fallback) {
-    if (ELITE_IDS.indexOf(id) < 0) return id
-    if (elitesLeft <= 0) return fallback
-    elitesLeft--
-    return id
-  }
-
+  // ① 먼저 «일반 몹»으로 웨이브를 통째로 채운다. 종류는 여전히 단계가 정한다 —
+  //    관문을 깰수록 다른 놈이 온다는 원칙(양=위협도, 질=진행도)은 그대로다.
   for (let i = 0; i < total; i++) {
-    // 5단계는 새 몹을 더하지 않고 - 밀도 - 를 올린다. 종류를 더 늘리면 화면에서 구분이 안 된다.
-    if (tier >= 5 && i % 4 === 0) mobs.push(pick('cataclysm:ignited_berserker', 'minecraft:wither_skeleton'))
-    else if (tier >= 5 && i % 3 === 1) mobs.push(pick('cataclysm:ignited_revenant', 'minecraft:husk'))
-    else if (tier >= 4 && i % 6 === 0) mobs.push(pick('cataclysm:ignited_berserker', 'minecraft:wither_skeleton'))
-    else if (tier >= 3 && i % 5 === 0) mobs.push(pick('cataclysm:ignited_revenant', 'minecraft:husk'))
-    else if (tier >= 3 && i % 4 === 1) mobs.push('minecraft:wither_skeleton')
+    if (tier >= 3 && i % 4 === 1) mobs.push('minecraft:wither_skeleton')
     else if (tier >= 2 && i % 4 === 0) mobs.push('minecraft:husk')
     else if (tier >= 2 && i % 5 === 2) mobs.push('minecraft:stray')
-    else if (tier >= 2 && i % 7 === 3) mobs.push('minecraft:vindicator') // 크리퍼 금지: mobGriefing ON이라 성역이 부서짐 → 약탈자 처형인으로 대체
+    // 크리퍼 금지: mobGriefing ON 이라 성역이 부서진다 → 약탈자 처형인으로 대체
+    else if (tier >= 2 && i % 7 === 3) mobs.push('minecraft:vindicator')
     else if (i % 3 === 1) mobs.push('minecraft:skeleton')
     else if (i % 5 === 4) mobs.push('minecraft:spider')
     else mobs.push('minecraft:zombie')
+  }
+
+  // ② 그 위에 정예를 «정확한 수»만큼 덮어쓴다.
+  //    ⚠️ 자리를 «더하지» 않고 «바꾼다» — 더하면 마릿수가 늘어 인원 비례가 도로 깨진다.
+  //    고르게 흩는 이유: 한쪽에 몰리면 그 구간만 벽이 되고 나머지는 텅 빈다.
+  const want = eliteCounts(grand, players)
+  var slots = Math.min(total, want.rev + want.ber)
+  if (slots > 0) {
+    var step = total / slots
+    for (var si = 0; si < slots; si++) {
+      var at = Math.min(total - 1, Math.floor(si * step))
+      // 광전사를 먼저 깔고 레버넌트를 뒤에 — 앞줄이 「막는 놈」이면 첫인상이 나쁘다.
+      mobs[at] = (si < want.ber) ? 'cataclysm:ignited_berserker' : 'cataclysm:ignited_revenant'
+    }
   }
   return mobs
 }
@@ -601,7 +661,7 @@ function spawnWave(server, waveNo) {
       say(server, `§c⚔ 공성 시작! §7위협도 ${threat} · 웨이브 ${LS.siegeWaves(server) + 1}개 · 첫 물결 ${n}기`)
     }
     // 몹 진화 단계 뉴스 (새 단계 첫 공성 때 1회)
-    var tier = waveTier(LS.progress(server), threat)
+    var tier = waveTier(LS.progress(server), threat, LS.siegeGrand(server))
     if (tier > LS.annTier(server)) {
       LS.setAnnTier(server, tier)
       if (TIER_NEWS[tier]) say(server, TIER_NEWS[tier])
@@ -618,7 +678,7 @@ function startSiege(server, auto, forceGrand) {
   if (LS.siegeActive(server)) { if (!auto) say(server, '§7이미 공성이 진행 중입니다.'); return 0 }
   const threat = effThreat(server)
   const grand = !!forceGrand || isGrandDay(server)
-  let wavesTotal = Math.min(MAX_WAVES, 1 + Math.floor(threat / 3))
+  let wavesTotal = Math.min(MAX_WAVES, 1 + Math.floor(threat / WAVE_PER_THREAT))
   if (grand) wavesTotal = Math.min(MAX_WAVES + 1, wavesTotal + 2)
   if (grand && townLvl(server, 'ramparts') >= 4) wavesTotal = Math.max(1, wavesTotal - 1) // 방벽 Lv4: 대공세 웨이브 -1
   LS.setSiegeActive(server, true)
@@ -662,9 +722,10 @@ function onWaveCleared(server) {
 // 첫 공세를 살아남았다 → 유물이 깨어난다
 function firstSiegeCleared(server) {
   LS.setFirstSiegeDone(server, true)
-  server.players.forEach(p => {
-    server.runCommandSilent(`give ${p.username} kubejs:rift_essence ${FIRST_SIEGE_ESS}`)
-  })
+  // ⚠️ 명단 전원에게. 첫 공세는 **딱 한 번뿐인 사건**이라 여기서 빠진 사람은
+  // 파편을 얻을 다른 길이 대공세·고위협 공성·노드뿐이다 — 며칠을 맨몸으로 보내게 된다.
+  // 그날 밤 접속 못 했다는 이유로 유물 해금이 밀리면 안 된다.
+  awAll(server, (nm) => awItem(server, nm, 'kubejs:rift_essence', FIRST_SIEGE_ESS))
   server.runCommandSilent('title @a title {"text":"유물이 깨어난다","color":"aqua","bold":true}')
   server.runCommandSilent('title @a subtitle {"text":"첫 밤을 버텨낸 자에게 별이 응답했다","color":"gray"}')
   playAll(server, 'minecraft:block.beacon.power_select', 1, 1.2)
@@ -694,7 +755,7 @@ function finishSiege(server, outcome) {
   const accrued = LS.siegeReward(server)
   const fin = finaleStage(server)
   // ── 성벽이 무너진 채 새벽 = 버텨낸 게 아니다 (2026-08-07) ──
-  // WALL_BASE_HP 3000 과 수리비(완전 수리 = 300 Ducat + 원목 75 + 철괴 30 + 조약돌 150)로
+  // WALL_BASE_HP 와 수리비(완전 수리 = 100 Ducat + 원목 25 + 철괴 10 + 조약돌 50)로
   // 판돈을 만들어 놓고 정작 **결과에는 안 연결돼 있었다** — 성벽을 잃든 말든 dawn 은 똑같이
   // "성역은 밤을 버텨냈습니다"였다. 웨이브를 전부 지운 'win' 은 그대로 승리로 둔다(다 잡았으면
   // 이긴 것이다). 강등되는 건 «못 잡았고 성벽도 잃은» 경우뿐이다.
@@ -717,7 +778,9 @@ function finishSiege(server, outcome) {
     addTreasury(server, reward)
     // 공성이 3일에 한 번이므로 승리 한 번이 3일치 상승분을 되돌린다
     setThreat(server, threat - SIEGE_EVERY)
-    if (!wallBroken(server)) wallSetHp(server, wallHp(server) + 300) // 승리 시 성벽 소폭 보수(최대치의 10%)
+    // 주석은 「최대치의 10%」인데 값이 300 으로 박혀 있었다. WALL_BASE_HP 를 내리는 순간
+    // 둘이 갈리므로 계산으로 바꾼다 — 방벽 레벨이 올라도 비율이 유지된다.
+    if (!wallBroken(server)) wallSetHp(server, wallHp(server) + Math.round(wallMax(server) * 0.1))
     // ── 자막을 «먼저» 정하고 타이틀을 띄운다 ──
     // 안 정하면 직전에 남아 있던 자막이 그대로 따라붙는다. 실제로 마지막 물결의
     // 「N번째 물결이 몰려온다!」가 여기 §a성역 방어 성공!§r 밑에 붙어 있었다.
@@ -732,33 +795,40 @@ function finishSiege(server, outcome) {
     // **관전자를 뺀 접속자 전원**에게 준다. 공성은 「누가 마무리했나」가 없는 공동 이벤트라
     // 마지막 킬을 잡은 사람만 세면 벽을 고치고 봉화를 켠 사람이 아무것도 못 받는다.
     // 로드 순서가 s < v 라 `typeof` 로 감싼다 — 없어도 공성은 그대로 끝나야 한다.
+    // ── 보상은 «명단 전원»에게 (2026-08-13) ──
+    // 예전엔 지갑·주간금고가 각자 `server.players.forEach` 를 돌아 **그때 접속해 있던
+    // 사람만** 받았고, 파편은 성역 «바닥»에 떨어져 5분 뒤 사라졌다. 각자 일정이 다른
+    // 친구 서버에서 그건 「바쁜 사람이 영영 밀린다」로 굳는다 — 그리고 밀린 사람은
+    // 그걸 불공평으로 못 읽고 그냥 «내가 약하다»고 느낀다.
+    //
+    // 이제 `awAll`(ls_away.js) 이 분배의 **유일한 입구**다. 여기서 forEach 를 다시 쓰면
+    // 그 순간 부재자가 조용히 빠진다.
+    //
+    // ⚠️ **관전자 제외를 뺐다.** 부재자가 전액을 받는데 관전자만 못 받는 건 앞뒤가 안 맞는다.
+    // ⚠️ **파편이 «공동 드랍»에서 «1인당»으로 바뀌었다** — 총량이 인원수만큼 는다.
+    //    그래도 괜찮은 이유: 무기 각성이 1인당 14개(2~5성 = 2+3+4+5)를 먹는 지속 소모처라,
+    //    여태 공동 2개를 여덟이 나누던 건 사실상 장식이었다.
+    //    빠르다 싶으면 GRAND_ESS / HIGH_THREAT_ESS_AMT 를 낮춘다. 그 두 줄이 전부다.
+    var sgPay = grand ? SIEGE_WAGE_GRAND : SIEGE_WAGE
+    var sgEss = grand ? GRAND_ESS : (threat >= HIGH_THREAT_ESS ? HIGH_THREAT_ESS_AMT : 0)
     try {
-      if (typeof vtSiegeWin === 'function') {
-        server.players.forEach(p => { if (!p.isSpectator()) vtSiegeWin(server, String(p.username)) })
-      }
-    } catch (e) { lsWarn('ls_siege:vault', e) }
+      awAll(server, (nm, online) => {
+        LS.walletAdd(server, nm, sgPay)
+        if (typeof vtSiegeWin === 'function') vtSiegeWin(server, nm)
+        if (sgEss > 0) awItem(server, nm, 'kubejs:rift_essence', sgEss)
+        if (online) {
+          awSay(server, nm, `§e+${sgPay} Ducat §7— 성역을 지킨 대가${sgEss > 0 ? ` §8· §5별의 파편 +${sgEss}` : ''}`)
+        } else {
+          awBump(server, nm, grand ? 'grand' : 'siege', 1)
+        }
+      })
+    } catch (e) { lsWarn('ls_siege:reward', e) }
+    if (sgEss > 0) playAll(server, 'minecraft:block.amethyst_block.chime', 0.9, 0.7)
     // 공성 격퇴 = 반복 가능한 정수 공급처 (무기 각성과 마을 재건을 동시에 굴려야 하므로).
     // 대공세는 항상, 일반 공성은 고위협(HIGH_THREAT_ESS 이상)에서 완전 격퇴했을 때만 —
     // "위협도를 낮게 깔면 안전하지만 정수가 안 나온다"는 선택지를 만든다.
-    var ess = grand ? GRAND_ESS : (threat >= HIGH_THREAT_ESS ? HIGH_THREAT_ESS_AMT : 0)
-    if (ess > 0) {
-      var gc = sancPos(server)
-      server.runCommandSilent(`summon item ${gc.x + 0.5} ${gc.y + 1} ${gc.z + 0.5} {Item:{id:"kubejs:rift_essence",count:${ess}}}`)
-      say(server, `§5✦ 별의 파편 +${ess} §7— ${grand ? '대공세를' : `위협도 ${threat}의 공세를`} 격퇴한 대가 (성역에 떨어졌다)`)
-      playAll(server, 'minecraft:block.amethyst_block.chime', 0.9, 0.7)
-    }
-    // ── 개인 지갑 ── (2026-08-13)
-    // 금고는 마을 몫, 이건 «막아낸 사람» 몫이다. 둘은 다른 주머니다(WalletData 머리말).
-    // 관전자는 뺀다 — activePlayers 와 같은 기준이라야 「구경만 하고 받는다」가 안 생긴다.
-    try {
-      var sgPay = grand ? SIEGE_WAGE_GRAND : SIEGE_WAGE
-      server.players.forEach(p => {
-        if (p.isSpectator()) return
-        LS.walletAdd(server, String(p.username), sgPay)
-        p.tell(Text.of(`§e+${sgPay} Ducat §7— 성역을 지킨 대가`))
-      })
-    } catch (e) { lsWarn('ls_siege:wage', e) }
-    console.log(`[LS-SIEGE] WIN reward=${reward} grand=${grand}`)
+    if (sgEss > 0) say(server, `§5✦ 별의 파편 +${sgEss} §7— ${grand ? '대공세를' : `위협도 ${threat}의 공세를`} 격퇴한 대가 §8(각자 인벤토리로)`)
+    console.log(`[LS-SIEGE] WIN reward=${reward} grand=${grand} wage=${sgPay} ess=${sgEss}`)
   } else if (result === 'dawn') {
     // accrued 는 const 라 재할당하지 않는다 — 'win' 분기가 reward 를 따로 두는 것과 같은 구조.
     // (예전엔 여기서 accrued 를 직접 덮어써 Rhino 에서 런타임 오류가 났다. dawn 은 흔한 경로라 매번 터졌다.)
@@ -1308,7 +1378,7 @@ ServerEvents.commandRegistry(event => {
   event.register(Commands.literal('wall')
     .executes(ctx => {
       const s = ctx.source.server
-      ctx.source.sendSystemMessage(Text.of(`§6▨ 성벽 내구도 ${wallBar(s)} §8(최대 ${wallMax(s)} = 기본 ${WALL_BASE_HP} + 방벽Lv×1000)`))
+      ctx.source.sendSystemMessage(Text.of(`§6▨ 성벽 내구도 ${wallBar(s)} §8(최대 ${wallMax(s)} = 기본 ${WALL_BASE_HP} + 방벽Lv${townLvl(s, 'ramparts')}×${WALL_PER_RAMPART})`))
       // 모양·스폰 거리를 같이 띄운다. 스폰 거리는 이제 계산값이라, 안 보이면 「왜 이 밤만
       // 몹이 멀리서 오지」를 못 읽는다. 건축 명령도 같이 준다 — 판정과 실물이 어긋나면 그게 제일 아프다.
       const wSq = wallIsSquare(s), wRad = wallR(s)
@@ -1441,9 +1511,14 @@ ServerEvents.commandRegistry(event => {
         const nodeReward = Math.round((30 + (townLvl(s, 'sanctum') >= 3 ? 30 : 0)) * REWARD_MULT) // 성소 Lv3: 노드 보상 강화
         addTreasury(s, nodeReward)
         const nodeEss = townLvl(s, 'sanctum') >= 3 ? 3 : 2
-        const nc = sancPos(s)
-        s.runCommandSilent(`summon item ${nc.x + 0.5} ${nc.y + 1} ${nc.z + 0.5} {Item:{id:"kubejs:rift_essence",count:${nodeEss}}}`)
-        say(s, `§5✦ 별의 파편 +${nodeEss} §7— 어둠의 근원이 응결됐다 (성역에 떨어졌다)`)
+        // 바닥 드랍 → 각자 인벤토리. 부재자는 보관함에 쌓인다 (`ls_away.js`).
+        try {
+          awAll(s, (nm, online) => {
+            awItem(s, nm, 'kubejs:rift_essence', nodeEss)
+            if (!online) awBump(s, nm, 'node', 1)
+          })
+        } catch (e) { lsWarn('ls_siege:node-ess', e) }
+        say(s, `§5✦ 별의 파편 +${nodeEss} §7— 어둠의 근원이 응결됐다 §8(각자 인벤토리로)`)
         say(s, `§b✔ 균열 노드 파괴: §d${name} §7— 세상이 숨을 돌린다 (남은 ${names.length}개) §e공동 금고 +${nodeReward}`)
         playAll(s, 'minecraft:ui.toast.challenge_complete', 1, 0.8)
         playAll(s, 'minecraft:block.beacon.activate', 0.8, 1.2)
@@ -1549,7 +1624,10 @@ ServerEvents.commandRegistry(event => {
       // 이게 안 보이면 「40마리인데 왜 렉이 걸리지」와 「80마리인데 멀쩡하네」를 못 가른다.
       var wN = buildWave(et, false, pc, pg), wG = buildWave(et, true, pc, pg)
       ctx.source.sendSystemMessage(Text.of(
-        `§8   그중 정예 §c${countElites(wN)}§8마리 (대공세 §c${countElites(wG)}§8) · 예산 ${eliteBudget(false, pc)}/${eliteBudget(true, pc)}`))
+        `§8   그중 정예 §c${countElites(wN)}§8마리 (대공세 §c${countElites(wG)}§8)`))
+      var ecN = eliteCounts(false, pc), ecG = eliteCounts(true, pc)
+      ctx.source.sendSystemMessage(Text.of(
+        `§8   광전사 §7${ecN.ber}§8 · 레버넌트 §7${ecN.rev}§8 §7(대공세 ${ecG.ber}/${ecG.rev})§8 — ${pc}명 기준`))
       // 양과 질이 갈렸으니 둘을 같이 보여준다 — 안 보이면 "관문 깼는데 뭐가 달라졌지"가 된다
       ctx.source.sendSystemMessage(Text.of(
         `§8몹 단계 §7${waveTier(pg, et)}§8/5 §7— 관문 ${pg}/4${et >= 10 ? ' §c+ 방치 보정(위협 10+)' : ''}`))
