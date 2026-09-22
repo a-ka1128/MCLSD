@@ -51,6 +51,22 @@ public final class ThreatManager {
     // 이지스 평타 위협도 계수 (유저 결정: 평타만 ×2, 스킬은 그대로).
     private static final float GUARDIAN_AUTO = 2.0f;
 
+    // 네메시스 평타 위협도 계수 (2026-08-09 유저 결정).
+    //
+    // ── 왜 붙였나 ──
+    // 네메시스는 도발 두 개(R 6칸 2초 · C 8칸 4초)로만 어그로를 끌었다. 그 사이 구간에는
+    // 위협도가 딜러와 똑같이 쌓여서, 「탱커인데 몹이 나를 안 본다」가 나올 수밖에 없었다.
+    // 이지스는 이 배수 + 궁극(16칸/8초)까지 있어 상시로 붙잡지만, 이쪽엔 아무것도 없었다.
+    //
+    // ── 왜 2.0 이 아니라 1.5 인가 ──
+    // 두 탱커가 같은 값을 가지면 「둘 중 아무나」가 된다. 이지스는 «붙잡고 있는» 탱커,
+    // 네메시스는 «순간마다 되찾아오는» 탱커다 — 상시 몫은 이지스가 더 크고,
+    // 대신 이쪽은 도발 두 개를 짧은 구간에 몰아 걸 수 있다.
+    //
+    // ⚠️ 네메시스의 평타는 «느리다»(공격 속도 −2.8). 초당 위협도로 보면 1.5 배여도
+    //    이지스와의 격차는 이 숫자보다 크다. 인게임에서 여전히 안 붙으면 여기부터 올린다.
+    private static final float NEMESIS_AUTO = 1.5f;
+
     // 힐 위협도를 뿌릴 반경 — 이 안의 교전 중인 몹이 힐러를 미워한다.
     private static final double HEAL_RADIUS = 24.0;
 
@@ -126,11 +142,12 @@ public final class ThreatManager {
         if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) return;
 
         float amount = event.getNewDamage();
-        // 이지스는 평타에만 ×2. 스킬 피해는 전부 LsDamage 를 거치므로 그걸로 구분한다
+        // 탱커는 평타에만 배수가 붙는다. 스킬 피해는 전부 LsDamage 를 거치므로 그걸로 구분한다
         // (근접 유물은 스킬도 바닐라 피해원을 쓰기 때문에 DamageSource 로는 구분이 안 된다).
-        if (!LsDamage.inSkill()
-            && attacker.getMainHandItem().getItem() == LSRelics.GUARDIAN.get()) {
-            amount *= GUARDIAN_AUTO;
+        if (!LsDamage.inSkill()) {
+            var held = attacker.getMainHandItem().getItem();
+            if (held == LSRelics.GUARDIAN.get()) amount *= GUARDIAN_AUTO;
+            else if (held == LSRelics.NEMESIS.get()) amount *= NEMESIS_AUTO;
         }
         add(mob, attacker, amount);
     }

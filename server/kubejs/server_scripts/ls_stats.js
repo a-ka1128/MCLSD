@@ -81,7 +81,11 @@ function cerStart(server) {
 }
 function cerLine(server, step) {
   const K = stTop(server, 'k'), D = stTop(server, 'd'), SG = stTop(server, 'sg'), B = stTop(server, 'b'), C = stTopContrib(server)
-  const pop = stStore(server).getInt('town_pop')
+  // 인구 — 이관 5단계로 모드가 소유한다 (2026-08-06). 예전엔 `town_pop` 을 직접 읽었는데,
+  // `ls_rescue.js` 만 옮겼으면 **폐막식이 「인구 0명」으로 닫혔다.** 오류 없이.
+  // 이 파일에는 그 사고의 전례가 있다 — 명예 보드가 몇 주 동안 「CSV 첫 사람, 0점」을 1위로 냈다.
+  var pop = 0
+  try { pop = LS.population(server) | 0 } catch (e) { lsWarn('ls_stats:pop', e) }
   switch (step) {
     case 1:
       server.runCommandSilent('title @a title {"text":"Last Stardust","color":"gold","bold":true}')
@@ -125,7 +129,9 @@ ServerEvents.tick(event => {
   const server = event.server
   const p = stStore(server)
   // 피날레 승리 → 15초 후 자동 폐막식 (1회)
-  if (p.getInt('ls_finale') === 100 && !p.getBoolean('cer_auto_done')) {
+  // 최종장 단계는 모드(LSData.siege)가 소유한다 (이관 4단계, 2026-07-31).
+  // 옛 키를 계속 읽으면 늘 0 이라 **최종 보스를 잡아도 폐막식이 영영 안 열린다.**
+  if (LS.finale(server) === 100 && !p.getBoolean('cer_auto_done')) {
     var cd = p.getInt('cer_auto_cd')
     if (cd === 0) p.putInt('cer_auto_cd', 15)
     else if (cd === 1) { p.putBoolean('cer_auto_done', true); p.putInt('cer_auto_cd', 0); cerStart(server) }

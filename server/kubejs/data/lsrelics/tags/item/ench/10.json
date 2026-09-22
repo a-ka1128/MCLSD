@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:enchantable/vanishing",
+    "lsrelics:guardian",
+    "lsrelics:lancer",
+    "lsrelics:hecate",
+    "lsrelics:nemesis",
+    "lsrelics:assassin",
+    "lsrelics:chiron",
+    "lsrelics:pioneer",
+    "lsrelics:hunter",
+    "lsrelics:gunner",
+    "lsrelics:sage",
+    "lsrelics:healer",
+    "lsrelics:harmonia"
+  ]
+}

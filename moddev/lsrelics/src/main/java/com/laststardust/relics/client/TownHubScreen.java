@@ -95,9 +95,10 @@ public class TownHubScreen extends Screen {
             } else {
                 g.drawString(this.font, Component.literal("§7→ §f").append(t.nextName()), panelX + 22, y + 13, C_BODY, false);
                 boolean ok = t.canUpgrade();
-                var cost = t.itemName().copy()
-                    .append(net.minecraft.network.chat.Component.literal(
-                        "  " + t.have() + "/" + t.need() + "   " + t.ducat() + " Ducat"));
+                // 허브는 트랙 넷을 한 화면에 얹으므로 자원은 한 줄로 줄인다.
+                // 자세한 내역은 트랙 창에서 줄마다 나눠 보여준다.
+                var cost = net.minecraft.network.chat.Component.literal(
+                    t.shortCost() + "   " + t.ducat() + " Ducat");
                 g.drawString(this.font, cost, panelX + 22, y + 24, ok ? C_OK : C_SUB, false);
                 if (ok) {
                     String ready = Component.translatable("lstown.gui.ready").getString();

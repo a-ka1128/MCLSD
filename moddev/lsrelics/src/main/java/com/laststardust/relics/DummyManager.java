@@ -43,8 +43,80 @@ public final class DummyManager {
 
     private static final Logger LOG = LogUtils.getLogger();
 
-    private static final double DUMMY_HP = 1_000_000.0; // AttributeCaps 가 상한을 풀어둬서 가능
+    private static final double DUMMY_HP_DEFAULT = 1_000_000.0; // AttributeCaps 가 상한을 풀어둬서 가능
     private static final double REFILL_BELOW = 0.2;     // 20% 밑으로 떨어지면 다시 채운다
+
+    // ── 더미 체력을 바꿀 수 있다 (2026-08-11) ──
+    // 기본 100만은 「60초 동안 안 죽는 과녁」이라는 목적에는 맞았는데, **체력 비율에 걸리는
+    // 축복을 영원히 못 재는** 부작용이 있었다. `executioner`(체력 25% 이하 추가 피해)는
+    // 100만짜리를 60초에 25% 까지 못 깎으니 한 번도 발동하지 않고, `harvest`(처치 시 회복)는
+    // 더미가 안 죽으니 마찬가지다. 재려면 체력을 내릴 수 있어야 한다.
+    //   · 낮게 잡을 때 REFILL_BELOW(20%) 자동 보충이 executioner 구간을 지워버리므로,
+    //     체력을 직접 정한 동안에는 보충을 끈다(아래 dummyHpFixed).
+    private static double dummyHp = DUMMY_HP_DEFAULT;
+    private static boolean dummyHpFixed = false;
+
+    public static double hp() { return dummyHp; }
+    public static boolean hpFixed() { return dummyHpFixed; }
+
+    /** 지금 실제로 남아 있는 체력(첫 더미 기준). 「깎았는데 다시 찼나」를 눈으로 보려고 있다. */
+    public static double currentHp() {
+        prune();
+        return DUMMIES.isEmpty() ? 0 : DUMMIES.get(0).getHealth();
+    }
+
+    /** 값이 0 이하면 기본값(100만)으로 되돌리고 자동 보충도 다시 켠다. */
+    public static void setHp(double v) {
+        dummyHpFixed = v > 0;
+        dummyHp = dummyHpFixed ? v : DUMMY_HP_DEFAULT;
+        prune();
+        for (LivingEntity d : DUMMIES) applyHp(d);
+    }
+
+    private static void applyHp(LivingEntity d) {
+        AttributeInstance a = d.getAttribute(Attributes.MAX_HEALTH);
+        if (a != null) a.setBaseValue(dummyHp);
+        d.setHealth((float) dummyHp);
+    }
+
+    // ── 더미가 되받아친다 (2026-08-11) ──
+    // 더미는 `setNoAi(true)` 라 절대 반격하지 않는다. 측정이 흐려지지 않게 일부러 그렇게
+    // 만든 것인데, 그 때문에 **맞아야 발동하는 축복 5종을 아예 못 쟀다**
+    // (`barrier`·`thorns`·`resolve`·`grudge`·`sprint`).
+    //
+    // AI 를 주는 대신 **정해진 피해를 정해진 주기로** 넣는다. 실제 몹보다 오히려 낫다 —
+    // 「1.5초마다 20」처럼 고정하면 보호막이 몇 번 터졌는지가 산수로 떨어진다. AI 를 주면
+    // 이동·쿨·명중이 섞여 그 계산이 다시 추정이 된다.
+    //
+    // ⚠️ 피해원은 더미(공격자 엔티티)를 그대로 쓴다. `thorns`·`grudge` 는 「누가 때렸나」를
+    //    보므로 공격자가 없는 피해로 넣으면 그 둘이 안 돈다.
+    private static float retaliateDmg = 0f;      // 0 = 꺼짐
+    private static int retaliateEvery = 30;      // 기본 1.5초
+    private static long retaliateNext = 0;
+    /** 이번 측정에서 내가 실제로 넣은 되받아치기 횟수. 「원본」과 갈라 보려고 센다. */
+    private static int retaliateHits = 0;
+    /**
+     * 되받아치기가 <b>실제로 도착시킨</b> 원본 피해 합.
+     *
+     * <p>⚠️ <b>넣은 값과 도착한 값이 다르다.</b> `mobAttack` 은 damage type 의
+     * {@code scaling: when_caused_by_living_non_player} 을 타므로 <b>난이도 배수</b>가 붙는다
+     * (Hard = ×1.5). {@code /dummy hit 20} 이 30 이 되어 도착한다.
+     *
+     * <p>이걸 몰라서 2026-08-11 에 크게 헤맸다 — 「설정값 × 횟수」로 계산한 몫을 빼서
+     * 「그 밖의 피해 60」을 만들어내고, 「6번이어야 하는데 9번 맞았다」는 있지도 않은 현상을
+     * 두 번 보고했다. <b>실제로는 6번 × 30 이었다.</b> 그리고 그 잘못된 분모로 가시 갑주를
+     * 「설계의 2.2배」로 읽어 멀쩡한 코드를 고칠 뻔했다.
+     */
+    private static float retaliateRaw = 0f;
+
+    public static float retaliateDamage() { return retaliateDmg; }
+    public static int retaliateInterval() { return retaliateEvery; }
+
+    public static void setRetaliate(float dmg, int everyTicks) {
+        retaliateDmg = Math.max(0f, dmg);
+        retaliateEvery = Math.max(1, everyTicks);
+        retaliateNext = tick + retaliateEvery;
+    }
 
     private static final List<LivingEntity> DUMMIES = new ArrayList<>();
 
@@ -138,16 +210,24 @@ public final class DummyManager {
     }
 
     // 유물 이름은 게임 내 표기(한글)를 쓴다. getHoverName() 은 서버 언어로 풀려서
-    // 번역 키나 영문이 나올 수 있어, 필요한 8종만 직접 적는다.
+    // 번역 키나 영문이 나올 수 있어, 12종을 직접 적는다.
+    //
+    // ⚠️ **유물을 새로 만들면 여기도 같이 추가할 것.** 빠뜨리면 null 이 되고 리포트에
+    //    이름이 빈칸으로 찍힌다 — 오류가 아니라 조용히 비어서 측정 로그를 나중에 읽을 때
+    //    어느 유물이었는지 알 수 없게 된다(2026-08-10 케이론 15판 측정에서 실제로 겪음).
     private static String relicName(net.minecraft.world.item.Item item) {
         if (item == LSRelics.GUNNER.get())   return "솔라리스";
         if (item == LSRelics.HUNTER.get())   return "시리우스";
         if (item == LSRelics.ASSASSIN.get()) return "스틱스";
         if (item == LSRelics.LANCER.get())   return "게볼그";
+        if (item == LSRelics.HECATE.get())   return "헤스페로스";
+        if (item == LSRelics.HARMONIA.get()) return "바르비톤";
+        if (item == LSRelics.NEMESIS.get())  return "아드라스테이아";
         if (item == LSRelics.PIONEER.get())  return "타이탄";
         if (item == LSRelics.GUARDIAN.get()) return "이지스";
         if (item == LSRelics.SAGE.get())     return "셀레스티아";
         if (item == LSRelics.HEALER.get())   return "파나케이아";
+        if (item == LSRelics.CHIRON.get())   return "펠리온";
         return null;
     }
 
@@ -166,10 +246,10 @@ public final class DummyManager {
         dummy.setCustomNameVisible(true);
 
         AttributeInstance hp = dummy.getAttribute(Attributes.MAX_HEALTH);
-        if (hp != null) hp.setBaseValue(DUMMY_HP);
+        if (hp != null) hp.setBaseValue(dummyHp);
         AttributeInstance kb = dummy.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
         if (kb != null) kb.setBaseValue(1.0); // 밀려나면 근접이 계속 쫓아가야 해서 측정이 흐려진다
-        dummy.setHealth((float) DUMMY_HP);
+        dummy.setHealth((float) dummyHp);
         applyArmor(dummy);
 
         // ── 엔티티 자체에 표식을 박는다 ──
@@ -240,7 +320,15 @@ public final class DummyManager {
         HITS.clear();
         RELICS.clear();
         BUFFS.clear();
-        for (LivingEntity d : DUMMIES) d.setHealth(d.getMaxHealth());
+        resetVitals();
+        retaliateNext = tick + retaliateEvery;
+        // ⚠️ **체력을 손으로 정한 동안에는 안 채운다** (2026-08-11).
+        //    `executioner`(체력 25% 이하)를 재려면 «이미 깎인 상태»에서 시작할 수 있어야 한다.
+        //    매번 꽉 채우면 판의 3/4 이 조건 밖이라 30% 효과가 평균 +7.5% 로 묽어지고,
+        //    평타 노이즈(±4%)에 묻힌다. 다시 채우고 싶으면 `/dummy hp <값>` 을 한 번 더 친다.
+        if (!dummyHpFixed) {
+            for (LivingEntity d : DUMMIES) d.setHealth(d.getMaxHealth());
+        }
         startTick = tick;
         measuring = true;
         plannedTicks = Math.max(0, seconds) * 20;
@@ -274,8 +362,15 @@ public final class DummyManager {
         float total = totalDamage();
 
         out.add(Component.literal("§6═══ ✦ DPS 측정 결과 ═══"));
+        // ── 준 피해가 0 이어도 «받은 피해»는 내놓는다 (2026-08-12) ──
+        // 초판은 여기서 통째로 돌아섰다. 그런데 **방어 측정에는 준 피해가 필요 없고**,
+        // 이지스의 「우클릭 방어」 판은 아예 **때릴 수가 없다**(우클릭을 쥐고 있으니 좌클릭이 안 나간다).
+        // 그래서 5성 2단 −16% 를 재려던 판이 「기록된 피해가 없다」 한 줄만 남기고 사라졌다.
+        // **못 잰 게 아니라, 잰 것을 안 보여준 것이다.**
         if (total <= 0) {
-            out.add(Component.literal("§7기록된 피해가 없다. §8(/dummy start 후 더미를 때려야 한다)"));
+            out.add(Component.literal("§7준 피해 없음 §8— 방어 측정이면 정상이다 (우클릭 방어 중엔 평타가 안 나간다)"));
+            if (rawFirst > 0) { damageTakenLines(out); return out; }
+            out.add(Component.literal("§8받은 피해도 없다. §7/dummy hit 으로 되받아치기를 켰는지 확인할 것."));
             return out;
         }
         out.add(Component.literal(String.format("§7경과 §e%.1f초 §7· 총 피해 §e%,.0f", secs, total)));
@@ -299,9 +394,15 @@ public final class DummyManager {
                 buffs == null ? "" : " §6[" + buffs + "]")));
         }
         // ── 스킬별 배분 ──
-        // 이름표가 하나뿐이면(=전부 평타) 줄만 늘어나므로 생략한다.
-        if (BY_SKILL.size() > 1) {
-            out.add(Component.literal("§8──── 스킬별 ────"));
+        //
+        // 이름표가 하나뿐이면(=전부 평타) 「스킬별」이라는 제목만 군더더기가 되므로 제목은
+        // 건너뛴다. **줄 자체는 반드시 낸다.**
+        //   원래는 `size() > 1` 로 절을 통째로 생략했다. 그런데 콤보 배율을 보려고
+        //   «스킬 없이 평타만» 재는 판이 바로 그 경우라, 제일 알고 싶은 타수·단타 평균이
+        //   통째로 사라졌다(2026-08-10 네메시스·스틱스 평타 측정에서 실제로 겪음).
+        //   총 DPS 만 남으면 «타수가 모자란 건지 한 대가 약한 건지»를 못 가른다.
+        if (!BY_SKILL.isEmpty()) {
+            if (BY_SKILL.size() > 1) out.add(Component.literal("§8──── 스킬별 ────"));
             List<Map.Entry<String, Float>> skills = new ArrayList<>(BY_SKILL.entrySet());
             skills.sort(Comparator.<Map.Entry<String, Float>>comparingDouble(Map.Entry::getValue).reversed());
             for (Map.Entry<String, Float> e : skills) {
@@ -315,11 +416,64 @@ public final class DummyManager {
             }
         }
 
+        // ── 회복·흡수 ── 축복 넷(생명흡수·치유·범람·재생)은 여기서만 보인다.
+        // 0 이면 줄을 안 낸다 — 회복이 없는 유물이 대부분이라 늘 0 이면 눈이 무시하게 된다.
+        float shielded = com.laststardust.relics.blessing.BlessingEffects.shieldGiven();
+        if (healed > 0.05f || shielded > 0.05f || natural > 0.05f || taken > 0.05f) {
+            out.add(Component.literal("§8──────────────"));
+            out.add(Component.literal(String.format(
+                "§d회복 §f%,.0f §8(%.1f HPS)§7 · 보호막 §f%,.0f §8(%.1f/s)",
+                healed, healed / secs, shielded, shielded / secs)));
+            // 자연 회복은 «우리 것이 아니다». 따로 내되 지우지는 않는다 —
+            // 0 이면 「되받아치기가 안 맞고 있다」는 신호라 그것대로 값어치가 있다.
+            if (natural > 0.05f) {
+                out.add(Component.literal(String.format(
+                    "§8자연 회복 %,.0f (%.1f HPS) — 축복 아님, 위 회복에서 제외됨",
+                    natural, natural / secs)));
+            }
+        }
+        damageTakenLines(out);
+
         out.add(Component.literal("§8──────────────"));
         out.add(Component.literal(String.format(
             "§7보스 체력 환산 §8— 60초 §f%,.0f §8· 90초 §f%,.0f §8· 120초 §f%,.0f",
             total / secs * 60, total / secs * 90, total / secs * 120)));
         return out;
+    }
+
+    /**
+     * 「받은 피해」 묶음. <b>준 피해가 0 인 판에서도 이걸 내놓아야 한다</b> —
+     * 방어 측정에는 준 피해가 필요 없고, 이지스의 우클릭 방어 판은 아예 때릴 수가 없다.
+     *
+     * <p>세 값의 뜻을 헷갈리면 결론이 통째로 뒤집힌다:
+     * <ul>
+     *   <li><b>원본 → 감쇄 전</b> = <b>이벤트 핸들러</b>가 먹은 몫 (별의 축복 · 5성 2단 · 패링·방어)
+     *   <li><b>감쇄 전 → 실제</b> = <b>방어도·흡수</b>가 먹은 몫
+     * </ul>
+     * 그래서 <b>2단의 피해 감소는 첫 구간에서 읽는다.</b> 갑옷은 둘째 구간이라 벗을 필요가 없다.
+     */
+    private static void damageTakenLines(List<Component> out) {
+        if (retaliateDmg <= 0 && rawFirst <= 0) return;
+
+            out.add(Component.literal(String.format(
+                "§8되받아치기 %.0f × %.1f초 주기 §7· 내 최대 체력 §f%,.0f",
+                retaliateDmg, retaliateEvery / 20.0f, maxHpOfFirstPlayer())));
+            out.add(Component.literal(String.format(
+                "§8받은 피해 §7— 원본 §f%,.0f §8→ 감쇄 전 §f%,.0f §8→ 실제 §f%,.0f",
+                rawFirst, rawLast, taken)));
+            // ⚠️ 내가 넣은 몫과 «그 밖» 을 갈라 보인다. 2026-08-11 에 원본이 설정값의 1.5배로
+            //    나와 「되받아치기가 자주 때리나」를 의심했는데, 가시가 정확히 6타(=6회)였다.
+            //    즉 되받아치기는 맞고 «공격자 없는 다른 피해» 가 섞인 것이다 — 그 둘을 눈으로
+            //    가르지 못하면 「받은 피해의 몇 %」인 축복(가시)의 분모를 영영 못 믿는다.
+            out.add(Component.literal(String.format(
+                "§8  ├ 되받아치기 §f%d회 §8· 넣은 값 %.0f → §f도착 %,.0f §8(한 대 %.1f · 난이도 배수 §f×%.2f§8)",
+                retaliateHits, retaliateDmg, retaliateRaw,
+                retaliateHits > 0 ? retaliateRaw / retaliateHits : 0f,
+                retaliateHits > 0 && retaliateDmg > 0 ? retaliateRaw / retaliateHits / retaliateDmg : 1f)));
+            float other = rawFirst - retaliateRaw;
+            out.add(Component.literal(other > 0.5f
+                ? String.format("§c  └ 그 밖의 피해 %,.0f §8— 공격자 없는 피해가 섞였다", other)
+                : "§8  └ 그 밖의 피해 없음"));
     }
 
     // ── 집계 ──
@@ -358,16 +512,126 @@ public final class DummyManager {
         HITS.merge(key, 1, Integer::sum);
     }
 
+    // ── 회복·흡수 집계 (2026-08-11) ──
+    //
+    // 왜 필요한가: 축복 18종 중 넷(`lifesteal`·`mend`·`overflow`·`regen`)은 **피해가 아니라
+    // 회복**으로 나타난다. 리포트가 피해만 세니 그 넷은 재도 화면에 아무 변화가 없었다 —
+    // 「돌긴 도는데 얼마인지 모르는」 상태였다.
+    //
+    // 흡수(`overflow`·`barrier`)를 따로 세는 이유: 흡수는 최대 체력을 안 넘으므로 heal 로는
+    // 안 잡힌다. 둘을 합쳐 한 줄로 내면 「보호막이 안 도는」 것과 「보호막이 도는데 작은」
+    // 것이 구분이 안 된다.
+    private static float healed = 0f;
+    private static float natural = 0f;
+    private static float taken = 0f;
+
+    static void resetVitals() {
+        healed = 0f; natural = 0f; taken = 0f; rawFirst = 0f; rawLast = 0f;
+        retaliateHits = 0; retaliateRaw = 0f;
+        com.laststardust.relics.blessing.BlessingEffects.resetShieldGiven();
+    }
+
+    /**
+     * <b>내가 실제로 받은 피해.</b> 「가시 갑주」처럼 «받은 피해의 몇 %» 인 축복은 이게 없으면
+     * 못 읽는다 — 2026-08-11 ⑤ 묶음에서 가시 10.3 이 나왔는데 분모를 몰라 해석이 막혔다.
+     * 그때 리포트가 찍던 「받은 피해 120」은 <b>되받아치기 설정값으로 계산한 추정</b>이었지
+     * 실측이 아니었다.
+     */
+    @SubscribeEvent
+    public static void onPlayerHurt(LivingDamageEvent.Post event) {
+        if (!measuring) return;
+        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        taken += event.getNewDamage();
+    }
+
+    // ── 「내가 넣은 값」이 「축복이 보는 값」으로 오는 사이를 본다 (2026-08-11) ──
+    //
+    // 가시 갑주가 설계(받은 피해의 25%)의 2.24배로 나왔는데, 원인을 코드만 보고 못 짚었다.
+    // 후보를 셋(amplify · onGiantSlayer · ls_mobscale) 짚었다가 셋 다 틀렸다.
+    // 그래서 **추측을 그만두고 잰다** — 같은 이벤트를 맨 앞(HIGHEST)과 맨 뒤(LOWEST)에서
+    // 각각 잡으면, 그 사이에 누가 값을 건드렸는지가 뺄셈 없이 그대로 보인다.
+    //   · rawFirst  = 아무도 안 건드린 원본 (내가 /dummy hit 으로 넣은 값이어야 한다)
+    //   · rawLast   = 방어도 감쇄 «직전» 값 (축복·유물 핸들러가 다 지난 뒤)
+    //   · taken     = 실제로 체력에서 깎인 값
+    private static float rawFirst = 0f;
+    private static float rawLast = 0f;
+
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGHEST)
+    public static void onPlayerIncomingFirst(
+            net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
+        if (!measuring) return;
+        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        rawFirst += event.getAmount();
+        // 더미가 때린 것만 따로 센다 — 「내가 넣은 몫」을 추정이 아니라 실측으로 잡는다.
+        if (event.getSource().getEntity() instanceof LivingEntity src && isDummy(src)) {
+            retaliateRaw += event.getAmount();
+        }
+    }
+
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+    public static void onPlayerIncomingLast(
+            net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
+        if (!measuring) return;
+        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        rawLast += event.getAmount();
+    }
+
+    /**
+     * <b>축복·유물이 넣은 회복</b>과 <b>그 밖의 회복</b>을 갈라 센다 (2026-08-11).
+     *
+     * <p>가르는 기준은 {@code BlessingEffects.healingBy} 다 — 축복·유물이 넣는 회복은 전부
+     * 그 안을 지나고, 바닐라 자연 회복·음식·물약은 안 지난다.
+     *
+     * <p><b>왜 필요한가</b>: 「재생」 축복은 케이론 기준 <b>0.34 HPS</b> 다(최대 체력 34 의 4% 를
+     * 4초마다). 배경 회복이 조금이라도 섞이면 그 값은 읽을 수가 없다.
+     *
+     * <p>⚠️ <b>이 기능을 만든 계기는 오진이었다.</b> ⑤ 묶음 판 0 에서 회복 184 가 잡혔길래
+     * 「되받아치기로 깎이니 자연 회복이 돌았구나」로 읽었는데, 실제로는 <b>지우지 않고 남아
+     * 있던 생명 흡수·치유</b>였다({@code 1,371 × 0.11 × 1.22 = 184.0} — 소수점까지 맞는다).
+     * 기능 자체는 옳아서 남기지만, <b>회복이 이상하면 자연 회복부터 의심하지 말고
+     * {@code /bless status} 로 남은 축복부터 볼 것.</b>
+     */
+    @SubscribeEvent
+    public static void onHeal(net.neoforged.neoforge.event.entity.living.LivingHealEvent event) {
+        if (!measuring) return;
+        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        if (com.laststardust.relics.blessing.BlessingEffects.healAttributed()) healed += event.getAmount();
+        else natural += event.getAmount();
+    }
+
+
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         tick++;
         server = event.getServer();   // rescan() 이 쓸 유일한 서버 참조
         if (DUMMIES.isEmpty()) return;
         prune();
-        // 더미가 죽어서 측정이 끊기지 않게 체력을 다시 채운다
-        for (LivingEntity d : DUMMIES) {
-            if (d.getHealth() < d.getMaxHealth() * REFILL_BELOW) d.setHealth(d.getMaxHealth());
+        // 더미가 죽어서 측정이 끊기지 않게 체력을 다시 채운다.
+        // ⚠️ 체력을 손으로 정해둔 동안에는 보충하지 않는다 — `executioner`(체력 25% 이하)를
+        //    재려고 낮게 잡았는데 20% 에서 자동으로 꽉 채우면 그 구간이 통째로 사라진다.
+        if (!dummyHpFixed) {
+            for (LivingEntity d : DUMMIES) {
+                if (d.getHealth() < d.getMaxHealth() * REFILL_BELOW) d.setHealth(d.getMaxHealth());
+            }
         }
+
+        // ── 되받아치기 ── 측정 중에만 돈다. 밖에서 맞으면 「가만히 서 있는 과녁」이 아니게 된다.
+        if (measuring && retaliateDmg > 0 && tick >= retaliateNext) {
+            retaliateNext = tick + retaliateEvery;
+            for (LivingEntity d : DUMMIES) {
+                if (!d.isAlive()) continue;
+                for (ServerPlayer p : event.getServer().getPlayerList().getPlayers()) {
+                    if (p.isSpectator() || p.isCreative()) continue;
+                    if (p.distanceToSqr(d) > 256.0) continue;   // 16칸 — 재는 사람만
+                    // 무적 프레임을 지운다. 1.5초 주기라 원래도 안 겹치지만, 주기를 짧게 잡고
+                    // 재는 경우(보호막 재충전 확인 등)에 «가끔 안 들어오는» 게 섞이면 안 된다.
+                    p.invulnerableTime = 0;
+                    p.hurt(d.level().damageSources().mobAttack(d), retaliateDmg);
+                    retaliateHits++;
+                }
+            }
+        }
+
         if (!measuring) return;
         MinecraftServer server = event.getServer();
 
@@ -436,6 +700,20 @@ public final class DummyManager {
 
     // 죽은 참조를 걷어내고, 월드에 남아 있는 더미를 다시 주워 온다.
     // 재시작 후에는 리스트가 비어 있으므로 이 rescan 이 유일한 복구 경로다.
+
+    /**
+     * 재는 사람의 최대 체력. 「별빛 보호막(최대 체력 8%)」·「재생(최대 체력 4%)」처럼
+     * <b>최대 체력 비례</b> 인 축복은 이 값이 없으면 기대치를 못 세운다 — 2026-08-11 ⑤ 묶음에서
+     * 재생 27 이 나왔는데 최대 체력을 몰라 「4배 빠른 버그인가」로 헛짚을 뻔했다.
+     */
+    private static float maxHpOfFirstPlayer() {
+        if (server == null) return 0f;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (!p.isSpectator()) return p.getMaxHealth();
+        }
+        return 0f;
+    }
+
     private static void prune() {
         Iterator<LivingEntity> it = DUMMIES.iterator();
         while (it.hasNext()) {

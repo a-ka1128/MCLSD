@@ -33,6 +33,18 @@ public class StarBow extends BowItem implements RelicActions {
     //   평타      2,189 / 2,087 / 2,106 / 2,066   (±3%)
     //   유성 사격   379 /   361 /   338 /   418   (±11%)
     //   별빛 폭풍   700 /   600 /   496 /   747   (±20%)
+    //
+    // ⚠️ **위 유성 사격 4판은 폭발이 죽어 있던 상태의 값이다 (2026-08-04 판명).**
+    //    착탄 이벤트가 안 돌아 화살 직격만 들어가고 있었다 — 그 상태의 실측이 「18타 평균 9.9」.
+    //    훅을 살린 뒤 같은 스킬이 18타 평균 99.3 / 103.0 이 나왔다. **위 숫자를 기준으로 쓰지 말 것.**
+    //    별빛 폭풍의 4판도 착탄 확산이 죽어 있던 값이라 마찬가지다(평균 56.6 → 77.4 / 85.5).
+    //
+    // ── 2026-08-04 실측 (60초 · 축복 밖 · 방어도 0 · 5성) ──
+    //   1판(궁 2회)  총 6,927 · 115.5 DPS   평타 3,515(197타) · 유성 1,788(18타) · 폭풍 1,625(19타)
+    //   2판(궁 1회)  총 5,984 ·  99.7 DPS   평타 3,510(199타) · 유성 1,855(18타) · 폭풍   620( 8타)
+    // 유성은 쿨 10초라 두 판 다 18타(6시전 × 3발)로 고정 — 궁극기 횟수와 무관해 비교가 깨끗하다.
+    // 지속 기준은 104.8 로 봤다(궁극기 쿨 45초 → 60초당 1.33회). 거기서 폭발을 ×0.75 해
+    // 97.9 로 내렸다 — `RelicSkills.meteorShot` 주석 참조.
     // 흔들리는 건 궁극기 하나다. 하늘에서 화살이 떨어지는 스킬이라 표적 1기에 몇 발이
     // 맞느냐가 매번 다르다 — 최소 496, 최대 747 로 1.5배 차이다.
     // - 한 판으로 판단하지 말 것 - .
@@ -97,8 +109,11 @@ public class StarBow extends BowItem implements RelicActions {
     private void fire(ServerLevel sl, Player player, ItemStack stack) {
         Vec3 look = player.getViewVector(1.0f);
         Arrow arrow = com.laststardust.relics.LsArrows.create(sl, player, stack);
-        arrow.setPos(player.getX(), player.getEyeY() - 0.1, player.getZ());
-        arrow.shoot(look.x, look.y, look.z, ARROW_SPEED, ARROW_INACCURACY);
+        // 눈높이 정중앙이 아니라 손에서 나간다 — 초당 여러 발이라 조준선 위에 겹치면 앞이 안 보인다
+        Vec3 hand = RelicSkills.muzzle(player, look);
+        arrow.setPos(hand.x, hand.y, hand.z);
+        Vec3 aim = RelicSkills.muzzleDir(player, look, hand);
+        arrow.shoot(aim.x, aim.y, aim.z, ARROW_SPEED, ARROW_INACCURACY);
         arrow.setBaseDamage(ARROW_DMG * RelicSkills.power(stack)); // 평타도 각성·전역 배율을 받는다
         if (sl.getRandom().nextFloat() < CRIT_CHANCE) arrow.setCritArrow(true); // 확률 크리
         arrow.pickup = AbstractArrow.Pickup.DISALLOWED; // 별빛 화살(무한, 회수 불가)
@@ -118,4 +133,23 @@ public class StarBow extends BowItem implements RelicActions {
         RelicSkills.meteorShot(level, player, stack);
     }
 
+
+    // ── 인챈트 테이블에서도 걸리게 (2026-08-18) ──
+    // 바닐라 기본값은 «스택1 && 내구도 있음»이라, 내구도가 없는 유물 9종은
+    // 인챈트 테이블도 모루도 통째로 거부했다. 유물은 닳아 없어지면 안 되는 물건이라
+    // 내구도를 주는 대신 여기만 연다.
+    //
+    // ⚠️ **무엇이 붙을지는 여기서 안 정한다.** 그건 데이터팩(`tools/gen_relic_enchants.py`)이
+    //    인챈트의 `supported_items` 로 정한다 — 데미지 계열 17종은 거기서 막힌다.
+    //    여기서 true 만 돌려주면 「테이블에 올라갈 자격」이 생길 뿐이다.
+    @Override
+    public boolean isEnchantable(ItemStack stack) {
+        return stack.getCount() == 1;
+    }
+
+    // 인챈트 «잘 걸리는» 정도. 네더라이트와 같은 15 — 금(22)은 운이 과하고 돌(5)은 답답하다.
+    @Override
+    public int getEnchantmentValue(ItemStack stack) {
+        return 15;
+    }
 }

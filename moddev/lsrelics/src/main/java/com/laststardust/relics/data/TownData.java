@@ -48,41 +48,78 @@ public class TownData {
     public int level(String track) { return levels.getOrDefault(track, 0); }
     public void setLevel(String track, int v) { levels.put(track, Math.max(0, v)); }
 
+    // ── 월드에 «지어진» 단계 ──
+    // 레벨(levels)과 따로 둔다. 레벨은 올랐는데 아직 구조물을 못 세운 상태가 있기 때문이다
+    // (성역이 안 정해졌거나, 앵커를 안 잡았거나, 청크가 안 열렸거나).
+    // 둘을 한 값으로 합치면 「레벨은 3인데 건물은 2단계」인 상태를 표현할 방법이 없고,
+    // 그러면 다음 reconcile 이 «이미 지었다»고 착각해 영영 안 세운다.
+    private final Map<String, Integer> built = new HashMap<>();
+
+    public int builtLevel(String track) { return built.getOrDefault(track, 0); }
+    public void setBuiltLevel(String track, int v) { built.put(track, Math.max(0, v)); }
+
+    // ── 구조물 앵커 ──
+    // 성역 기준 «상대» 좌표다. 절대 좌표로 두면 성역을 옮기는 날 건물만 제자리에 남는다.
+    // 값이 없으면 «아직 안 정함» — 그때는 아무것도 안 세운다(엉뚱한 데 짓느니 안 짓는다).
+    private final Map<String, int[]> anchors = new HashMap<>();
+
+    public int[] anchor(String track) { return anchors.get(track); }
+    public void setAnchor(String track, int dx, int dy, int dz) {
+        anchors.put(track, new int[] {dx, dy, dz});
+    }
+
     // ── 보관함 ──
     public SimpleContainer deposit(String track) {
         return deposits.computeIfAbsent(track, k -> new SimpleContainer(TownCatalog.DEPOSIT_SLOTS));
     }
 
-    // 보관함에 들어 있는 '이번 레벨에 필요한 아이템'의 개수.
+    // 보관함에 들어 있는 '요구 자원 하나'의 개수.
     // 다른 아이템이 섞여 있어도 세지 않는다 — 슬롯 자체가 필요한 것만 받도록 막지만,
-    // 레벨이 오르면 요구 아이템이 바뀌므로 남아 있던 이전 자원은 여기서 자연히 0으로 잡힌다.
-    public int depositCount(String track, TownCatalog.Level need) {
-        if (need == null) return 0;
-        var item = need.itemOrNull();
-        if (item == null) return 0;
+    // 레벨이 오르면 요구가 바뀌므로 남아 있던 이전 자원은 여기서 자연히 0으로 잡힌다.
+    // (그 자원은 사라지지 않는다. 보관함에 그대로 남아 있어서 도로 꺼낼 수 있다.)
+    public int depositCount(String track, TownCatalog.Req req) {
+        if (req == null) return 0;
         int n = 0;
         SimpleContainer c = deposit(track);
         for (int i = 0; i < c.getContainerSize(); i++) {
             ItemStack st = c.getItem(i);
-            if (!st.isEmpty() && st.is(item)) n += st.getCount();
+            if (req.matches(st)) n += st.getCount();
         }
         return n;
+    }
+
+    /** 이번 레벨의 요구가 <b>전부</b> 채워졌는가. 하나라도 모자라면 false. */
+    public boolean depositSatisfied(String track, TownCatalog.Level need) {
+        if (need == null) return false;
+        for (TownCatalog.Req r : need.reqs()) {
+            if (depositCount(track, r) < r.count()) return false;
+        }
+        return true;
+    }
+
+    /** 아직 모자란 요구 중 첫 번째. 전부 채워졌으면 null — 안내 메시지에 쓴다. */
+    public TownCatalog.Req firstMissing(String track, TownCatalog.Level need) {
+        if (need == null) return null;
+        for (TownCatalog.Req r : need.reqs()) {
+            if (depositCount(track, r) < r.count()) return r;
+        }
+        return null;
     }
 
     // 완성 시 요구 수량만큼만 소모한다. 남는 건 보관함에 그대로 둔다(플레이어가 도로 꺼낼 수 있게).
     public void consumeDeposit(String track, TownCatalog.Level need) {
         if (need == null) return;
-        var item = need.itemOrNull();
-        if (item == null) return;
-        int left = need.count();
         SimpleContainer c = deposit(track);
-        for (int i = 0; i < c.getContainerSize() && left > 0; i++) {
-            ItemStack st = c.getItem(i);
-            if (st.isEmpty() || !st.is(item)) continue;
-            int take = Math.min(st.getCount(), left);
-            st.shrink(take);
-            left -= take;
-            if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
+        for (TownCatalog.Req req : need.reqs()) {
+            int left = req.count();
+            for (int i = 0; i < c.getContainerSize() && left > 0; i++) {
+                ItemStack st = c.getItem(i);
+                if (!req.matches(st)) continue;
+                int take = Math.min(st.getCount(), left);
+                st.shrink(take);
+                left -= take;
+                if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
+            }
         }
         c.setChanged();
     }
@@ -110,6 +147,16 @@ public class TownData {
         CompoundTag lv = new CompoundTag();
         levels.forEach(lv::putInt);
         tag.put("levels", lv);
+
+        CompoundTag bl = new CompoundTag();
+        built.forEach(bl::putInt);
+        tag.put("built", bl);
+
+        // 앵커는 int 배열 셋으로 적는다. 문자열로 말아 넣으면(「12,0,-8」) 파싱이 실패했을 때
+        // 조용히 «앵커 없음» 이 되어 건물이 안 서는데 이유는 아무 데도 안 남는다.
+        CompoundTag an = new CompoundTag();
+        anchors.forEach((k, v) -> an.putIntArray(k, v));
+        tag.put("anchors", an);
 
         CompoundTag dep = new CompoundTag();
         deposits.forEach((k, c) -> {
@@ -143,6 +190,17 @@ public class TownData {
         levels.clear();
         CompoundTag lv = tag.getCompound("levels");
         for (String k : lv.getAllKeys()) levels.put(k, lv.getInt(k));
+
+        built.clear();
+        CompoundTag bl = tag.getCompound("built");
+        for (String k : bl.getAllKeys()) built.put(k, bl.getInt(k));
+
+        anchors.clear();
+        CompoundTag an = tag.getCompound("anchors");
+        for (String k : an.getAllKeys()) {
+            int[] v = an.getIntArray(k);
+            if (v.length == 3) anchors.put(k, v);   // 길이가 다르면 버린다 — 반쯤 읽은 좌표가 더 나쁘다
+        }
 
         CompoundTag dep = tag.getCompound("deposits");
         for (String k : dep.getAllKeys()) {

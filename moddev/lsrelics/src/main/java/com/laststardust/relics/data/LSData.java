@@ -26,6 +26,20 @@ public class LSData extends SavedData {
     public static final String FILE_ID = "laststardust";
 
     private final TownData town = new TownData();
+    private final HeroData hero = new HeroData();
+    private final BlessingData blessing = new BlessingData();
+    private final SiegeData siege = new SiegeData();
+    private final BossDiffData bossDiff = new BossDiffData();
+    private final TitleData titles = new TitleData();
+    private final BountyData bounty = new BountyData();
+    private final VaultData vault = new VaultData();
+    private final OathData oath = new OathData();
+    private final BeaconData beacons = new BeaconData();
+    private final CasinoData casino = new CasinoData();
+    private final RescueData rescue = new RescueData();
+    private final VoiceData voice = new VoiceData();
+    // 개인 지갑 — 공동 금고(TownData.treasury)와 «다른 주머니»다. WalletData 머리말 참고.
+    private final WalletData wallet = new WalletData();
 
     // 성역 좌표 — 여러 시스템이 공유하는 가장 넓게 퍼진 상태다.
     // (공성·관문·구출·통계·귀환석이 전부 이걸 본다)
@@ -34,6 +48,77 @@ public class LSData extends SavedData {
 
     public TownData town() {
         return town;
+    }
+
+    /** 개인 지갑(Ducat). 마을 금고는 {@link #town()} 쪽이다 — 섞지 말 것. */
+    public WalletData wallet() {
+        return wallet;
+    }
+
+    // 가호·유물·각성 — 사람에 붙는 성장 상태 (이관 3단계).
+    public HeroData hero() {
+        return hero;
+    }
+
+    // 별의 축복 — 슬롯 4칸(상의·무기1·하의·무기2). 성급과 같은 자리에 둔다:
+    // 둘 다 «사람에 붙는 성장»이고, 슬롯 해금이 성급을 직접 읽는다.
+    public BlessingData blessing() {
+        return blessing;
+    }
+
+    // 공성 — 위협도·성벽·노드·최종장 (이관 4단계).
+    // 위협도는 성역 좌표만큼 넓게 퍼져 있다: 희망 게이지·호데고스 대사·몹 스케일링이 전부 이걸 본다.
+    public SiegeData siege() {
+        return siege;
+    }
+
+    // 보스 난이도 라이브 오버라이드 — `/bossdiff` (이관 5단계).
+    // 영구 기본값은 여기가 아니라 `ls_config.js` 에 있다. 이유는 BossDiffData 머리말에.
+    public BossDiffData bossDiff() {
+        return bossDiff;
+    }
+
+    // 칭호 — 보유 목록과 착용 (이관 5단계).
+    // 부여하는 쪽이 네 파일(유물·구출·균열·공성)이라 장부가 한 곳이어야 한다.
+    public TitleData titles() {
+        return titles;
+    }
+
+    // 현상금 — 게시 중인 3건과 진행도 (이관 5단계).
+    public VaultData vault() {
+        return vault;
+    }
+
+    public OathData oath() {
+        return oath;
+    }
+
+    public BountyData bounty() {
+        return bounty;
+    }
+
+    // 정화 봉화 — 이름·좌표 (이관 5단계).
+    // 개수가 공성 위협 하한과 희망 게이지에 들어가므로 성역 좌표만큼 널리 읽힌다.
+    public BeaconData beacons() {
+        return beacons;
+    }
+
+    // 별똥말 경마 — 단계·말 위치·베팅 (이관 5단계).
+    // 주사위 결투는 여기 없다 — 60초짜리 메모리 상태라 저장할 이유가 없다.
+    public CasinoData casino() {
+        return casino;
+    }
+
+    // 생존자 구출 — 원정·명부·인구 (이관 5단계).
+    // 인구는 저장된 숫자가 아니라 명부의 크기다 — 두 번 셀 방법이 없게.
+    public RescueData rescue() {
+        return rescue;
+    }
+
+    // 안내자의 목소리 — 예산·대사별 상태·감시 스냅샷·사람별 마지막 접속 (이관 6단계 = 마지막).
+    // 감시 스냅샷은 **사본이 아니라 진도표**다 — 「어디까지 대사를 읽어줬나」.
+    public VoiceData voice() {
+        return voice;
     }
 
     // 관문 진행도 0~4 — 클리어한 봉인 수.
@@ -50,6 +135,26 @@ public class LSData extends SavedData {
     public void setSanctuary(int x, int y, int z) {
         sancX = x; sancY = y; sancZ = z; sancSet = true;
     }
+
+    // ── 귀환 지점 (귀환석이 데려가는 자리) ──
+    // 성역 «중심»과 따로 둔다. 성역 좌표는 공성 반경·관문 거리·구조물 앵커의 «기준점»이라
+    // 건물 한복판이나 공중일 수 있는데, 귀환석은 사람이 «발을 딛는» 자리여야 한다
+    // (귀환의 요람 — 공방 4단계). 둘을 한 값으로 쓰면 하나를 옮길 때 다른 하나가 망가진다.
+    //
+    // 안 정하면 성역으로 보낸다 — 공방 4단계를 열어 놓고 자리를 안 잡았을 때
+    // 「귀환석이 아무 데도 안 간다」가 되면 안 되기 때문이다.
+    private int hearthX, hearthY, hearthZ;
+    private boolean hearthSet;
+
+    public boolean hasHearth() { return hearthSet; }
+    /** 귀환 지점. 안 정했으면 성역을 돌려준다. */
+    public net.minecraft.core.BlockPos hearth() {
+        return hearthSet ? new net.minecraft.core.BlockPos(hearthX, hearthY, hearthZ) : sanctuary();
+    }
+    public void setHearth(int x, int y, int z) {
+        hearthX = x; hearthY = y; hearthZ = z; hearthSet = true;
+    }
+    public void clearHearth() { hearthSet = false; }
 
     public int progress() { return progress; }
     public void setProgress(int n) {
@@ -74,11 +179,29 @@ public class LSData extends SavedData {
     private static LSData load(CompoundTag tag, HolderLookup.Provider registries) {
         LSData data = new LSData();
         data.town.load(tag.getCompound("town"), registries);
+        data.hero.load(tag.getCompound("hero"), registries);
+        data.blessing.load(tag.getCompound("blessing"), registries);
+        data.siege.load(tag.getCompound("siege"), registries);
+        data.bossDiff.load(tag.getCompound("bossDiff"), registries);
+        data.titles.load(tag.getCompound("titles"), registries);
+        data.bounty.load(tag.getCompound("bounty"), registries);
+        data.vault.load(tag.getCompound("vault"), registries);
+        data.oath.load(tag.getCompound("oath"), registries);
+        data.beacons.load(tag.getCompound("beacons"), registries);
+        data.casino.load(tag.getCompound("casino"), registries);
+        data.rescue.load(tag.getCompound("rescue"), registries);
+        data.voice.load(tag.getCompound("voice"), registries);
+        data.wallet.load(tag.getCompound("wallet"), registries);
         CompoundTag s = tag.getCompound("sanctuary");
         data.sancSet = s.getBoolean("set");
         data.sancX = s.getInt("x");
         data.sancY = s.getInt("y");
         data.sancZ = s.getInt("z");
+        CompoundTag h = tag.getCompound("hearth");
+        data.hearthSet = h.getBoolean("set");
+        data.hearthX = h.getInt("x");
+        data.hearthY = h.getInt("y");
+        data.hearthZ = h.getInt("z");
         data.setProgress(tag.getInt("progress"));   // 없으면 0 — 새 월드의 정상값이다
         return data;
     }
@@ -86,12 +209,32 @@ public class LSData extends SavedData {
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.put("town", town.save(registries));
+        tag.put("hero", hero.save(registries));
+        tag.put("blessing", blessing.save(registries));
+        tag.put("siege", siege.save(registries));
+        tag.put("bossDiff", bossDiff.save(registries));
+        tag.put("titles", titles.save(registries));
+        tag.put("bounty", bounty.save(registries));
+        tag.put("vault", vault.save(registries));
+        tag.put("oath", oath.save(registries));
+        tag.put("beacons", beacons.save(registries));
+        tag.put("casino", casino.save(registries));
+        tag.put("rescue", rescue.save(registries));
+        tag.put("voice", voice.save(registries));
+        tag.put("wallet", wallet.save(registries));
         CompoundTag s = new CompoundTag();
         s.putBoolean("set", sancSet);
         s.putInt("x", sancX);
         s.putInt("y", sancY);
         s.putInt("z", sancZ);
         tag.put("sanctuary", s);
+
+        CompoundTag h = new CompoundTag();
+        h.putBoolean("set", hearthSet);
+        h.putInt("x", hearthX);
+        h.putInt("y", hearthY);
+        h.putInt("z", hearthZ);
+        tag.put("hearth", h);
         tag.putInt("progress", progress);
         return tag;
     }

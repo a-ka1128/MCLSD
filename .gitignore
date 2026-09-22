@@ -74,3 +74,16 @@ moddev/mdk.zip
 
 # 믹스인 런타임 덤프 — 서버가 켜질 때마다 갱신되는 빌드 산물이다
 server/.mixin.out/
+
+# Firebase Hosting (site/ 안내서 배포) — 캐시만 무시한다.
+# site/ 자체는 생성물이지만 tools/build_site.py 로 언제든 다시 만들 수 있다.
+.firebase/
+
+# 백업 산물 — backup.bat / reset_open.ps1 이 만드는 zip·dat (수백 MB, 월드 데이터)
+server/backups/
+
+# server.properties 의 어떤 사본이든 — rcon.password 가 들어 있다
+server/server.properties.bak*
+
+# 작업용 임시 파일
+.tmp/

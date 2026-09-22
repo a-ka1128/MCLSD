@@ -1,0 +1,28 @@
+{
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "display": {
+    "icon": {
+      "id": "lsrelics:hearthstone",
+      "count": 1
+    },
+    "title": {
+      "translate": "advancement.lsrelics.root.title"
+    },
+    "description": {
+      "translate": "advancement.lsrelics.root.description"
+    },
+    "background": "minecraft:textures/gui/advancements/backgrounds/nether.png",
+    "show_toast": false,
+    "announce_to_chat": false
+  },
+  "sends_telemetry_event": false
+}

@@ -96,12 +96,19 @@ public class HearthStone extends Item {
         return stack;
     }
 
-    // 성역 좌표는 LSData 가 갖고 있다 (스크립트가 /sanctuary here 로 정하면 브릿지로 밀어 넣는다).
+    // 도착지는 «귀환 지점»이다 — 성역 중심이 아니라.
+    //
+    // 성역 좌표는 공성 반경·관문 거리·구조물 앵커의 «기준점»이라 건물 한복판이거나
+    // 공중일 수 있다. 귀환석은 사람이 발을 딛는 자리여야 하므로 따로 잡는다
+    // (`/town hearth` — 귀환의 요람, 공방 4단계).
+    //
+    // 안 잡았으면 hearth() 가 성역을 돌려준다. 그래서 여기 판정은 예전 그대로
+    // 「성역이 있는가」다 — 자리를 안 잡았다고 귀환석이 죽으면 안 된다.
     private static BlockPos sanctuary(ServerLevel level) {
         var server = level.getServer();
         if (server == null) return null;
         var data = com.laststardust.relics.data.LSData.get(server);
-        return data.hasSanctuary() ? data.sanctuary() : null;
+        return data.hasSanctuary() ? data.hearth() : null;
     }
 
     @Override

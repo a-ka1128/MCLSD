@@ -56,10 +56,16 @@ ServerEvents.tick(event => {
     console.log(`[LS-DAYNIGHT] init dayTime=${Number(server.overworld().getDayTime()) % 24000}`)
   }
   if (p.getBoolean('ls_cycle_off')) return
-  if (p.getBoolean('ls_time_locked')) return // 최종장: 시간 정지 (보스 체력↔시간은 공성 스크립트가 제어)
+  // ── 하늘 정지·밤 길이는 이관 6단계로 모드가 소유한다 (2026-08-06) ──
+  // 둘 다 공성이 쓰고 여기와 `ls_voice.js` 가 읽던, 마지막까지 남아 있던 파일 경계를 넘는 키다.
+  // 다리 호출을 감싸는 이유: 이건 **매 틱 도는 시간 진행 루프**라, 여기서 터지면 시간이 멈춘다.
+  // 실패하면 「정지 아님·오버라이드 없음」으로 내려간다 — 하늘이 평소 속도로 도는 쪽이 안전하다.
+  var dnLocked = false, pct = 0
+  try { dnLocked = !!LS.timeLocked(server); pct = LS.nightRatePct(server) | 0 }
+  catch (e) { lsWarn('ls_daynight:sky', e) }
+  if (dnLocked) return // 최종장: 시간 정지 (보스 체력↔시간은 공성 스크립트가 제어)
   const t = Number(server.overworld().getDayTime()) % 24000
   let rate = phaseRate(t)
-  const pct = p.getInt('ls_nrate_pct')
   if (pct > 0 && t >= B_NIGHT && t < B_DAWN) rate = rate * pct / 100 // 최종장: 밤 길이 오버라이드 (70%→55%→…)
   DN_ACC += rate
   const add = Math.floor(DN_ACC)

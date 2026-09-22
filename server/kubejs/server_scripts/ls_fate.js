@@ -2,9 +2,8 @@
 // 첫 접속 후 1회 선택하는 가호(소프트 클래스). 고유 패시브 + 시작 키트.
 // "나는 누구인가"를 첫 순간에 정한다 — Cisco's/Prominence의 Fate 패턴.
 // 패시브는 /attribute modifier(고정 ID)로 적용 — 재접속에도 유지, 중복 적용은 명령이 거부.
-// 저장: fate_<uuid> (선택한 가호 키)
+// 저장: 모드가 소유한다 (이관 3단계) — LS.fate / LS.setFate / LS.fateOwner.
 
-function ftStore(server) { return server.overworld().persistentData }
 function ftSay(server, text) { server.players.forEach(p => p.tell(Text.of(text))) }
 
 // ── 공용 시작 키트 ──
@@ -39,8 +38,8 @@ const FATES = {
     desc: '넉백 저항 +0.5 · 기본 스타터킷과 함께 시작',
     story: [
       '무너지는 하늘을 홀로 떠받친 자의 가호.',
-      '아군을 지키는 가장 튼튼한 방패이자, 어떤 충격에도 한 걸음 물러서지 않는 벽이 된다.',
-      '어둠의 시선을 모조리 자신에게 붙들어두고, 모두가 쓰러지려는 그 순간 불멸의 맹세로 밤을 되돌린다.'
+      '어떤 충격에도 물러서지 않는 철벽이 되어, 모든 적의를 자신의 몸으로 받아낸다.',
+      '에테르 이지스가 펼쳐지는 순간 성역은 누구도 넘볼 수 없는 요새가 되고, 모두가 쓰러질 운명의 순간마저 끝내 버텨내며 밤을 되돌린다.'
     ],
     // 넉백 저항은 1.0이 상한(완전 면역) — 0.5는 절반만 밀린다. 그 이상 올려도 1.0을 넘으면 무의미.
     attrs: [['minecraft:generic.knockback_resistance', 0.5, 'add_value']]
@@ -50,8 +49,8 @@ const FATES = {
     desc: '이동속도 +8% · 기본 스타터킷과 함께 시작',
     story: [
       '가장 밝은 별을 길잡이 삼아 어둠을 사냥하던 자의 가호.',
-      '적에게 꽂힐 가장 날카로운 화살이 되어, 결코 붙잡히지 않는 걸음으로 거리를 지배한다.',
-      '숨 돌릴 틈 없이 쏟아지던 화살은 이윽고 하늘을 가르는 별빛 폭풍이 되어 전장을 뒤덮는다.'
+      '별빛보다 빠른 화살로 적의 숨통을 조준하며, 누구도 그의 사정거리에서 벗어날 수 없다.',
+      '시리우스가 빛을 머금는 순간 쏟아진 별의 화살은 밤하늘을 뒤덮고, 전장은 별빛 폭풍 속으로 사라진다.'
     ],
     attrs: [['minecraft:generic.movement_speed', 0.08, 'add_multiplied_base']]
   },
@@ -59,9 +58,9 @@ const FATES = {
     name: '우라니아', icon: '✧', color: 0xB57EDC, // 라벤더
     desc: '경험치 획득 +15% · 기본 스타터킷과 함께 시작',
     story: [
-      '별의 궤도를 읽어 그 힘을 빌리는 자의 가호.',
-      '어둠을 지우는 가장 찬란한 별빛으로 전방을 꿰뚫고, 흩어진 적을 한 점으로 끌어모아 묶어둔다.',
-      '그리고 하늘에서 별 하나를 떨어뜨려, 그 자리에 있던 모든 것을 소멸시킨다.'
+      '별의 궤도를 읽어 그 힘을 다루는 자의 가호.',
+      '밤하늘에 새겨진 별의 힘을 불러내 전장을 자신의 영역으로 바꾸고, 흩어진 적들을 하나의 운명으로 엮어낸다.',
+      '셀레스티아가 하늘을 가리키는 순간 거대한 별이 낙하하며, 그 아래 남은 모든 것은 빛과 함께 소멸한다.'
     ],
     // 별을 읽어 더 빨리 깨우친다 — 퍼피시 스킬트리가 XP로 크므로 실질 성장 가속이 된다.
     attrs: [['apothic_attributes:experience_gained', 0.15, 'add_value']]
@@ -71,8 +70,8 @@ const FATES = {
     desc: '방어구 견고함 +2 · 기본 스타터킷과 함께 시작',
     story: [
       '힘 그 자체가 형상을 얻은 자의 가호.',
-      '무엇도 막아설 수 없는 가장 무거운 일격으로, 거대한 적일수록 더 깊이 파고든다.',
-      '대지를 갈라 길을 열고 — 끝내 스스로 거인이 되어 전장을 짓밟는다.'
+      '대지를 흔드는 일격으로 적진을 갈라버리며, 거대한 적일수록 더욱 강한 파괴를 퍼붓는다.',
+      '타이탄 브레이커가 대지를 내리치는 순간, 스스로 거인의 형상을 두르고 전장을 짓밟는다.'
     ],
     attrs: [['minecraft:generic.armor_toughness', 2.0, 'add_value']]
   },
@@ -80,9 +79,9 @@ const FATES = {
     name: '헬리오스', icon: '☀', color: 0xF7931E, // 태양 오렌지
     desc: '화염 저항 (영구) · 기본 스타터킷과 함께 시작',
     story: [
-      '식지 않는 태양을 방아쇠에 담아 쏘는 자의 가호.',
-      '작열하는 탄환으로 거리를 지지고, 흩어진 무리를 산탄 한 발로 뒤로 밀어낸다.',
-      '이윽고 하늘의 해를 통째로 끌어내려, 그 자리를 일식의 어둠으로 뒤덮는다.'
+      '태양을 별의 탄환으로 벼리는 자의 가호.',
+      '별빛을 응축한 마탄으로 전장을 꿰뚫으며, 적이 다가오기 전에 운명을 먼저 겨눈다.',
+      '솔라리스의 각인이 총열을 따라 타오르는 순간, 마지막 한 발은 태양의 광선을 닮은 빛이 되어 일직선 위의 모든 것을 관통한다.'
     ],
     // 태양을 다루는 자는 불에 타지 않는다 — 속성으론 표현이 안 돼(1.21.1엔 화염 속성 없음) 효과로 건다.
     attrs: [],
@@ -92,9 +91,9 @@ const FATES = {
     name: '히기에이아', icon: '✚', color: 0x2ECC71, // 에메랄드
     desc: '최대 체력 +4 · 기본 스타터킷과 함께 시작',
     story: [
-      '꺼져가는 생명에 다시 별빛을 불어넣는 자의 가호.',
-      '심판의 빛으로 어둠을 태우고, 성역을 세워 아군의 상처를 되돌린다.',
-      '그리고 죽음의 문턱을 넘어선 동료마저, 별의 이름으로 다시 일으켜 세운다.'
+      '꺼져가는 생명의 불씨를 되살리는 자의 가호.',
+      '상처를 치유하는 것을 넘어 희망마저 이어붙이며, 쓰러진 동료를 다시 전장으로 일으켜 세운다.',
+      '파나케이아가 피워낸 치유의 빛은 모든 고통을 잠재우고, 그 빛이 머무는 동안 누구도 홀로 쓰러지지 않는다.'
     ],
     // 각성 체력과 의도적으로 겹친다 — 대신 힐러의 각성 체력 최종치를 30칸으로 낮춰 균형을 맞춘다.
     attrs: [['minecraft:generic.max_health', 4.0, 'add_value']]
@@ -103,9 +102,9 @@ const FATES = {
     name: '에레보스', icon: '†', color: 0x9400D3, // 다크 바이올렛
     desc: '공격 속도 +12% · 기본 스타터킷과 함께 시작',
     story: [
-      '빛이 닿지 못하는 태초의 어둠에서 온 자의 가호.',
-      '두 자루의 그림자 칼로 배후를 갈라, 쓰러뜨릴수록 더 빠르게 다음 목을 노린다.',
-      '끝내 발밑에 무저갱을 열어, 그 안으로 모든 것을 삼켜버린다.'
+      '심연의 어둠을 품은 자의 가호.',
+      '그림자와 하나 되어 존재마저 감춘 채, 가장 위험한 적의 등 뒤에 조용히 선다.',
+      '스틱스가 어둠을 가르는 순간 단 한 번의 베임으로 모든 것을 끝내고, 흔적조차 남기지 않은 채 그림자 속으로 사라진다.'
     ],
     // Better Combat 쌍단검은 바닐라 스윙 타이밍을 타므로 공격속도가 실제로 콤보를 가속한다.
     attrs: [['minecraft:generic.attack_speed', 0.12, 'add_multiplied_base']]
@@ -114,16 +113,67 @@ const FATES = {
     name: '쿠훌린', icon: '⚑', color: 0xDC143C, // 크림슨 레드
     desc: '공격 넉백 +1.5 · 기본 스타터킷과 함께 시작',
     story: [
-      '단 한 번의 창격으로 운명을 꿰뚫은 자의 가호.',
-      '긴 창의 간격을 지배하며, 손을 떠난 창은 적을 꿰고 다시 손으로 돌아온다.',
-      '이윽고 하늘을 백 개의 창으로 가득 메워, 내리꽂히는 창비로 전장을 끝낸다.'
+      '죽음을 꿰뚫는 마창을 계승한 자의 가호.',
+      '거리를 허락하지 않는 창끝으로 전장을 지배하며, 단 한 번의 돌격으로 적의 진형을 무너뜨린다.',
+      '게볼그가 손을 떠나는 순간 운명을 거스르듯 심장을 향해 끝없이 갈라지고, 그 창끝에 겨눠진 자에게는 피할 미래조차 허락되지 않는다.'
     ],
     attrs: [['minecraft:generic.attack_knockback', 1.5, 'add_value']]
+  },
+  hecate: {
+    // ※ 아이콘은 반드시 BMP 기호를 쓴다. 이모지(🔥 등)는 마크 기본 폰트에 글리프가 없어
+    //   화면에 «네모»로 뜬다. 나머지 여덟도 전부 이 범위(▣ ➶ ✧ ⚔ ☀ ✚ † ⚑)다.
+    name: '헤카테', icon: '☽', color: 0x17A2A2, // 녹청 — 초승달(헤카테는 달의 여신이기도 하다)
+    desc: '평타가 저주를 새긴다 · 기본 스타터킷과 함께 시작',
+    story: [
+      '어둠과 경계의 문을 다스리는 자의 가호.',
+      '적에게 저주의 낙인을 새기고, 그 힘을 주변으로 퍼뜨려 적의 움직임과 힘을 서서히 빼앗는다.',
+      '헤카테의 밤이 드리우는 순간 모든 저주가 절정에 이르며, 적은 회복마저 잃은 채 깊은 어둠 속에 잠긴다.'
+    ],
+    // 패시브가 «속성»이 아니라 저주 중첩이라 여기 붙일 게 없다.
+    // 실제 구현은 모드 쪽(RelicEventHandlers.onHecateBrand → CurseManager)에 있다 —
+    // 이 유물의 힘은 자기 수치가 아니라 «남의 피해»로 나가기 때문에 속성으로는 표현이 안 된다.
+    attrs: []
+  },
+  harmonia: {
+    name: '하르모니아', icon: '♫', color: 0xE86A9A, // 로즈 — 8분음표
+    desc: '주변 아군 이동속도 +10% · 기본 스타터킷과 함께 시작',
+    story: [
+      '흩어진 이들을 하나의 선율로 묶는 자의 가호.',
+      '아군의 걸음을 맞추고 힘을 끌어올려, 따로 싸우던 이들을 하나의 진형으로 만든다.',
+      '바르비톤의 깊은 선율이 울려 퍼지는 순간 모든 이의 힘이 하나로 공명하며, 그 어떤 어둠 속에서도 함께 싸울 길을 밝혀낸다.'
+    ],
+    // 헤카테와 같은 이유로 여기 붙일 속성이 없다 — 패시브가 «주변 아군»에게 가는 오라라
+    // 자기 속성으로는 표현이 안 된다. 구현은 모드 쪽 HarmonyManager 에 있다.
+    attrs: []
+  },
+  nemesis: {
+    name: '네메시스', icon: '⊗', color: 0x55668A, // 강철 — 받아넘김
+    desc: '방어력 +5 · 방어 강도 +3 · 기본 스타터킷과 함께 시작',
+    story: [
+      '받은 힘을 되돌려주는 자의 가호.',
+      '피하지 않고 모든 공격을 흘려내며 기세를 쌓아, 그 힘을 고스란히 칼끝에 담아낸다.',
+      '아드라스테이아가 휘둘러지는 순간 쌓아온 기세가 하나의 일격으로 폭발하고, 눈앞의 모든 것을 가른다.'
+    ],
+    // 방어력·방어 강도는 «무기 속성»으로 붙는다(LSRelics.nemesisAttrs) — 여기 가호 패시브로
+    // 또 주면 두 번 붙는다. 헤카테·하르모니아와 같은 이유로 attrs 는 비워 둔다.
+    attrs: []
+  },
+  chiron: {
+    name: '케이론', icon: '⚕', color: 0x8DA764, // 올리브 — 약초를 아는 스승
+    desc: '적을 때리면 아군이 회복된다 (자신은 제외) · 기본 스타터킷과 함께 시작',
+    story: [
+      '상처 입은 자의 곁을 지키며, 자신의 상처를 끝내 치유하지 못한 자의 가호.',
+      '적을 쓰러뜨릴 때마다 가장 다친 동료에게 생명의 힘을 나누고, 펠리온의 가르침이 울려 퍼지는 순간 모두가 서로를 치유하는 전장이 된다.',
+      '자신은 끝내 상처를 짊어진 채, 마지막 순간까지 동료들이 살아남을 길을 열어준다.'
+    ],
+    // 전이 회복은 «주변 아군»에게 가는 효과라 자기 속성으로는 표현이 안 된다.
+    // 헤카테·하르모니아·네메시스와 같은 이유로 attrs 는 비워 둔다 — 구현은 모드 쪽 ChironManager 에 있다.
+    attrs: []
   }
 }
-const FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer']
+const FATE_KEYS = ['guardian', 'hunter', 'sage', 'pioneer', 'gunner', 'healer', 'assassin', 'lancer', 'hecate', 'harmonia', 'nemesis', 'chiron']
 
-function ftGet(server, player) { return String(ftStore(server).getString('fate_' + player.username) || '') }
+function ftGet(server, player) { return String(LS.fate(server, player.username) || '') }
 
 function ftModId(key, i) { return 'last_stardust:fate_' + key + (i ? '_' + i : '') }
 
@@ -153,7 +203,7 @@ function ftApply(server, player, key) {
 // (속성 제거 명령은 대상이 없으면 조용히 실패하고, 재접속 시 ftApply 가 다시 정리한다).
 // ※ 블록 안에서는 var — const/let 은 Rhino 재선언 오류를 낸다 (docs/TODO.md 함정 #1)
 function ftClear(server, name) {
-  var cur = String(ftStore(server).getString('fate_' + name) || '')
+  var cur = String(LS.fate(server, name) || '')
   if (!cur || !FATES[cur]) return ''
   FATES[cur].attrs.forEach((a, i) => {
     try { server.runCommandSilent(`attribute ${name} ${a[0]} modifier remove ${ftModId(cur, i)}`) } catch (err) { lsWarn('ls_fate:ftClear-attr', err) }
@@ -161,27 +211,17 @@ function ftClear(server, name) {
   ;(FATES[cur].effects || []).forEach(eff => {
     try { server.runCommandSilent(`effect clear ${name} ${eff}`) } catch (err) { lsWarn('ls_fate:ftClear-eff', err) }
   })
-  ftStore(server).putString('fate_' + name, '')
+  LS.setFate(server, name, '')
   return cur
 }
 
 // 이 가호를 이미 가진 사람 — 없으면 ''.
-// 저장이 fate_<이름> 이라 키 목록을 훑는 수밖에 없다(인원이 8명이라 비용은 무시할 만하다).
-// ※ 블록 안에서는 var — const/let 은 Rhino 재선언 오류를 낸다
+// 예전엔 여기서 persistentData 키 목록을 훑고 `fate_` 접두사를 문자열로 잘라냈다.
+// 그 방식은 키 형식이 조금만 바뀌어도 - 조용히 아무도 못 찾는 상태 - 가 된다(예외도 안 난다).
+// 이관 3단계에서 모드가 장부를 갖게 되면서 그쪽에 물어보면 되게 됐다.
 function ftTakenBy(server, key, exceptName) {
-  var st = ftStore(server)
-  var found = ''
-  try {
-    st.getAllKeys().forEach(k => {
-      if (found) return
-      var ks = String(k)
-      if (ks.indexOf('fate_') !== 0) return
-      var who = ks.substring(5)
-      if (exceptName && who === exceptName) return
-      if (String(st.getString(ks) || '') === key) found = who
-    })
-  } catch (e) { lsWarn('ls_fate:taken-by', e) }
-  return found
+  try { return String(LS.fateOwner(server, key, exceptName || '') || '') }
+  catch (e) { lsWarn('ls_fate:taken-by', e); return '' }
 }
 
 function ftChoose(server, player, key) {
@@ -195,8 +235,14 @@ function ftChoose(server, player, key) {
     return 0
   }
   const f = FATES[key]
-  ftStore(server).putString('fate_' + player.username, key)
+  LS.setFate(server, player.username, key)
   ftApply(server, player, key)
+  // ── 각성 체력은 **여기서 정해진다** (2026-08-11, 유저 결정) ──
+  // 체력은 직업의 값이지 무기의 값이 아니다. 가호를 고르는 순간 1성 값이 붙고,
+  // 유물을 받아도(0성 → 1성) 숫자는 그대로다 — 그 사이는 「같은 직업인데 아직 무기가
+  // 없는」 구간이지 「더 약한 사람」인 구간이 아니다.  (ls_ascend.js asHealth)
+  try { asHealth(server, player.username) } catch (e) { lsWarn('ls_fate:choose-hp', e) }
+  lsAdv(server, player.username, 'root')   // 도전과제 뿌리 — 여기서부터 나무가 열린다
   // 시작 키트
   STARTER_KIT.concat(dyedArmor(f.color)).forEach(it => { server.runCommandSilent(`give ${player.username} ${it[0]} ${it[1]}`) })
   server.runCommandSilent(`title ${player.username} title {"text":"${f.icon} ${f.name}의 가호","color":"gold","bold":true}`)
@@ -206,6 +252,23 @@ function ftChoose(server, player, key) {
   // 성좌 중계 (전체) — STORY 부록A. 가호를 받은 순간 꺼진 별 하나가 그를 알아본다.
   // ls_voice.js 가 없어도 가호 지급은 끝나야 하므로 감싼다(ttGrant 호출과 같은 방식).
   try { vStar(server, player.username, 1) } catch (e) { lsWarn('ls_fate:166', e) }
+
+  // ── 부르는 이름 안내 ──
+  // 린케우스가 비행선에서 「/닉네임 으로 이름을 알려주게나」라고 하는데, 그 자리에서
+  // 안 정하고 넘어오는 사람이 대부분이다(대화 중엔 채팅을 안 친다).
+  // 가호를 받은 «직후»가 다시 말하기 제일 좋은 자리다 — 이제 자기가 누구인지 정해졌으니까.
+  //
+  // ⚠️ 본인에게만 보낸다. ftSay 는 전체 방송이라 여기 쓰면 남의 화면에도 뜬다.
+  // ⚠️ 이미 정한 사람에게는 안 띄운다. 안 그러면 다시 들어올 때마다 잔소리가 된다.
+  try {
+    if (!String(LS.nick(server, player.username) || '')) {
+      player.tell(Text.of(''))
+      player.tell(Text.of('§7━━ §f당신을 뭐라고 부르면 될까요? §7━━'))
+      player.tell(Text.of('§7  §e/닉네임 <이름>§7 으로 이름을 설정하세요.'))
+      player.tell(Text.of('§8   예) /닉네임 린케우스     ·  나중에 바꿀 수 있습니다'))
+    }
+  } catch (e) { lsWarn('ls_fate:nick-hint', e) }
+
   console.log(`[LS-FATE] ${player.username} -> ${key}`)
   return 1
 }
@@ -219,7 +282,10 @@ PlayerEvents.loggedIn(event => {
   if (cur) {
     ftApply(server, player, cur) // 제거 후 재적용 — 현재 성급 수치로 갱신된다
   } else {
-    player.tell(Text.of('§6✦ 별의 가호를 아직 받지 않았습니다. §7— §e/fate §7로 선택 (1회, 변경 불가)'))
+    // ※ 화면은 모드가 띄운다 (`FateAutoOpen.java`, 접속 2초 뒤). 여기 채팅 줄은 **대비책**이다 —
+    //   화면을 ESC 로 닫았거나 열기가 실패했을 때 「그래서 뭘 해야 하나」가 남아 있어야 한다.
+    //   예전엔 이 줄이 전부였고, 첫 접속이면 모드팩 로딩 메시지 수십 줄에 묻혔다.
+    player.tell(Text.of('§6✦ 별의 가호를 아직 받지 않았습니다. §7— 창을 닫았다면 §e/fate §7로 다시 열 수 있습니다. §8(1회, 변경 불가)'))
   }
 })
 
@@ -249,12 +315,14 @@ ServerEvents.commandRegistry(event => {
 
   event.register(Commands.literal('fate')
     // 선택 화면(lsrelics 모드의 /fateui)을 연다 — 유물 아이콘과 소개를 보고 고른다.
-    // 현재 가호는 여기(persistentData)에만 있으므로 인자로 넘겨준다.
+    //
+    // ※ 2026-08-06: 예전엔 «이미 고른 가호»를 인자로 넘겨줬다(`fateui <key>`).
+    //   그때는 장부가 persistentData 라 모드가 못 읽었기 때문인데, 이관 3단계로 낡은 이유다.
+    //   지금은 `/fateui` 가 `LSData.hero()` 를 직접 읽고 **남이 가진 가호 목록까지** 함께 보낸다.
     .executes(ctx => {
-      const s = ctx.source.server; const p = ctx.source.player
+      const p = ctx.source.player
       if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만')); return 0 }
-      const cur = ftGet(s, p)
-      s.runCommandSilent(`execute as ${p.username} run ${cur ? 'fateui ' + cur : 'fateui'}`)
+      ctx.source.server.runCommandSilent(`execute as ${p.username} run fateui`)
       return 1
     })
     // 채팅 목록판 (화면을 못 쓰는 상황이나 빠르게 훑어볼 때)
@@ -286,6 +354,9 @@ ServerEvents.commandRegistry(event => {
       const target = Arguments.STRING.getResult(ctx, 'target')
       const gone = ftClear(s, target)
       if (!gone) { ctx.source.sendSystemMessage(Text.of('§7해당 플레이어는 가호가 없습니다.')); return 0 }
+      // 각성 체력은 «직업별» 표에서 나온다(ls_ascend.js AS_HEALTH_BY_FATE) — 가호가 사라지면
+      // 같이 떼야 한다. 안 부르면 옛 직업의 체력이 재접속 전까지 그대로 남는다.
+      try { asHealth(s, target) } catch (e) { lsWarn('ls_fate:reset-hp', e) }
       ctx.source.sendSystemMessage(Text.of(`§a${target}의 가호(${FATES[gone].name}) 해제 — 재선택 가능`))
       return 1
     })))
@@ -305,8 +376,10 @@ ServerEvents.commandRegistry(event => {
 
         const had = ftClear(s, target)   // 있으면 갈아끼우기, 없으면 '' 반환
         if (had === key) { ctx.source.sendSystemMessage(Text.of(`§7${target} 은(는) 이미 ${FATES[key].name}입니다. §8(패시브만 다시 붙임)`)) }
-        ftStore(s).putString('fate_' + target, key)
+        LS.setFate(s, target, key)
         ftApply(s, p, key)
+        // 위 reset 과 같은 이유 — 직업이 바뀌면 각성 체력표도 바뀐다.
+        try { asHealth(s, target) } catch (e) { lsWarn('ls_fate:set-hp', e) }
 
         const f = FATES[key]
         if (!had) {
@@ -321,7 +394,7 @@ ServerEvents.commandRegistry(event => {
         ctx.source.sendSystemMessage(Text.of(
           `§a${target} → §e${f.name}§a 지정${had ? ` §7(${FATES[had].name}에서 변경)` : ' §7(신규 · 시작 키트 지급)'}`))
         // 유물은 별개 저장이라 옛 직업 유물이 그대로 남는다 — 조용히 손대지 않고 알려만 준다.
-        if (ftStore(s).getBoolean('relic_' + target)) {
+        if (LS.hasRelic(s, target)) {
           ctx.source.sendSystemMessage(Text.of(`§7※ ${target} 은(는) 이미 유물을 받은 상태입니다 — 옛 직업 유물이 인벤에 남아 있습니다.`))
         }
         console.log(`[LS-FATE] admin set ${target} -> ${key} (had=${had || 'none'})`)

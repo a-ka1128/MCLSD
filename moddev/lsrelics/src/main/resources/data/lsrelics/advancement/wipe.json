@@ -1,0 +1,28 @@
+{
+  "parent": "lsrelics:root",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "display": {
+    "icon": {
+      "id": "minecraft:soul_torch",
+      "count": 1
+    },
+    "title": {
+      "translate": "advancement.lsrelics.wipe.title"
+    },
+    "description": {
+      "translate": "advancement.lsrelics.wipe.description"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "sends_telemetry_event": false
+}

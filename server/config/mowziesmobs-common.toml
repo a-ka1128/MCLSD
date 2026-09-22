@@ -328,7 +328,7 @@
 		#Disable/enable Ferrous Wroughtnaut's boss health bar
 		has_boss_bar = true
 		#Disable/enable Ferrous Wroughtnaut healing while not active
-		heals_out_of_battle = true
+		heals_out_of_battle = false
 		#Disable/enable Ferrous Wroughtnaut resetting health when a player respawns nearby. (Prevents respawn cheese!)
 		reset_health_when_respawn = true
 

@@ -44,7 +44,7 @@ public class PanaceaStaff extends Item implements RelicActions {
     // 2026-07-26 상향: 4.3 → 6.5 (+51%). 파티전에서는 힐 우선이라 평타가 거의 안 나가지만,
     // 솔로·아군이 사선에 없을 때의 체감이 너무 약했다. 파티 화력 기여는 성역 연소가 맡는다.
     private static final float BOLT_DMG = 6.5f;   // × 2발/초 = DPS 13
-    private static final float HEAL = 2.0f;       // × 2발/초 = 4 HPS (5성 10 HPS)
+    public static final float HEAL = 2.0f;       // × 2발/초 = 4 HPS (5성 10 HPS)
     private static final double RANGE = 20.0;
     private static final double AIM_LENIENCY = 1.5; // 아군 조준 허용 오차(칸)
 
@@ -53,7 +53,7 @@ public class PanaceaStaff extends Item implements RelicActions {
     // ── 패시브 ① 자기 재생 ──
     // 평타의 아군 힐(4 HPS)의 1/4. 스스로는 느리게 차서 파티 지원이 여전히 필요하지만,
     // 전투 사이에 밥 먹고 기다릴 일은 없어진다. (평타로는 자신을 조준할 수 없기 때문에 필요한 보완)
-    private static final float SELF_REGEN = 1.0f;   // 초당
+    public static final float SELF_REGEN = 1.0f;   // 초당
     private static final int REGEN_INTERVAL = 20;
 
     // ── 패시브 ② 과잉 치유 ──
@@ -118,7 +118,9 @@ public class PanaceaStaff extends Item implements RelicActions {
         float missing = Math.max(0, ally.getMaxHealth() - ally.getHealth());
         float healed = Math.min(missing, amount);
         if (healed > 0) {
-            ally.heal(healed);
+            // 별의 축복 「치유 증폭」의 «주는» 절반 — LivingHealEvent 는 시전자를 안 알려주므로
+            // 회복을 넣는 동안만 깃발을 세운다(LsDamage.inSkill 과 같은 수법).
+            com.laststardust.relics.blessing.BlessingEffects.healingBy(caster, () -> ally.heal(healed));
             // 힐도 미움을 산다 — 힐러가 뒤에서 안전하기만 하면 역할 긴장이 없다.
             com.laststardust.relics.ThreatManager.addHealThreat(level, caster, healed);
         }
@@ -126,11 +128,22 @@ public class PanaceaStaff extends Item implements RelicActions {
         boolean shielded = false;
         if (overflow > 0) {
             ShieldManager.add(ally, overflow, SHIELD_CAP, SHIELD_TICKS);
+            // ── 5성 2단 「생명의 샘」 ──
+            // 넘친 몫이 «가장 약한 다른 아군»에게도 같은 양으로 한 번 더 간다.
+            // 상한(6)은 그대로다 — 위 주석대로 5성에서 전원이 두꺼워지면 수성전이 무너진다.
+            // 늘어나는 건 두께가 아니라 **닿는 사람 수**다. 만피 아군 하나를 조준하는 동작이
+            // 둘을 덮으므로, 저녁에 파티를 한 명씩 돌던 일이 절반으로 준다.
+            if (com.laststardust.relics.Passive2.on(caster, com.laststardust.relics.LSRelics.HEALER.get())) {
+                Player second = RelicSkills.weakestAlly(level, caster, RANGE, ally);
+                if (second != null) ShieldManager.add(second, overflow, SHIELD_CAP, SHIELD_TICKS);
+            }
             shielded = true;
         }
 
-        // 시전자 → 대상으로 이어지는 빛줄기
-        Vec3 from = caster.getEyePosition();
+        // 시전자 → 대상으로 이어지는 빛줄기.
+        // 눈에서 그으면 1인칭에서 줄기가 조준선을 따라 화면 정중앙을 덮는다 — 힐러는 초당
+        // 여러 번 이걸 쏘므로 앞이 계속 하얘졌다. 손 위치에서 그어 가운데를 비운다.
+        Vec3 from = RelicSkills.muzzle(caster, caster.getViewVector(1.0f));
         Vec3 to = ally.position().add(0, ally.getBbHeight() * 0.6, 0);
         Vec3 seg = to.subtract(from);
         int steps = Math.max(4, (int) (seg.length() * 2));
@@ -151,12 +164,11 @@ public class PanaceaStaff extends Item implements RelicActions {
 
     // ── 신성 탄환 ──
     private static void attack(ServerLevel level, ServerPlayer player, ItemStack stack) {
-        Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
-        BoltManager.fire(level, player, eye.add(look.scale(0.5)), look,
+        Vec3 hand = RelicSkills.muzzle(player, look);
+        BoltManager.fire(level, player, hand, RelicSkills.muzzleDir(player, look, hand),
             RelicSkills.dmg(stack, BOLT_DMG), 26, HOLY);
-        level.sendParticles(ParticleTypes.END_ROD,
-            eye.x + look.x * 0.7, eye.y + look.y * 0.7, eye.z + look.z * 0.7, 4, 0.04, 0.04, 0.04, 0.02);
+        level.sendParticles(ParticleTypes.END_ROD, hand.x, hand.y, hand.z, 4, 0.04, 0.04, 0.04, 0.02);
         level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.PLAYERS, 0.8f, 1.9f);
     }
 
@@ -202,4 +214,23 @@ public class PanaceaStaff extends Item implements RelicActions {
         RelicSkills.sanctuary(level, player, stack);
     }
 
+
+    // ── 인챈트 테이블에서도 걸리게 (2026-08-18) ──
+    // 바닐라 기본값은 «스택1 && 내구도 있음»이라, 내구도가 없는 유물 9종은
+    // 인챈트 테이블도 모루도 통째로 거부했다. 유물은 닳아 없어지면 안 되는 물건이라
+    // 내구도를 주는 대신 여기만 연다.
+    //
+    // ⚠️ **무엇이 붙을지는 여기서 안 정한다.** 그건 데이터팩(`tools/gen_relic_enchants.py`)이
+    //    인챈트의 `supported_items` 로 정한다 — 데미지 계열 17종은 거기서 막힌다.
+    //    여기서 true 만 돌려주면 「테이블에 올라갈 자격」이 생길 뿐이다.
+    @Override
+    public boolean isEnchantable(ItemStack stack) {
+        return stack.getCount() == 1;
+    }
+
+    // 인챈트 «잘 걸리는» 정도. 네더라이트와 같은 15 — 금(22)은 운이 과하고 돌(5)은 답답하다.
+    @Override
+    public int getEnchantmentValue(ItemStack stack) {
+        return 15;
+    }
 }

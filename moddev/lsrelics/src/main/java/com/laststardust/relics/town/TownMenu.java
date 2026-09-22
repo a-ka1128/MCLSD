@@ -1,10 +1,12 @@
 package com.laststardust.relics.town;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.laststardust.relics.LSRelics;
 import com.laststardust.relics.data.TownCatalog;
 import com.laststardust.relics.data.TownData;
 
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -16,7 +18,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -31,6 +32,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 // 예전엔 서버만 "이 트랙이 받는 아이템"을 알았고 클라는 전부 허용했다. 그러면 클라가 일단
 // 넣는 시늉을 하고 서버가 되돌려 **아이템이 들어갔다 튕겨 나온다.** 양쪽이 같은 판정을 해야
 // 애초에 안 들어가는 게 보이고, 빈 슬롯에 "무엇을 넣어야 하는지" 미리보기도 그릴 수 있다.
+// 판정은 `TownCatalog.Req.matches` 하나로 모아 뒀다 — 태그가 늘어도 여기는 안 바뀐다.
 public class TownMenu extends AbstractContainerMenu {
 
     public static final DeferredRegister<MenuType<?>> MENUS =
@@ -40,58 +42,80 @@ public class TownMenu extends AbstractContainerMenu {
         MENUS.register("town", () -> IMenuTypeExtension.create(TownMenu::new));
 
     // ── 화면 배치 (TownTrackScreen 과 공유하는 좌표) ──
+    // 제출칸이 3 → 18(2줄 × 9)로 늘면서 창이 세로로 42px 길어졌다.
     public static final int PANEL_W = 208;
-    public static final int PANEL_H = 214;
-    private static final int DEPOSIT_X = 73;   // 3칸을 가운데 정렬한 시작 X
+    public static final int PANEL_H = 256;
+    private static final int DEPOSIT_X = 23;   // 9칸 가운데 정렬 — 인벤토리와 같은 열에 맞춘다
     private static final int DEPOSIT_Y = 48;
-    private static final int DEPOSIT_STEP = 22;
-    private static final int INV_X = 23;       // 9칸 가운데 정렬
-    private static final int INV_Y = 133;
-    private static final int HOTBAR_Y = 191;
+    private static final int INV_X = 23;
+    private static final int INV_Y = 174;
+    private static final int HOTBAR_Y = 232;
 
     private final Container deposit;
     private final String trackKey;
-    private final Item required;   // 이번 단계가 받는 아이템 (없으면 null = 최대 단계)
+    private final List<TownCatalog.Req> required;   // 이번 단계가 받는 것들 (비었으면 최대 단계)
 
     // ── 서버 ──
-    public TownMenu(int id, Inventory playerInv, Container deposit, String trackKey, Item required) {
+    public TownMenu(int id, Inventory playerInv, Container deposit, String trackKey,
+                    List<TownCatalog.Req> required) {
         super(TYPE.get(), id);
         this.deposit = deposit;
         this.trackKey = trackKey;
-        this.required = required;
+        this.required = required == null ? List.of() : required;
         layout(playerInv);
     }
 
     // ── 클라 ──
     public TownMenu(int id, Inventory playerInv, RegistryFriendlyByteBuf buf) {
         this(id, playerInv, new SimpleContainer(TownCatalog.DEPOSIT_SLOTS),
-            buf.readUtf(), readItem(buf));
+            buf.readUtf(), readReqs(buf));
     }
 
-    private static Item readItem(RegistryFriendlyByteBuf buf) {
-        String id = buf.readUtf();
-        if (id.isEmpty()) return null;
-        ResourceLocation rl = ResourceLocation.tryParse(id);
-        return rl != null && BuiltInRegistries.ITEM.containsKey(rl) ? BuiltInRegistries.ITEM.get(rl) : null;
+    private static List<TownCatalog.Req> readReqs(RegistryFriendlyByteBuf buf) {
+        int n = buf.readVarInt();
+        List<TownCatalog.Req> out = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            String id = buf.readUtf();
+            boolean isTag = buf.readBoolean();
+            int count = buf.readVarInt();
+            ResourceLocation rl = ResourceLocation.tryParse(id);
+            if (rl != null) out.add(new TownCatalog.Req(rl, count, isTag));
+        }
+        return out;
+    }
+
+    public static void writeReqs(RegistryFriendlyByteBuf buf, List<TownCatalog.Req> reqs) {
+        buf.writeVarInt(reqs.size());
+        for (TownCatalog.Req r : reqs) {
+            buf.writeUtf(r.id().toString());
+            buf.writeBoolean(r.isTag());
+            buf.writeVarInt(r.count());
+        }
     }
 
     public String trackKey() { return trackKey; }
-    public Item required() { return required; }
+    public List<TownCatalog.Req> required() { return required; }
 
-    public static int depositX(int i) { return DEPOSIT_X + i * DEPOSIT_STEP; }
-    public static int depositY() { return DEPOSIT_Y; }
+    /** 이 아이템을 제출칸이 받는가. 서버·클라가 같은 답을 낸다. */
+    private boolean accepts(ItemStack stack) {
+        for (TownCatalog.Req r : required) if (r.matches(stack)) return true;
+        return false;
+    }
+
+    public static int depositX(int i) { return DEPOSIT_X + (i % TownCatalog.DEPOSIT_COLS) * 18; }
+    public static int depositY(int i) { return DEPOSIT_Y + (i / TownCatalog.DEPOSIT_COLS) * 18; }
     public static int invX(int col) { return INV_X + col * 18; }
     public static int invY(int row) { return INV_Y + row * 18; }
     public static int hotbarY() { return HOTBAR_Y; }
 
     private void layout(Inventory playerInv) {
         for (int i = 0; i < TownCatalog.DEPOSIT_SLOTS; i++) {
-            addSlot(new Slot(deposit, i, depositX(i), DEPOSIT_Y) {
+            addSlot(new Slot(deposit, i, depositX(i), depositY(i)) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
                     // 이번 단계에 필요한 자원만 받는다. 아무거나 받으면 보관함이 잡동사니로 차고,
                     // 무엇을 더 넣어야 하는지도 화면에서 읽기 어려워진다.
-                    return required != null && !stack.isEmpty() && stack.is(required);
+                    return accepts(stack);
                 }
             });
         }
@@ -119,7 +143,7 @@ public class TownMenu extends AbstractContainerMenu {
         } else {
             // 받는 자원이 아니면 인벤토리 안에서 굴리지 않고 그냥 둔다 —
             // 안 그러면 시프트클릭이 엉뚱한 칸으로 아이템을 옮겨버린다.
-            if (required == null || !stack.is(required)) return ItemStack.EMPTY;
+            if (!accepts(stack)) return ItemStack.EMPTY;
             if (!moveItemStackTo(stack, 0, depositEnd, false)) return ItemStack.EMPTY;
         }
         if (stack.isEmpty()) slot.set(ItemStack.EMPTY);
@@ -147,7 +171,7 @@ public class TownMenu extends AbstractContainerMenu {
     public static TownMenu server(int id, Inventory inv, TownData town, String trackKey) {
         TownCatalog.Track track = TownCatalog.byKey(trackKey);
         TownCatalog.Level need = track == null ? null : track.next(town.level(trackKey));
-        Item required = need == null ? null : need.itemOrNull();
-        return new TownMenu(id, inv, town.deposit(trackKey), trackKey, required);
+        return new TownMenu(id, inv, town.deposit(trackKey), trackKey,
+            need == null ? List.of() : need.reqs());
     }
 }

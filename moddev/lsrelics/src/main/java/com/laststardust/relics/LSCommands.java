@@ -7,9 +7,11 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -25,13 +27,16 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 // 각성 단계를 아이템에 새기는 관리자 명령.
 //
-// 각성의 "자격 판정"(관문 클리어 수·균열 정수 소모)은 KubeJS(ls_ascend.js)가 한다 —
+// 각성의 "자격 판정"(관문 클리어 수·별의 파편 소모)은 KubeJS(ls_ascend.js)가 한다 —
 // 진행도가 전부 거기 persistentData에 있기 때문. 여기서는 판정이 끝난 뒤
 // 실제 아이템 NBT에 별을 새기는 일만 맡는다.
 //   /lsrelic star <1-5>   손에 든 유물의 각성 단계를 설정
 @EventBusSubscriber(modid = LSRelics.MODID)
 public final class LSCommands {
     private LSCommands() {}
+
+    /** 측정 결과를 콘솔에도 남기려고 둔다 — 채팅만 가면 나중에 기록을 다시 못 읽는다. */
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
 
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
@@ -40,7 +45,162 @@ public final class LSCommands {
                 .requires(s -> s.hasPermission(2))
                 .then(Commands.literal("star")
                     .then(Commands.argument("n", IntegerArgumentType.integer(1, 5))
-                        .executes(ctx -> setStar(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "n"))))));
+                        .executes(ctx -> setStar(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "n")))))
+                // 첫 접속 프롤로그 «다시 보기». 연출은 한 번 보고 끝나는 물건이라
+                // 이게 없으면 박자를 못 고친다 — 재접속으로는 「봤다」 표식 때문에 안 뜬다.
+                .then(Commands.literal("prologue").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) {
+                        ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다."));
+                        return 0;
+                    }
+                    FateAutoOpen.replay(p);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7프롤로그를 다시 튼다 §8— 약 30초. 가호가 이미 있으면 마지막 선택 화면만 안 열린다."), false);
+                    return 1;
+                })));
+
+        // ── 상인 광장 ──
+        // 권한을 안 건다. 상인 NPC 의 대화 버튼이 `/shop @initiator` 로 부르는데,
+        // 권한을 걸면 일반 플레이어에게는 상점이 통째로 안 열린다.
+        //
+        // 인수는 EntityArgument — 선택자와 맨 이름을 둘 다 받는다(/lsonboard 와 같은 이유).
+        event.getDispatcher().register(
+            Commands.literal("shop")
+                .executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    com.laststardust.relics.shop.ShopService.open(p);
+                    return 1;
+                })
+                .then(Commands.argument("who", EntityArgument.player()).executes(ctx -> {
+                    // ⚠️ 감싼다. 이 명령은 **Easy NPC 대화 버튼**이 부르는데, Easy NPC 는
+                    //    예외를 삼키고 「명령어 실행 중 예상치 못한 오류」만 띄운다 —
+                    //    로그에 아무 자국이 안 남아서 무엇이 터졌는지 알 방법이 없다.
+                    //    (2026-08-13, 여기서 한 번 막혔다. 오늘 같은 모양이 세 번째다.)
+                    try {
+                        ServerPlayer t = EntityArgument.getPlayer(ctx, "who");
+                        com.laststardust.relics.shop.ShopService.open(t);
+                        return 1;
+                    } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+                        throw e;   // 인수 오류는 그대로 — 이건 원래 사람에게 보여야 한다
+                    } catch (Exception e) {
+                        LOG.error("[상점] /shop 실행 중 예외", e);
+                        ctx.getSource().sendFailure(Component.literal(
+                            "§c상점을 여는 중 오류 — §7logs/latest.log 의 §e[상점]§7 을 보세요."));
+                        return 0;
+                    }
+                })));
+
+        // ── 개인 지갑 ──
+        event.getDispatcher().register(
+            Commands.literal("wallet")
+                .executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    int bal = com.laststardust.relics.data.LSData.get(p.getServer())
+                        .wallet().get(p.getGameProfile().getName());
+                    ctx.getSource().sendSystemMessage(Component.literal(
+                        "§7개인 지갑: §e" + bal + " Ducat §8(마을 금고는 /town treasury)"));
+                    return 1;
+                })
+                .then(Commands.literal("give").requires(s -> s.hasPermission(2))
+                    .then(Commands.argument("who", EntityArgument.player())
+                        .then(Commands.argument("amount", IntegerArgumentType.integer(1))
+                            .executes(ctx -> {
+                                ServerPlayer t = EntityArgument.getPlayer(ctx, "who");
+                                int n = IntegerArgumentType.getInteger(ctx, "amount");
+                                var data = com.laststardust.relics.data.LSData.get(ctx.getSource().getServer());
+                                String nm = t.getGameProfile().getName();
+                                data.wallet().add(nm, n);
+                                data.dirty();
+                                t.sendSystemMessage(Component.literal("§e+" + n + " Ducat §7(개인 지갑)"));
+                                ctx.getSource().sendSuccess(() -> Component.literal(
+                                    "§a" + nm + " 에게 " + n + " Ducat §7— 잔액 " + data.wallet().get(nm)), false);
+                                return 1;
+                            })))));
+
+        // ── 부르는 이름 ──
+        // **권한을 안 건다.** 이건 관리 도구가 아니라 첫 대화에서 린케우스가 시키는 일이고,
+        // 일반 플레이어가 못 쓰면 온보딩이 거기서 멈춘다.
+        //
+        // ⚠️ 인수는 반드시 **greedyString** 이다. `word()`/`string()` 은 따옴표가 없으면
+        //    `0-9A-Za-z_-.+` 만 읽는다 — **한글이 통째로 안 들어간다.**
+        //    `/닉네임 린케우스` 가 「잘못된 인수」로 튕긴다(`/lsonboard @p` 와 같은 함정이다).
+        //
+        // ⚠️ 리터럴 이름이 한글이다. 브리가디어는 리터럴을 문자열 비교로 맞추므로 문제없지만,
+        //    IME 를 켜야 칠 수 있다. 그래서 `/nick` 도 같은 것으로 등록한다 —
+        //    둘은 «같은 명령의 두 이름»이지 서로 다른 기능이 아니다.
+        for (String alias : new String[] {"닉네임", "nick"}) {
+            event.getDispatcher().register(
+                Commands.literal(alias)
+                    .executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) {
+                            ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다."));
+                            return 0;
+                        }
+                        String cur = Nick.get(p);
+                        if (cur.isEmpty()) {
+                            ctx.getSource().sendSystemMessage(Component.literal(
+                                "§7아직 부르는 이름이 없습니다. §e/닉네임 <이름>"));
+                        } else {
+                            ctx.getSource().sendSystemMessage(Component.literal(
+                                "§7당신은 §r" + cur + "§7 라고 불립니다. §8(계정 "
+                                + p.getGameProfile().getName() + ")"));
+                        }
+                        return 1;
+                    })
+                    .then(Commands.argument("이름", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            ServerPlayer p = ctx.getSource().getPlayer();
+                            if (p == null) {
+                                ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다."));
+                                return 0;
+                            }
+                            String want = StringArgumentType.getString(ctx, "이름");
+                            String fail = Nick.set(p, want);
+                            if (fail != null) {
+                                ctx.getSource().sendFailure(Component.literal("§c" + fail));
+                                return 0;
+                            }
+                            ctx.getSource().sendSystemMessage(Component.literal(
+                                "§a이제 §r" + Nick.get(p) + "§a 라고 부르겠습니다."));
+                            LOG.info("[닉네임] {} -> {}", p.getGameProfile().getName(), Nick.get(p));
+                            return 1;
+                        })));
+        }
+
+        // ── 비행선 NPC 온보딩 ──
+        // Easy NPC 대화의 마지막 버튼이 부른다. 관리자도 손으로 부를 수 있어야 한다 —
+        // NPC 가 안 보이거나 대화가 막혔을 때 첫 세션을 여기서 구할 수 있어야 하기 때문이다.
+        //
+        // ⚠️ 인수는 **EntityArgument.player()** 다. 예전엔 StringArgumentType.word() 로 받아
+        //    이름을 getPlayerByName 으로 찾았는데, 그러면 `@p`·`@s` 가 통째로 막힌다 —
+        //    `@` 는 word() 의 허용 문자도 아니라 파싱 단계에서 「잘못된 인수」로 튕긴다.
+        //    Easy NPC 버튼에 손으로 `/lsonboard @p` 를 넣으면 정확히 그렇게 된다.
+        //
+        //    EntityArgument.player() 는 **선택자와 맨 이름을 둘 다** 받으므로
+        //    `/lsonboard a_ka1128` 도 그대로 살아 있고, 대상 제안도 공짜로 붙는다.
+        //    NPC 버튼에는 `@initiator`(Easy NPC 가 «클릭한 사람»의 이름으로 바꿔 준다)를 쓴다 —
+        //    `@p` 는 «명령을 실행한 자리에서 제일 가까운 사람」이라 옆 사람이 더 가까우면
+        //    엉뚱한 사람이 날아간다.
+        event.getDispatcher().register(
+            Commands.literal("lsonboard")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.argument("who", EntityArgument.player())
+                    .executes(ctx -> {
+                        ServerPlayer target = EntityArgument.getPlayer(ctx, "who");
+                        String who = target.getGameProfile().getName();
+                        String fail = Onboarding.send(target);
+                        if (fail != null) {
+                            ctx.getSource().sendFailure(Component.literal("§c" + fail));
+                            return 0;
+                        }
+                        LOG.info("[온보딩] {} -> 성역", who);
+                        ctx.getSource().sendSuccess(() -> Component.literal("§7" + who + " → 성역"), false);
+                        return 1;
+                    })));
 
         // 훈련 더미 — 파티 실효 DPS 실측 (보스 체력 설계의 근거가 된다)
         event.getDispatcher().register(
@@ -66,8 +226,13 @@ public final class LSCommands {
                         ctx.getSource().sendFailure(Component.literal("측정 중이 아니다. 먼저 /dummy start"));
                         return 0;
                     }
+                    // ⚠️ **콘솔에도 남긴다.** 자동 종료(autoStopTicks)는 처음부터 LOG.info 를
+                    //    찍고 있었는데 이 손 종료 경로만 안 찍어서, `/dummy stop` 으로 끝낸 판은
+                    //    서버 로그에 **한 줄도 안 남았다.** 나중에 결과를 다시 읽을 방법이 없다
+                    //    — 2026-08-11 「수확」 측정에서 더미가 죽어 손으로 끊었더니 그렇게 됐다.
                     for (Component line : DummyManager.stop()) {
                         ctx.getSource().sendSuccess(() -> line, true);
+                        LOG.info("[DPS] {}", line.getString());
                     }
                     return 1;
                 }))
@@ -84,6 +249,29 @@ public final class LSCommands {
                             .executes(ctx -> setDummyArmor(ctx.getSource(),
                                 IntegerArgumentType.getInteger(ctx, "armor"),
                                 IntegerArgumentType.getInteger(ctx, "toughness"))))))
+                // ── 축복 측정용 손잡이 둘 (2026-08-11) ──
+                // 축복 18종 중 11종이 기본 설정으로는 «영원히 발동하지 않아» 잴 수가 없었다.
+                //   · 체력 비율에 걸리는 것 — 더미 체력이 100만이라 25% 밑으로 못 간다
+                //   · 맞아야 도는 것     — 더미가 setNoAi(true) 라 반격을 안 한다
+                // 그 둘을 여는 손잡이다. 자세한 계획은 `docs/BLESSING.md` 「재보정」.
+                .then(Commands.literal("hp")
+                    .then(Commands.argument("hp", IntegerArgumentType.integer(0, 1_000_000))
+                        .executes(ctx -> {
+                            int v = IntegerArgumentType.getInteger(ctx, "hp");
+                            DummyManager.setHp(v);
+                            ctx.getSource().sendSuccess(() -> Component.literal(v > 0
+                                ? String.format("§6더미 체력 §e%,d §8— 자동 보충 끔 (체력 비율 축복 측정용)", v)
+                                : "§6더미 체력 §e기본(1,000,000) §8— 자동 보충 켬"), false);
+                            return 1;
+                        })))
+                .then(Commands.literal("hit")
+                    .then(Commands.argument("damage", com.mojang.brigadier.arguments.FloatArgumentType.floatArg(0f, 1000f))
+                        .executes(ctx -> setDummyHit(ctx.getSource(),
+                            com.mojang.brigadier.arguments.FloatArgumentType.getFloat(ctx, "damage"), 30))
+                        .then(Commands.argument("everyTicks", IntegerArgumentType.integer(1, 200))
+                            .executes(ctx -> setDummyHit(ctx.getSource(),
+                                com.mojang.brigadier.arguments.FloatArgumentType.getFloat(ctx, "damage"),
+                                IntegerArgumentType.getInteger(ctx, "everyTicks"))))))
                 // 몹 공격력 설계용 — 이 피해가 장비별로 얼마나 들어가는지
                 .then(Commands.literal("calc")
                     .then(Commands.argument("damage", IntegerArgumentType.integer(1, 1000)).executes(ctx -> {
@@ -100,8 +288,23 @@ public final class LSCommands {
                             : "§8대기")), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(String.format(
                         "§7표적 방어도 §e%.0f§7 · 견고함 §e%.0f", DummyManager.armor(), DummyManager.toughness())), false);
+                    // ── 체력·되받아치기 상태를 보여준다 (2026-08-11) ──
+                    // 이게 없어서 「측정 시작하니 풀피가 된다」를 코드만 보고는 못 짚었다.
+                    // 손잡이를 만들면 **그 손잡이가 지금 어느 위치인지도 같이 보여야 한다.**
+                    ctx.getSource().sendSuccess(() -> Component.literal(String.format(
+                        "§7체력 §e%,.0f§7 · %s§7 · 지금 §e%,.0f",
+                        DummyManager.hp(),
+                        DummyManager.hpFixed()
+                            ? "§a고정 (자동 보충·시작 시 회복 §l꺼짐§a)"
+                            : "§8기본 (자동 보충·시작 시 회복 켜짐)",
+                        DummyManager.currentHp())), false);
+                    if (DummyManager.retaliateDamage() > 0) {
+                        ctx.getSource().sendSuccess(() -> Component.literal(String.format(
+                            "§7되받아치기 §e%.0f §7× §e%.1f초", DummyManager.retaliateDamage(),
+                            DummyManager.retaliateInterval() / 20.0f)), false);
+                    }
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§8/dummy spawn · start [초] · stop · clear · armor <값> [견고함] · calc <피해>"), false);
+                        "§8/dummy spawn · start [초] · stop · clear · armor <값> [견고함] · hp <값> · hit <피해> [주기] · calc <피해>"), false);
                     return 1;
                 }));
 
@@ -111,6 +314,25 @@ public final class LSCommands {
         event.getDispatcher().register(
             Commands.literal("lsgimmick")
                 .requires(s -> s.hasPermission(2))
+                // ── 지금까지 얼마나 아팠나 ──
+                // 처치 보고와 사망 보고만 있으면 **둘 다 판이 끝나야** 나온다. 조율은
+                // 「30초 맞아 보고 값을 본다」가 제일 싸므로 중간 조회가 있어야 한다.
+                .then(Commands.literal("dmg").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    BossDamageMeter.Meter m = BossDamageMeter.busiest();
+                    if (m == null) {
+                        ctx.getSource().sendFailure(Component.literal(
+                            "지켜보는 보스가 없다 — 먼저 /lsgimmick summon (또는 ignis·lich·gauntlet·monstrosity summon)"));
+                        return 0;
+                    }
+                    BossDamageMeter.print(p, m, false);
+                    // 로그에도. 화면에만 찍으면 **내가 못 읽는다** — 조율은 로그를 뒤져서
+                    // 하는데(`docs/BLESSING.md`), 이 경로만 그게 빠져 있었다.
+                    // 처치·사망은 남기면서 「그냥 조회」만 안 남기는 건 일관성도 없다.
+                    BossDamageMeter.log(m, "조회");
+                    return 1;
+                }))
                 .then(Commands.literal("summon").executes(ctx -> {
                     ServerPlayer p = ctx.getSource().getPlayer();
                     if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
@@ -150,7 +372,12 @@ public final class LSCommands {
                         .suggests((c, b) -> { b.suggest("danger"); b.suggest("stack"); b.suggest("spread"); return b.buildFuture(); })
                         .executes(ctx -> testTelegraph(ctx.getSource(), StringArgumentType.getString(ctx, "kind")))))
                 .then(Commands.literal("clear").executes(ctx -> {
-                    int n = WroughtnautGimmick.clearTest() + IgnisGimmick.clearTest() + GauntletGimmick.clearTest();
+                    // 기믹을 새로 만들 때마다 여기에 한 줄을 - 반드시 - 더한다.
+                    // T4·최종이 빠져 있던 적이 있는데, 시험 소환은 PersistenceRequired 라
+                    // 청크를 벗어나도 안 사라진다 — 빠뜨리면 체력 1만짜리가 세계에 영구히 남는다.
+                    int n = WroughtnautGimmick.clearTest() + IgnisGimmick.clearTest()
+                          + GauntletGimmick.clearTest() + MonstrosityGimmick.clearTest()
+                          + LichGimmick.clearTest() + SiegeVanguardGimmick.clearTest();
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§7시험 소환분 " + n + "기 제거 §8(세계에서 만난 개체는 건드리지 않는다)"), false);
                     return 1;
@@ -194,6 +421,77 @@ public final class LSCommands {
                         return 1;
                     }))
                 // ── T3 건틀렛 「분쇄 파문」 (보라 = 흩어져라) ──
+                .then(Commands.literal("monstrosity")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!MonstrosityGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — L_Ender's Cataclysm 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a네더라이트 괴물 소환 §7— 교전 후 §e" + (MonstrosityGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 심판. §8(/lsgimmick monstrosity now 로 즉시)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!MonstrosityGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 네더라이트 괴물이 없다. 먼저 /lsgimmick monstrosity summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§6◆ 네더라이트 괴물 §6「용암의 심판」 §8— 두 박자: §d흩어져라§8 → "
+                            + (MonstrosityGimmick.BEAT / 20.0) + "초 뒤 §e뭉쳐라"), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§8  주기 " + (MonstrosityGimmick.INTERVAL_P1 / 20) + "초 → 2페이즈("
+                            + (int) (MonstrosityGimmick.PHASE2_HP * 100) + "%) "
+                            + (MonstrosityGimmick.INTERVAL_P2 / 20) + "초 + 보스 발밑 빨강 = 세 어휘 동시"), false);
+                        for (Component line : MonstrosityGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
+                .then(Commands.literal("lich")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!LichGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — Bosses of Mass Destruction 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a리치 소환 §7— 교전 후 §e" + (LichGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 삼킴. §8(/lsgimmick lich now 로 즉시)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!LichGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 리치가 없다. 먼저 /lsgimmick lich summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§6◆ 리치 §9「별을 삼키는 자」 §8— " + (LichGimmick.SWALLOW_TICKS / 20)
+                            + "초 무적(§9파랑§8), §e노란 자리§8에 절반 이상이 "
+                            + (LichGimmick.HOLD_NEEDED / 20) + "초 모이면 해제"), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§8  못 막으면 최대 체력 " + (int) (LichGimmick.HEAL_FRAC * 100)
+                            + "% 회복 · 주기 " + (LichGimmick.INTERVAL_P1 / 20) + "초 → 2페이즈("
+                            + (int) (LichGimmick.PHASE2_HP * 100) + "%) " + (LichGimmick.INTERVAL_P2 / 20) + "초"), false);
+                        for (Component line : LichGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
                 .then(Commands.literal("gauntlet")
                     .then(Commands.literal("summon").executes(ctx -> {
                         ServerPlayer p = ctx.getSource().getPlayer();
@@ -232,6 +530,55 @@ public final class LSCommands {
                         }
                         return 1;
                     }))
+                // ── 공성 선봉 「무너지는 땅」 — 관문 전에 빨강을 처음 만나는 자리 ──
+                .then(Commands.literal("vanguard")
+                    .then(Commands.literal("summon").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!SiegeVanguardGimmick.summon(p)) {
+                            ctx.getSource().sendFailure(Component.literal("소환 실패 — Cataclysm 이 설치되어 있는지 확인."));
+                            return 0;
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§a균열의 선봉 소환 §7— 교전 후 §e" + (SiegeVanguardGimmick.FIRST_DELAY / 20)
+                            + "초§7 뒤 첫 장판. §8(피해 " + SiegeVanguardGimmick.DAMAGE
+                            + " — T1 의 " + WroughtnautGimmick.DAMAGE + " 보다 약하다. 연습이니까)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("now").executes(ctx -> {
+                        ServerPlayer p = ctx.getSource().getPlayer();
+                        if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        if (!SiegeVanguardGimmick.forceNear(p)) {
+                            ctx.getSource().sendFailure(Component.literal("근처에 선봉이 없다. 먼저 /lsgimmick vanguard summon"));
+                            return 0;
+                        }
+                        return 1;
+                    }))
+                    .executes(ctx -> {
+                        for (Component line : SiegeVanguardGimmick.status()) {
+                            ctx.getSource().sendSuccess(() -> line, false);
+                        }
+                        return 1;
+                    }))
+                // ── 탐험 보스: 모드가 이미 가진 규칙을 보이게 만든 것들 ──
+                // 소환·즉시시전이 없다(ExplorerGimmicks 주석 참고). 규칙표와 추적 현황만.
+                .then(Commands.literal("explorer").executes(ctx -> {
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§6◆ 탐험 보스의 숨은 규칙 §8— 전부 모드가 원래 가진 것. 우리는 보이게만 했다"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7프로스트모 §8— 불 ×1.25 · §c화살은 피해 0§8 (시리우스가 통째로 막힌다)"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7히드라 §8— §a벌린 입§8만 온전한 피해, 나머지는 1/8 · "
+                        + (int) ExplorerGimmicks.HYDRA_MAX_DIST + "칸 밖은 피해 0"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7유령기사 §8— 돌진 중이 아니면 §a방어도 5배§8 (돌진 때만 딜이 들어간다)"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7우르가스트 §8— 발작 중 피해 1/10 · 누적 18 이면 페이즈 전환"), false);
+                    for (Component line : ExplorerGimmicks.status()) {
+                        ctx.getSource().sendSuccess(() -> line, false);
+                    }
+                    return 1;
+                }))
                 .executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§6◆ 강철거인 기믹 §c「대지 가르기」 §8— 무작위 플레이어 발밑, 반경 "
@@ -241,23 +588,29 @@ public final class LSCommands {
                         ctx.getSource().sendSuccess(() -> line, false);
                     }
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§7T1 §c빨강§7 강철거인 · T2 §e노랑§7 이그니스 · T3 §d보라§7 건틀렛 §8| §a초록§7 지금 쳐라(취약 창)"), false);
+                        "§7T1 §c빨강§7 · T2 §e노랑§7 · T3 §d보라§7(+2P 조합) · T4 §6조합 시험§7 · 최종 §9파랑"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§7언제 때릴 것인가 §8— §a초록§7 지금 쳐라(강철거인 취약 창) · §9파랑§7 멈춰라(이그니스 반격)"), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         "§8/lsgimmick summon · now · window · test <danger|stack|spread> · clear"), false);
                     ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§8/lsgimmick ignis <summon|now> · /lsgimmick gauntlet <summon|now>"), false);
+                        "§8/lsgimmick ignis · gauntlet · monstrosity · lich  <summon|now>"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§8/lsgimmick vanguard <summon|now> §8— 공성 선봉(관문 전 연습)"), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§8/lsgimmick explorer §8— 탐험 보스 4종의 숨은 규칙"), false);
                     return 1;
                 }));
 
         // 가호 선택 화면 열기 — 모든 플레이어가 쓴다(/lsrelic 은 OP 전용이라 그 아래 두면 안 된다).
-        // 현재 가호는 KubeJS(persistentData)에만 있어 모드가 읽을 수 없으므로 인자로 받는다.
-        //   /fateui           선택 안 한 상태로 열기
-        //   /fateui <key>     이미 그 가호를 받은 상태로 열기 (선택 버튼 비활성)
+        //
+        // ── 인자가 사라졌다 (2026-08-06) ──
+        // 예전 주석은 «현재 가호는 KubeJS(persistentData)에만 있어 모드가 읽을 수 없으므로 인자로
+        // 받는다» 였다. **이관 3단계(2026-07-31)로 낡았다** — 장부는 `LSData.hero()` 다.
+        // 인자로 받는 동안은 스크립트가 넘겨준 값을 믿는 구조라, 그쪽이 한 번 어긋나면
+        // 「이미 가호가 있는데 선택 버튼이 열려 있는」 화면이 나올 수 있었다. 이제 직접 읽는다.
         event.getDispatcher().register(
-            Commands.literal("fateui")
-                .executes(ctx -> openFateScreen(ctx.getSource(), ""))
-                .then(Commands.argument("current", StringArgumentType.word())
-                    .executes(ctx -> openFateScreen(ctx.getSource(), StringArgumentType.getString(ctx, "current")))));
+            Commands.literal("fateui").executes(ctx -> openFateScreen(ctx.getSource())));
 
         // ── 마을(성역 재건) ──
         // 데이터·판정이 전부 모드에 있으므로 명령도 여기서 등록한다.
@@ -267,6 +620,108 @@ public final class LSCommands {
             Commands.literal("town")
                 .executes(ctx -> openTown(ctx.getSource()))
                 .then(Commands.literal("info").executes(ctx -> townInfo(ctx.getSource())))
+                // ── 귀환 지점 ──
+                // 귀환석(공방 4단계 「귀환의 요람」)이 데려가는 자리. 성역 «중심»과 따로 둔다 —
+                // 성역은 공성 반경·관문 거리의 기준점이라 건물 한복판이거나 공중일 수 있는데,
+                // 귀환석은 사람이 발을 딛는 자리여야 한다.
+                //
+                // 안 잡으면 성역으로 보낸다. 「자리를 안 잡아서 귀환석이 안 듣는다」가
+                // 되면 안 되기 때문이다.
+                .then(Commands.literal("hearth").requires(s -> s.hasPermission(2))
+                    .executes(ctx -> {
+                        var src = ctx.getSource();
+                        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                        var h = data.hearth();
+                        src.sendSuccess(() -> Component.literal(data.hasHearth()
+                            ? "§7귀환 지점: §e" + h.getX() + ", " + h.getY() + ", " + h.getZ()
+                            : "§7귀환 지점이 따로 없습니다 — §f성역§7으로 보냅니다. §8(" + h.getX()
+                              + ", " + h.getY() + ", " + h.getZ() + ")"), false);
+                        return 1;
+                    })
+                    .then(Commands.literal("set").executes(ctx -> {
+                        var src = ctx.getSource();
+                        ServerPlayer p = src.getPlayer();
+                        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                        var at = p.blockPosition();
+                        // 발밑이 아니라 «서 있는 칸»을 적는다. 도착할 때 +1 을 얹으므로
+                        // 여기서 또 내리면 바닥에 파묻힌다.
+                        data.setHearth(at.getX(), at.getY() - 1, at.getZ());
+                        data.dirty();
+                        src.sendSuccess(() -> Component.literal(
+                            "§a귀환 지점 지정: " + at.getX() + ", " + at.getY() + ", " + at.getZ()
+                            + " §7(귀환석이 여기로 데려옵니다)"), false);
+                        return 1;
+                    }))
+                    .then(Commands.literal("clear").executes(ctx -> {
+                        var src = ctx.getSource();
+                        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                        data.clearHearth();
+                        data.dirty();
+                        src.sendSuccess(() -> Component.literal("§7귀환 지점을 지웠습니다 — 다시 성역으로 보냅니다."), false);
+                        return 1;
+                    })))
+                // ── 구조물 앵커 ──
+                // 그 자리에 «서서» 잡는다. 좌표를 손으로 계산하면 한 칸씩 틀리고,
+                // 틀린 걸 눈으로 확인할 방법이 없다.
+                //
+                // ⚠️ 저장되는 건 성역 기준 «상대» 좌표다 — 성역을 옮겨도 건물이 따라온다.
+                .then(Commands.literal("anchor").requires(s -> s.hasPermission(2))
+                    .then(Commands.argument("track", StringArgumentType.word())
+                        .suggests((c, b) -> {
+                            for (var t : com.laststardust.relics.data.TownCatalog.ALL) b.suggest(t.key());
+                            return b.buildFuture();
+                        })
+                        .executes(ctx -> {
+                            var src = ctx.getSource();
+                            ServerPlayer p = src.getPlayer();
+                            if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                            String track = StringArgumentType.getString(ctx, "track");
+                            if (com.laststardust.relics.data.TownCatalog.byKey(track) == null) {
+                                src.sendFailure(Component.literal("§c그런 트랙이 없다: " + track)); return 0;
+                            }
+                            var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                            if (!data.hasSanctuary()) {
+                                src.sendFailure(Component.literal("§c성역이 먼저다 — §e/sanctuary here")); return 0;
+                            }
+                            var s0 = data.sanctuary();
+                            var here = p.blockPosition();
+                            int dx = here.getX() - s0.getX(), dy = here.getY() - s0.getY(), dz = here.getZ() - s0.getZ();
+                            data.town().setAnchor(track, dx, dy, dz);
+                            // 파일을 다시 넣었을 수 있으니 «지어진 단계»도 잊는다 — 안 그러면
+                            // 앵커만 옮기고 건물은 옛 자리에 남는다.
+                            data.town().setBuiltLevel(track, 0);
+                            data.dirty();
+                            src.sendSuccess(() -> Component.literal(
+                                "§a" + track + " 앵커 = 성역 기준 " + dx + ", " + dy + ", " + dz
+                                + " §7(다음 §e/town build " + track + "§7 에서 세운다)"), false);
+                            return 1;
+                        })))
+                // 지금 레벨의 구조물을 «다시» 세운다. 구조물 파일을 고친 뒤에 쓴다 —
+                // reconcile 은 레벨이 바뀔 때만 도므로 파일만 바꿔서는 아무 일도 안 일어난다.
+                .then(Commands.literal("build").requires(s -> s.hasPermission(2))
+                    .then(Commands.argument("track", StringArgumentType.word())
+                        .suggests((c, b) -> {
+                            for (var t : com.laststardust.relics.data.TownCatalog.ALL) b.suggest(t.key());
+                            return b.buildFuture();
+                        })
+                        .executes(ctx -> {
+                            var src = ctx.getSource();
+                            String track = StringArgumentType.getString(ctx, "track");
+                            var data = com.laststardust.relics.data.LSData.get(src.getServer());
+                            int lv = data.town().level(track);
+                            boolean ok = com.laststardust.relics.town.TownBuild.place(src.getServer(), track, lv);
+                            if (ok) {
+                                data.town().setBuiltLevel(track, lv);
+                                data.dirty();
+                                src.sendSuccess(() -> Component.literal("§a" + track + " " + lv + "단계 세움"), false);
+                            } else {
+                                // 왜 안 됐는지는 로그에 남는다. 여기서도 어디를 보라고 말해 준다.
+                                src.sendFailure(Component.literal(
+                                    "§c못 세웠다 — 앵커가 없거나 구조물 파일이 없다. §7logs/latest.log 의 §e[마을건축]§7 을 보세요."));
+                            }
+                            return ok ? 1 : 0;
+                        })))
                 .then(Commands.literal("treasury")
                     .executes(ctx -> {
                         var s2 = ctx.getSource();
@@ -287,6 +742,223 @@ public final class LSCommands {
                             .executes(ctx -> setLevel(ctx.getSource(),
                                 StringArgumentType.getString(ctx, "track"),
                                 IntegerArgumentType.getInteger(ctx, "n")))))));
+
+        // ── 별의 축복 ──
+        //   /bless                       현황 (슬롯 4칸 · 해금 상태 · 리롤 비용)
+        //   /bless <slot>                빈 칸을 채운다 (무료 — 각성이 이미 파편을 먹었다)
+        //   /bless <slot> kind|value     리롤 (파편 / 별먼지)
+        //   /bless clear <이름> [slot]   관리자
+        //
+        // 전용 UI(`/bless` 창)가 오기 전까지 이게 유일한 입구다. UI 가 붙어도 명령은 남긴다 —
+        // 화면 없이 상태를 확인할 수 있어야 「버튼이 안 눌린다」의 원인을 가릴 수 있다.
+        // ── 12번째 가호(소환사) 프로토타입 ──
+        // 직업을 통째로 설계하기 «전»에 「마크에서 소환수가 실제로 쓸 만한가」부터 안다.
+        // 스킬이 아니라 명령으로 둔 이유: 아직 유물도 가호도 없고, 손맛만 보는 단계다.
+        event.getDispatcher().register(
+            Commands.literal("lssummon")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.argument("n", IntegerArgumentType.integer(1, 8))
+                    .executes(ctx -> summonTest(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "n"))))
+                .then(Commands.literal("clear").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayer();
+                    if (p == null) { ctx.getSource().sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+                    int n = com.laststardust.relics.SummonManager.dismiss(p);
+                    ctx.getSource().sendSuccess(() -> Component.literal("§7잔영 " + n + "기 거둠"), false);
+                    return 1;
+                }))
+                .executes(ctx -> summonTest(ctx.getSource(), 3)));
+
+        event.getDispatcher().register(
+            Commands.literal("bless")
+                .executes(ctx -> blessOpen(ctx.getSource()))
+                .then(Commands.literal("status").executes(ctx -> blessStatus(ctx.getSource())))
+                .then(Commands.literal("clear").requires(s2 -> s2.hasPermission(2))
+                    .then(Commands.argument("who", StringArgumentType.word())
+                        .executes(ctx -> blessClear(ctx.getSource(),
+                            StringArgumentType.getString(ctx, "who")))))
+                // ── 관리자: 원하는 축복을 직접 박는다 ──
+                // 검증용이다. 18종을 «굴려서» 확인하려면 원하는 게 나올 때까지 리롤을 돌려야 하고,
+                // 그건 효과 하나 보는 데 파편을 수십 개 쓴다는 뜻이다. 값을 생략하면 최댓값 —
+                // 효과가 «도는지»를 보는 데는 최댓값이 제일 눈에 띈다.
+                .then(Commands.literal("set").requires(s2 -> s2.hasPermission(2))
+                    .then(Commands.argument("slot", StringArgumentType.word())
+                        .suggests((c, b) -> {
+                            for (var s2 : com.laststardust.relics.data.BlessingCatalog.Slot.values()) {
+                                b.suggest(s2.name().toLowerCase(java.util.Locale.ROOT));
+                            }
+                            return b.buildFuture();
+                        })
+                        .then(Commands.argument("id", StringArgumentType.word())
+                            .suggests((c, b) -> {
+                                com.laststardust.relics.data.BlessingCatalog.WEAPONS.forEach(x -> b.suggest(x.id()));
+                                com.laststardust.relics.data.BlessingCatalog.DEFENSE.forEach(x -> b.suggest(x.id()));
+                                return b.buildFuture();
+                            })
+                            .executes(ctx -> blessSet(ctx.getSource(),
+                                StringArgumentType.getString(ctx, "slot"),
+                                StringArgumentType.getString(ctx, "id"), Float.NaN))
+                            .then(Commands.argument("value", com.mojang.brigadier.arguments.FloatArgumentType.floatArg())
+                                .executes(ctx -> blessSet(ctx.getSource(),
+                                    StringArgumentType.getString(ctx, "slot"),
+                                    StringArgumentType.getString(ctx, "id"),
+                                    com.mojang.brigadier.arguments.FloatArgumentType.getFloat(ctx, "value")))))))
+                .then(Commands.argument("slot", StringArgumentType.word())
+                    .suggests((c, b) -> {
+                        for (var s2 : com.laststardust.relics.data.BlessingCatalog.Slot.values()) {
+                            b.suggest(s2.name().toLowerCase(java.util.Locale.ROOT));
+                        }
+                        return b.buildFuture();
+                    })
+                    .executes(ctx -> blessDo(ctx.getSource(),
+                        StringArgumentType.getString(ctx, "slot"), "bless"))
+                    .then(Commands.argument("what", StringArgumentType.word())
+                        .suggests((c, b) -> { b.suggest("kind"); b.suggest("value"); return b.buildFuture(); })
+                        .executes(ctx -> blessDo(ctx.getSource(),
+                            StringArgumentType.getString(ctx, "slot"),
+                            StringArgumentType.getString(ctx, "what"))))));
+    }
+
+    // ── 별의 축복 ──
+
+    private static com.laststardust.relics.data.BlessingCatalog.Slot slotOf(String s) {
+        for (var v : com.laststardust.relics.data.BlessingCatalog.Slot.values()) {
+            if (v.name().equalsIgnoreCase(s)) return v;
+        }
+        return null;
+    }
+
+    private static int blessOpen(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        com.laststardust.relics.blessing.BlessGui.open(p);
+        return 1;
+    }
+
+    private static int blessStatus(CommandSourceStack src) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        var server = src.getServer();
+        var data = com.laststardust.relics.data.LSData.get(server);
+        String name = p.getGameProfile().getName();
+        int star = data.hero().star(name);
+
+        boolean unlocked = com.laststardust.relics.blessing.BlessingService.altarUnlocked(server);
+        p.sendSystemMessage(Component.literal("§b✦ 별의 축복 §8— " + star + "성"
+            + (unlocked ? " §7· 제단 §a열림" : " §7· 제단 §c잠김 §8(공방 Lv2)")
+            + (com.laststardust.relics.blessing.BlessingService.altarUpgraded(server) ? " §7· §d강화됨" : "")));
+
+        for (var slot : com.laststardust.relics.data.BlessingCatalog.Slot.values()) {
+            String label = Component.translatable(slot.nameKey()).getString();
+            if (!slot.unlockedAt(star)) {
+                p.sendSystemMessage(Component.literal(
+                    "§8   [" + label + "] 잠김 — " + slot.star + "성 필요"));
+                continue;
+            }
+            var roll = data.blessing().get(name, slot);
+            if (roll == null) {
+                p.sendSystemMessage(Component.literal("§7   [" + label + "] §8비어 있음 — §e/bless "
+                    + slot.name().toLowerCase(java.util.Locale.ROOT)));
+                continue;
+            }
+            var def = roll.def();
+            String bn = def == null ? roll.id() : Component.translatable(def.nameKey()).getString();
+            p.sendSystemMessage(Component.literal("§f   [" + label + "] §r" + bn
+                + " §e" + com.laststardust.relics.blessing.BlessingService.fmt(roll.value()) + "%"
+                + " §8(" + Math.round(roll.percentile() * 100) + "%)"));
+        }
+        int kc = com.laststardust.relics.data.BlessingCatalog.kindCost(star);
+        int vc = com.laststardust.relics.data.BlessingCatalog.valueCost(star,
+            com.laststardust.relics.blessing.BlessingService.altarUpgraded(server));
+        p.sendSystemMessage(Component.literal("§8   리롤 — 종류 §d파편 " + kc + "§8 · 수치 §b별먼지 " + vc));
+        return 1;
+    }
+
+    private static int blessDo(CommandSourceStack src, String slotName, String what) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        var slot = slotOf(slotName);
+        if (slot == null) {
+            src.sendFailure(Component.literal("§c그런 칸이 없다: " + slotName
+                + " §8(chest · weapon_1 · legs · weapon_2)"));
+            return 0;
+        }
+        var action = switch (what) {
+            case "kind"  -> com.laststardust.relics.blessing.BlessingService.Action.REROLL_KIND;
+            case "value" -> com.laststardust.relics.blessing.BlessingService.Action.REROLL_VALUE;
+            default      -> com.laststardust.relics.blessing.BlessingService.Action.BLESS;
+        };
+        return com.laststardust.relics.blessing.BlessingService.apply(p, slot, action).ok() ? 1 : 0;
+    }
+
+    /** @param value NaN 이면 그 축복의 최댓값 — 효과가 도는지 보는 데는 최댓값이 제일 눈에 띈다. */
+    private static int blessSet(CommandSourceStack src, String slotName, String id, float value) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        var slot = slotOf(slotName);
+        if (slot == null) {
+            src.sendFailure(Component.literal("§c그런 칸이 없다: " + slotName));
+            return 0;
+        }
+        var def = com.laststardust.relics.data.BlessingCatalog.byId(id);
+        if (def == null) {
+            src.sendFailure(Component.literal("§c그런 축복이 없다: " + id));
+            return 0;
+        }
+        // 축이 안 맞으면 막는다 — 무기 칸에 방어 축복이 박히면 효과는 «걸리는데» 제단 화면엔
+        // 안 보인다(후보 목록이 축별로 갈려 있어서). 그 상태를 만들면 검증이 더 어려워진다.
+        if (def.axis() != slot.axis) {
+            src.sendFailure(Component.literal("§c" + id + " 은(는) "
+                + (def.axis() == com.laststardust.relics.data.BlessingCatalog.Axis.WEAPON ? "무기" : "방어")
+                + " 축복이다 — " + slotName + " 칸에는 못 넣는다."));
+            return 0;
+        }
+        float v = Float.isNaN(value) ? def.max() : value;
+        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+        data.blessing().set(p.getGameProfile().getName(), slot, id, v);
+        data.dirty();
+        com.laststardust.relics.blessing.BlessGui.sync(p, "");
+        src.sendSuccess(() -> Component.literal("§a✦ " + slotName + " ← " + id + " "
+            + com.laststardust.relics.blessing.BlessingService.fmt(v) + "%"), false);
+        return 1;
+    }
+
+    /** 「별의 잔영」 n 기를 주인 주변에 띄운다. 손맛 확인용이라 수치는 SummonManager 고정값이다. */
+    private static int summonTest(CommandSourceStack src, int n) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) { src.sendFailure(Component.literal("플레이어만 사용할 수 있다.")); return 0; }
+        if (!(p.level() instanceof ServerLevel sl)) return 0;
+        for (int i = 0; i < n; i++) {
+            double a = Math.PI * 2 * i / n;
+            net.minecraft.world.phys.Vec3 at = p.position().add(Math.cos(a) * 2.0, 1.8, Math.sin(a) * 2.0);
+            com.laststardust.relics.SummonManager.summon(sl, p, at, com.laststardust.relics.SummonManager.LIFE_TICKS);
+        }
+        int total = com.laststardust.relics.SummonManager.count(p);
+        // 수치를 같이 찍는다 — 손맛을 보는 단계라 「지금 뭘로 시험 중인지」가 안 보이면
+        // 「약하다/세다」는 감상이 어느 값에 대한 것인지 나중에 못 가린다.
+        src.sendSuccess(() -> Component.literal(
+            "§b별의 잔영 §f" + n + "§b기 §7(현재 " + total + "기) — 피해 "
+            + (int) com.laststardust.relics.SummonManager.DAMAGE
+            + " · 체력 " + (int) com.laststardust.relics.SummonManager.HP
+            + " · " + (com.laststardust.relics.SummonManager.LIFE_TICKS / 20) + "초"
+            + " §8| §e/lssummon clear"), false);
+        return 1;
+    }
+
+    private static int blessClear(CommandSourceStack src, String who) {
+        var data = com.laststardust.relics.data.LSData.get(src.getServer());
+        data.blessing().clearAll(who);
+        data.dirty();
+        // ── 클라에 알려야 한다 (2026-08-09) ──
+        // 툴팁은 서버 장부가 아니라 **클라 캐시**(BlessCache)를 읽는다. 여기서 sync 를 안 부르면
+        // 효과는 실제로 사라졌는데 무기 설명에는 그대로 남아서 「명령이 안 먹었다」로 보인다.
+        // 바로 위 blessSet 은 부르고 있었고 여기만 빠져 있었다.
+        ServerPlayer target = src.getServer().getPlayerList().getPlayerByName(who);
+        if (target != null) {
+            com.laststardust.relics.blessing.BlessGui.sync(target, "");
+        }
+        src.sendSuccess(() -> Component.literal("§7" + who + " 의 축복을 전부 지웠다."
+            + (target == null ? " §8(접속 중이 아니라 화면 갱신은 다음 접속에)" : "")), true);
+        return 1;
     }
 
     private static int openTown(CommandSourceStack src) {
@@ -304,8 +976,8 @@ public final class LSCommands {
             String name = def == null ? t.key() : Component.translatable(def.nameKey()).getString();
             String line = "§f" + (def == null ? "" : def.icon() + " ") + name
                 + " §7Lv" + t.level() + "/" + t.max()
-                + (t.isMax() ? " §6MAX" : " §8→ " + t.nextName() + " (" + t.itemName() + " "
-                    + t.have() + "/" + t.need() + " · " + t.ducat() + "D)");
+                + (t.isMax() ? " §6MAX" : " §8→ " + t.nextName().getString() + " ("
+                    + t.shortCost() + " · " + t.ducat() + "D)");
             src.sendSuccess(() -> Component.literal(line), false);
         }
         return 1;
@@ -355,6 +1027,19 @@ public final class LSCommands {
         return 1;
     }
 
+    // 더미가 되받아친다. 0 이면 끈다.
+    //
+    // ⚠️ **측정 중에만 돈다.** 밖에서도 때리면 더미가 「가만히 서 있는 과녁」이 아니게 되어,
+    //    설정해두고 잊은 채 다른 걸 하다가 죽는다. `/dummy start` 안에서만 산다.
+    private static int setDummyHit(CommandSourceStack src, float dmg, int everyTicks) {
+        DummyManager.setRetaliate(dmg, everyTicks);
+        src.sendSuccess(() -> Component.literal(dmg <= 0
+            ? "§6되받아치기 §8— 끔"
+            : String.format("§6되받아치기 §e%.0f §7× §e%.1f초 §7주기 §8— 측정 중에만 · 16칸 안 (보호막·가시·투지·원한 측정용)",
+                dmg, everyTicks / 20.0f)), false);
+        return 1;
+    }
+
     // 어휘 확인 — 판정은 하지 않는다. "저 색이 저 뜻으로 읽히는가"만 본다.
     private static int testTelegraph(CommandSourceStack src, String kind) {
         ServerPlayer player = src.getPlayer();
@@ -380,14 +1065,39 @@ public final class LSCommands {
         return 1;
     }
 
-    private static int openFateScreen(CommandSourceStack src, String current) {
+    private static int openFateScreen(CommandSourceStack src) {
         ServerPlayer player = src.getPlayer();
         if (player == null) {
             src.sendFailure(Component.literal("플레이어만 사용할 수 있다."));
             return 0;
         }
-        PacketDistributor.sendToPlayer(player, new FateOpenPayload(current));
+        openFateScreen(player);
         return 1;
+    }
+
+    // 접속 자동 열기(`FateAutoOpen`)와 명령이 같이 쓴다. 화면을 여는 방법이 하나뿐이어야
+    // 「명령으로 열면 잠긴 목록이 보이는데 자동으로 열면 안 보이는」 어긋남이 안 생긴다.
+    public static void openFateScreen(ServerPlayer player) {
+        if (player == null) return;
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+        var hero = com.laststardust.relics.data.LSData.get(server).hero();
+        String me = player.getGameProfile().getName();
+        PacketDistributor.sendToPlayer(player,
+            new FateOpenPayload(hero.fate(me), takenCsv(hero, me)));
+    }
+
+    // 남이 이미 가진 가호를 `키:주인,키:주인` 으로. **내 것은 뺀다** — 내 가호는 `current` 가 나른다.
+    // 여덟 개짜리 화이트리스트를 도니 사람 수와 무관하게 여덟 번이다.
+    private static String takenCsv(com.laststardust.relics.data.HeroData hero, String me) {
+        StringBuilder sb = new StringBuilder();
+        for (FateCatalog.Fate f : FateCatalog.ALL) {
+            String owner = hero.ownerOf(f.key(), me);
+            if (owner.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(',');
+            sb.append(f.key()).append(':').append(owner);
+        }
+        return sb.toString();
     }
 
     // 인벤토리 전체(주손·보관칸·오프핸드)의 유물에 별을 새긴다.
@@ -420,6 +1130,9 @@ public final class LSCommands {
         final int n = touched;
         src.sendSuccess(() -> Component.literal(
             "§6✦ §7각성 §e" + prev + "성 §7→ §e" + star + "성 §8(유물 " + n + "개)"), false);
+        // 성급이 바뀌면 축복 슬롯이 열리고 리롤 비용도 달라진다 — 클라 사본을 같이 갱신한다.
+        // 안 하면 「4성이 됐는데 하의칸이 여전히 잠겨 보인다」가 된다.
+        com.laststardust.relics.blessing.BlessGui.sync(player, "");
         player.level().playSound(null, player.blockPosition(),
             SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0f, 1.2f);
         return touched;

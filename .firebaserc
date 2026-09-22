@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "aka1128"
+  },
+  "targets": {
+    "aka1128": {
+      "hosting": {
+        "ls": [
+          "laststardust"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

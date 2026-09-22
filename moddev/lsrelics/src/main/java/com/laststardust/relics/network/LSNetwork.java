@@ -33,6 +33,93 @@ public final class LSNetwork {
         reg.playToServer(TownOpenPayload.TYPE, TownOpenPayload.STREAM_CODEC, LSNetwork::handleTownOpen);
         reg.playToServer(TownActionPayload.TYPE, TownActionPayload.STREAM_CODEC, LSNetwork::handleTownAction);
         reg.playToClient(TownViewPayload.TYPE, TownViewPayload.STREAM_CODEC, LSNetwork::handleTownView);
+        reg.playToServer(BlessActionPayload.TYPE, BlessActionPayload.STREAM_CODEC, LSNetwork::handleBlessAction);
+        reg.playToClient(BlessViewPayload.TYPE, BlessViewPayload.STREAM_CODEC, LSNetwork::handleBlessView);
+        reg.playToClient(RelicAnimPayload.TYPE, RelicAnimPayload.STREAM_CODEC, LSNetwork::handleAnim);
+        reg.playToClient(RelicViewPayload.TYPE, RelicViewPayload.STREAM_CODEC, LSNetwork::handleRelicView);
+        reg.playToClient(ShopViewPayload.TYPE, ShopViewPayload.STREAM_CODEC, LSNetwork::handleShopView);
+        reg.playToServer(ShopBuyPayload.TYPE, ShopBuyPayload.STREAM_CODEC, LSNetwork::handleShopBuy);
+        reg.playToServer(ShopSellPayload.TYPE, ShopSellPayload.STREAM_CODEC, LSNetwork::handleShopSell);
+    }
+
+    private static void handleShopSell(ShopSellPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (!(ctx.player() instanceof ServerPlayer player)) return;
+            String fail = com.laststardust.relics.shop.ShopService.sell(player, payload.index());
+            if (fail != null) player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c" + fail));
+        });
+    }
+
+    // ── 상인 광장 ──
+    private static void handleShopView(ShopViewPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> com.laststardust.relics.client.ShopScreens.show(payload.view()));
+    }
+
+    // 규칙은 전부 ShopService 에 있다. 여기서는 «누가 무엇을» 만 넘긴다 —
+    // 값과 아이템을 클라가 실어 보내게 두면 1 Ducat 짜리 다이아를 막을 방법이 없다.
+    private static void handleShopBuy(ShopBuyPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (!(ctx.player() instanceof ServerPlayer player)) return;
+            String fail = com.laststardust.relics.shop.ShopService.buy(player, payload.index());
+            if (fail != null) player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c" + fail));
+        });
+    }
+
+    // ── 유물 제단 화면 ──
+    // 클라 클래스는 «다리»를 통해서만 만진다 — 전용 서버에는 없어서 직접 참조하면
+    // NoClassDefFoundError 가 난다(TownScreens 와 같은 이유).
+    private static void handleRelicView(RelicViewPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> com.laststardust.relics.client.RelicScreens.show(payload.view()));
+    }
+
+    // ── 플레이어 자세 ──
+    // 애니메이션은 클라에만 있다(PlayerAnimator 는 클라 라이브러리). 서버는 «지금 시작하라»만 보낸다.
+    private static void handleAnim(RelicAnimPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            // 라이브러리가 없는 클라도 이 패킷을 받는다 — 없으면 자세만 없고 나머지는 그대로 돈다.
+            if (!net.neoforged.fml.ModList.get().isLoaded("playeranimator")) return;
+            if (payload.anim() == RelicAnimPayload.SUNDER) {
+                com.laststardust.relics.client.anim.RelicAnimations.playSunder(payload.entityId());
+            }
+        });
+    }
+
+    // ── 별의 제단 ──
+    // 규칙(해금·성급·중복금지·비용)은 전부 BlessingService 한 곳에 있다. 마을과 같은 구조다.
+
+    private static void handleBlessAction(BlessActionPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (!(ctx.player() instanceof ServerPlayer player)) return;
+            if (!(player.containerMenu instanceof com.laststardust.relics.blessing.BlessMenu menu)) return;
+
+            // 클라가 보낸 문자열은 enum 과 대조해 거른다 — 그대로 믿으면 잠긴 칸도 굴릴 수 있다.
+            com.laststardust.relics.data.BlessingCatalog.Slot slot;
+            try {
+                slot = com.laststardust.relics.data.BlessingCatalog.Slot.valueOf(payload.slot());
+            } catch (IllegalArgumentException e) { return; }
+
+            // 올려둔 장비가 «그 칸»을 여는 게 맞는지도 서버가 다시 본다. 화면만 믿으면
+            // 유물을 올려놓고 상의칸을 굴리는 패킷을 손으로 보낼 수 있다.
+            if (!menu.visibleSlots().contains(slot)) return;
+
+            var action = switch (payload.action()) {
+                case "kind"  -> com.laststardust.relics.blessing.BlessingService.Action.REROLL_KIND;
+                case "value" -> com.laststardust.relics.blessing.BlessingService.Action.REROLL_VALUE;
+                case "bless" -> com.laststardust.relics.blessing.BlessingService.Action.BLESS;
+                default -> null;
+            };
+            if (action == null) return;
+
+            var res = com.laststardust.relics.blessing.BlessingService.apply(
+                player, slot, action, menu.work());
+            // 성공하면 apply 안에서 이미 현황을 보냈다(스핀 포함). 실패했을 때만 여기서 갱신한다 —
+            // 재료칸이 줄었을 수 있고, 이유는 이미 채팅으로 갔으므로 스핀은 돌리지 않는다.
+            if (!res.ok()) com.laststardust.relics.blessing.BlessGui.sync(player, "");
+        });
+    }
+
+    private static void handleBlessView(BlessViewPayload payload, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> com.laststardust.relics.client.BlessScreens.update(payload.view()));
     }
 
     // ── 마을 관리 ──
@@ -89,13 +176,26 @@ public final class LSNetwork {
             MinecraftServer server = player.getServer();
             if (server == null) return;
             server.getCommands().performPrefixedCommand(player.createCommandSourceStack(), "fate choose " + key);
+
+            // ── 거절당했으면 새 목록으로 다시 연다 (2026-08-06) ──
+            // 화면의 「남이 가진 가호」는 **열었을 때의 스냅샷**이다. 둘이 동시에 열어 둘 다 같은
+            // 가호를 고르면, 두 화면 모두 그게 비어 있다고 보여 준다. 서버가 나중 사람을 거절하는데
+            // 그때는 화면이 이미 닫힌 뒤라 채팅 한 줄만 남는다 — 「눌렀는데 아무 일도 안 일어났다」.
+            //
+            // 명령의 성공 여부를 보는 대신 **결과**를 본다: 가호가 안 생겼으면 실패한 것이다.
+            // (`performPrefixedCommand` 의 반환값은 KubeJS 가 등록한 명령에서 신뢰하기 어렵다.)
+            if (com.laststardust.relics.data.LSData.get(server).hero()
+                    .fate(player.getGameProfile().getName()).isEmpty()) {
+                com.laststardust.relics.LSCommands.openFateScreen(player);
+            }
         });
     }
 
     // 화면 열기는 클라에서만 의미가 있다. 클라 전용 클래스는 이 람다가 실행될 때 지연 로드되므로
     // 전용 서버에선 화면 클래스를 아예 건드리지 않는다.
     private static void handleOpen(FateOpenPayload payload, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> com.laststardust.relics.client.FateScreenOpener.open(payload.current()));
+        ctx.enqueueWork(() ->
+            com.laststardust.relics.client.FateScreenOpener.open(payload.current(), payload.taken()));
     }
 
     private static void handle(RelicInputPayload payload, IPayloadContext ctx) {

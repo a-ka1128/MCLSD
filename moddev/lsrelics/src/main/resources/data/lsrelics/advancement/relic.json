@@ -1,0 +1,28 @@
+{
+  "parent": "lsrelics:root",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "display": {
+    "icon": {
+      "id": "lsrelics:guardian",
+      "count": 1
+    },
+    "title": {
+      "translate": "advancement.lsrelics.relic.title"
+    },
+    "description": {
+      "translate": "advancement.lsrelics.relic.description"
+    },
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "sends_telemetry_event": false
+}

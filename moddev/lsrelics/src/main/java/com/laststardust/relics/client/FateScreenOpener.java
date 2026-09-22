@@ -7,7 +7,7 @@ import net.minecraft.client.Minecraft;
 public final class FateScreenOpener {
     private FateScreenOpener() {}
 
-    public static void open(String current) {
-        Minecraft.getInstance().setScreen(new FateSelectScreen(current));
+    public static void open(String current, String taken) {
+        Minecraft.getInstance().setScreen(new FateSelectScreen(current, taken));
     }
 }

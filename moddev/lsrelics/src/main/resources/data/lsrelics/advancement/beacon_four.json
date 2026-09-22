@@ -1,0 +1,29 @@
+{
+  "parent": "lsrelics:beacon_first",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "display": {
+    "icon": {
+      "id": "minecraft:soul_lantern",
+      "count": 1
+    },
+    "title": {
+      "translate": "advancement.lsrelics.beacon_four.title"
+    },
+    "description": {
+      "translate": "advancement.lsrelics.beacon_four.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "sends_telemetry_event": false
+}

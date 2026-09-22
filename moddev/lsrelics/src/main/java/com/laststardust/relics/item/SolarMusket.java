@@ -431,15 +431,16 @@ public class SolarMusket extends Item implements RelicActions {
         }
 
         // ── 발사 ──
-        Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0f);
-        BulletManager.fire(level, player, eye.add(look.scale(0.6)), look,
+        // 총구는 눈이 아니라 손이다 — 연사(초당 6발)에서 눈앞 화염·연기가 조준을 통째로 가렸다.
+        // muzzleDir 이 조준선 위 한 점으로 수렴시키므로 스코프 저격 정확도는 그대로다.
+        Vec3 muzzle = RelicSkills.muzzle(player, look);
+        BulletManager.fire(level, player, muzzle, RelicSkills.muzzleDir(player, look, muzzle),
             RelicSkills.dmg(stack, rifle ? RIFLE_DMG : (scoped ? SCOPE_DMG : BULLET_DMG)),
             scoped ? SCOPE_BULLET_LIFE : BULLET_LIFE, scoped,
             rifle ? "연사" : (scoped ? "스코프" : "평타"));
 
         // 총구 화염 + 반동감 있는 사운드 (스코프는 더 묵직하게)
-        Vec3 muzzle = eye.add(look.scale(1.0));
         int n = scoped ? 10 : 6;
         level.sendParticles(ParticleTypes.FLAME, muzzle.x, muzzle.y, muzzle.z, n, 0.05, 0.05, 0.05, 0.02);
         level.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, n + 2, 0.08, 0.08, 0.08, 0.01);
@@ -563,5 +564,24 @@ public class SolarMusket extends Item implements RelicActions {
     public <T extends net.minecraft.world.entity.LivingEntity> int damageItem(
             ItemStack stack, int amount, T entity, java.util.function.Consumer<net.minecraft.world.item.Item> onBroken) {
         return 0;
+    }
+
+    // ── 인챈트 테이블에서도 걸리게 (2026-08-18) ──
+    // 바닐라 기본값은 «스택1 && 내구도 있음»이라, 내구도가 없는 유물 9종은
+    // 인챈트 테이블도 모루도 통째로 거부했다. 유물은 닳아 없어지면 안 되는 물건이라
+    // 내구도를 주는 대신 여기만 연다.
+    //
+    // ⚠️ **무엇이 붙을지는 여기서 안 정한다.** 그건 데이터팩(`tools/gen_relic_enchants.py`)이
+    //    인챈트의 `supported_items` 로 정한다 — 데미지 계열 17종은 거기서 막힌다.
+    //    여기서 true 만 돌려주면 「테이블에 올라갈 자격」이 생길 뿐이다.
+    @Override
+    public boolean isEnchantable(ItemStack stack) {
+        return stack.getCount() == 1;
+    }
+
+    // 인챈트 «잘 걸리는» 정도. 네더라이트와 같은 15 — 금(22)은 운이 과하고 돌(5)은 답답하다.
+    @Override
+    public int getEnchantmentValue(ItemStack stack) {
+        return 15;
     }
 }

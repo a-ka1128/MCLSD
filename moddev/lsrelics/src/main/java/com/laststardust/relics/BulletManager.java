@@ -114,7 +114,19 @@ public final class BulletManager {
                               && !(en instanceof Player) && !(en instanceof AbstractVillager))) {
                     if (!b.hit.add(e.getId())) continue; // 같은 대상 중복 타격 방지
                     float dmg = b.pierced == 0 ? b.damage : b.damage * PIERCE_FALLOFF;
-                    dmg *= 1.0f + snipeBonus(b.origin.distanceTo(next)); // 패시브 "저격"
+                    double snipeDist = b.origin.distanceTo(next);
+                    dmg *= 1.0f + snipeBonus(snipeDist); // 패시브 "저격"
+
+                    // ── 5성 2단 「밀어내기」 ──
+                    // 저격 보정에 «비례한» 넉백. 배수를 올리면 목표선(110)이 그대로 올라가므로,
+                    // 이미 있는 거리 곡선에 딜이 아닌 값을 하나 더 매단다.
+                    // 솔라리스는 멀수록 아픈데 **멀리 서는 방법이 없었다** — 붙으면 딜이 죽고,
+                    // 떨어지려면 도망쳐야 했다. 이제 맞히는 행위가 거리를 되사준다.
+                    if (com.laststardust.relics.Passive2.on(b.owner, LSRelics.GUNNER.get())) {
+                        double kb = Passive2.GUNNER_KB_MAX * (snipeBonus(snipeDist) / SNIPE_CAP);
+                        net.minecraft.world.phys.Vec3 dir = next.subtract(b.origin).normalize();
+                        e.knockback(kb, -dir.x, -dir.z);
+                    }
                     // 무적 프레임 무시 — 파티에서 표적이 항상 무적이라 스코프 사격이 통째로
                     // 씹히고 있었다 (LsDamage 주석 참고)
                     com.laststardust.relics.LsDamage.hit(e,

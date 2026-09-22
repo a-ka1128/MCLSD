@@ -16,21 +16,25 @@
 //
 // ── 설계 원칙: 이 파일은 다른 스크립트를 수정하지 않는다 ──
 // 트리거를 ls_rift/ls_siege 안에 심으면 그 파일들이 이 파일에 의존하게 되고,
-// 로드 순서가 꼬이면 공성·관문이 통째로 죽는다. 대신 여기서 persistentData 를
+// 로드 순서가 꼬이면 공성·관문이 통째로 죽는다. 대신 여기서 **모드 장부(LSData)** 를
 // 주기적으로 훑어 "값이 바뀐 순간"을 잡는다. 이 파일이 통째로 사라져도 게임은 그대로 돌아간다.
+// (이관 전에는 persistentData 를 훑었다. 훑는 대상만 바뀌었고 구조는 그대로다.)
 //
 // ── 침묵이 기본, 발화가 이벤트 ──
 // 안내자가 매번 떠들면 아무도 안 읽는다. 자발 발화(앰비언트)는 토큰 버킷으로 제한하고,
 // 서사 분기점(전멸·관문 해방·첫 공세)은 예산과 무관하게 항상 말한다.
 //
-// 저장: persistentData — vc_* (1회성 플래그·회전 인덱스·감시 스냅샷·플레이어별 마지막 접속일)
-
-// ── 저장소 ──
-function vcStore(server) { return server.overworld().persistentData }
-function vcGetI(server, k) { return vcStore(server).getInt(k) }
-function vcSetI(server, k, v) { vcStore(server).putInt(k, v) }
-function vcGetB(server, k) { return vcStore(server).getBoolean(k) }
-function vcSetB(server, k, v) { vcStore(server).putBoolean(k, v) }
+// ── 저장: 이관 6단계(마지막)로 모드가 소유한다 (2026-08-06) ──
+// 앞선 다섯 단계와 다른 점이 하나 있다 — **이 파일의 값은 밖으로 안 샜다.** `vc_*` 를 읽는
+// 스크립트가 여기 하나뿐이라(스캐너로 확인) 「읽는 쪽을 같이 옮겨야 하는」 함정이 없었다.
+// 그래서 이번엔 옮기는 이유가 순수하게 **키 조립**이다:
+//     `vc_once_<대사id>` · `vc_cd_<대사id>` · `vc_rot_<대사id>` · `vc_pend_<대사id>`
+//     `vc_p_known_<이름>` · `vc_p_day_<이름>` · `vc_p_rf_<이름>`
+// 대사 하나에 키 넷, 사람 하나에 키 셋이 흩어져 있었다. 대사 id 오타 하나면 조용히
+// 「한 번도 말한 적 없는」 상태가 되고, 그건 대사가 **또 나오는** 것으로만 드러난다.
+//
+// ※ 대사 테이블(아래 VC_LINES)·예산 상한·쿨다운은 여기 남는다. 서사를 다듬을 때마다
+//   재빌드가 필요해지면 아무도 안 다듬는다.
 
 function vcTicks(server) { return Number(server.overworld().getDayTime()) }
 function vcDay(server) { return Math.floor(vcTicks(server) / 24000) }
@@ -78,8 +82,9 @@ function vGuideTo(player, text) {
   player.tell(Text.of(`§6✧ §e호데고스 §8│ §f${text}`))
   vcPlayTo(player, 'minecraft:entity.allay.ambient_without_item', 0.6, 0.7)
 }
-// 이어지는 말(이름표 없이 들여쓰기) — 두 줄 이상 말할 때 화면이 덜 시끄럽다.
-function vGuideCont(server, text) { vcTellAll(server, `§8  │ §7${text}`) }
+// ※ 「이어지는 말」 헬퍼(vGuideCont)는 2026-07-31 삭제했다. 대사 10종 중 두 줄짜리가
+//   하나도 없어 한 번도 불린 적이 없다. 필요해지면 한 줄이라 그때 다시 쓰는 게 낫다 —
+//   «언젠가 쓸 것»으로 남겨두면 스캐너가 매번 지적하고, 그 소음이 진짜 죽은 코드를 가린다.
 
 // ③ 지문 — 3인칭 문어체. 기울임 + 어두운 회색으로 "목소리가 아님"을 표시.
 function vWorld(server, text) {
@@ -126,34 +131,43 @@ function vTitle(server, title, subtitle, color) {
 const VC_BUDGET_MAX = 4
 const VC_REFILL_DAYS = 3   // 인게임 3일(≈ 실시간 1시간)마다 1회분 회복
 
+// 상한(VC_BUDGET_MAX)은 여기 남아 있으므로, 모드는 **아직 안 정해졌으면 -1** 을 준다.
+// 그걸 보고 여기서 채운다. (옛 `vc_budget_init` 플래그가 하던 일이고, 예산은 음수가 될 수
+// 없어서 -1 하나로 충분하다 — `SiegeData.wallInit` 처럼 별도 플래그가 필요한 경우와 다르다.)
 function vcBudget(server) {
-  if (!vcGetB(server, 'vc_budget_init')) {
-    vcSetB(server, 'vc_budget_init', true)
-    vcSetI(server, 'vc_budget', VC_BUDGET_MAX)
-    vcSetI(server, 'vc_budget_day', vcDay(server))
-  }
-  return vcGetI(server, 'vc_budget')
+  try {
+    var b = LS.voiceBudget(server) | 0
+    if (b < 0) {
+      LS.setVoiceBudget(server, VC_BUDGET_MAX, VC_BUDGET_MAX)
+      LS.setVoiceBudgetDay(server, vcDay(server))
+      return VC_BUDGET_MAX
+    }
+    return b
+  } catch (e) { lsWarn('ls_voice:budget', e); return 0 }
 }
 function vcRefill(server) {
-  vcBudget(server)
-  var refillDay = vcDay(server)
-  var vcLastDay = vcGetI(server, 'vc_budget_day')
-  if (refillDay - vcLastDay < VC_REFILL_DAYS) return
-  var gain = Math.floor((refillDay - vcLastDay) / VC_REFILL_DAYS)
-  vcSetI(server, 'vc_budget', Math.min(VC_BUDGET_MAX, vcGetI(server, 'vc_budget') + gain))
-  vcSetI(server, 'vc_budget_day', vcLastDay + gain * VC_REFILL_DAYS)
+  try {
+    var cur = vcBudget(server)
+    var refillDay = vcDay(server)
+    var vcLastDay = LS.voiceBudgetDay(server) | 0
+    if (refillDay - vcLastDay < VC_REFILL_DAYS) return
+    var gain = Math.floor((refillDay - vcLastDay) / VC_REFILL_DAYS)
+    // 상한 자르기는 모드가 한다 — 자르는 곳이 하나면 여기서 빠뜨릴 수 없다.
+    LS.setVoiceBudget(server, cur + gain, VC_BUDGET_MAX)
+    LS.setVoiceBudgetDay(server, vcLastDay + gain * VC_REFILL_DAYS)
+  } catch (e) { lsWarn('ls_voice:refill', e) }
 }
+// 읽고·빼고·쓰는 세 걸음을 모드의 한 번으로 접었다.
 function vcTakeBudget(server) {
-  if (vcBudget(server) <= 0) return false
-  vcSetI(server, 'vc_budget', vcGetI(server, 'vc_budget') - 1)
-  return true
+  vcBudget(server)   // 아직 안 정해졌으면 여기서 채워진다
+  try { return !!LS.takeVoiceBudget(server) } catch (e) { lsWarn('ls_voice:take', e); return false }
 }
 
 // ════════════════════════════════════════════════════════════
 //  대사 테이블
 // ════════════════════════════════════════════════════════════
 // ch      : 'guide' | 'sys' | 'world'
-// once    : 서버 생애 1회만 (persistentData 에 플래그)
+// once    : 서버 생애 1회만 (모드 장부에 플래그)
 // cd      : 쿨다운(틱). 같은 id 를 이 안에 두 번 말하지 않는다
 // ambient : true 면 발화 예산을 소모한다 (= 조용할 수 있음). 서사 분기점은 false
 // lines   : 여러 개면 순환(random 아님 — 랜덤은 같은 대사가 연달아 나와서 티가 난다)
@@ -241,30 +255,48 @@ const VC_LINES = {
   }
 }
 
-// ── 회전 인덱스 (persistentData — 재시작해도 이어진다) ──
+// ── 회전 인덱스 (모드 장부 — 재시작해도 이어진다) ──
+// 인덱스를 받는 것과 다음으로 넘기는 것이 **한 번의 호출**이다. 예전엔 읽기와 쓰기가 두 줄이라,
+// 그 사이에 다른 발화가 끼면 같은 대사가 두 번 연달아 나갈 수 있었다.
 function vcPick(server, id, lines) {
   if (lines.length === 1) return lines[0]
-  const k = 'vc_rot_' + id
-  const i = vcGetI(server, k) % lines.length
-  vcSetI(server, k, (i + 1) % lines.length)
-  return lines[i]
+  var i = 0
+  try { i = LS.nextVoiceRot(server, id, lines.length) | 0 } catch (e) { lsWarn('ls_voice:rot', e) }
+  return lines[Math.max(0, Math.min(lines.length - 1, i))]
+}
+
+// ── 장부 읽기 ──
+// 다리 호출은 전부 감싼다. 이 파일은 1초마다 도는 감시자라, 여기서 터지면 **호데고스가
+// 영원히 침묵한다** — 그리고 그건 「원래 조용한 게 정상」인 시스템이라 아무도 못 알아챈다.
+// 실패했을 때 「아직 안 말했다(false/0)」로 내려가면 최악이 «대사가 한 번 더 나오는» 것이다.
+function vcMuted(server) {
+  try { return !!LS.voiceMuted(server) } catch (e) { lsWarn('ls_voice:muted', e); return false }
+}
+function vcOnce(server, id) {
+  try { return !!LS.voiceOnce(server, id) } catch (e) { lsWarn('ls_voice:once', e); return false }
+}
+function vcCd(server, id) {
+  try { return LS.voiceCd(server, id) | 0 } catch (e) { lsWarn('ls_voice:cd', e); return 0 }
+}
+function vcPend(server, id) {
+  try { return !!LS.voicePend(server, id) } catch (e) { lsWarn('ls_voice:pend', e); return false }
 }
 
 // ── 발화 엔트리 포인트 ──
 // 반환: 실제로 말했으면 true. (1회성/쿨다운/예산/음소거에 걸리면 false)
 function vSpeak(server, id) {
-  if (vcGetB(server, 'vc_mute')) return false
+  if (vcMuted(server)) return false
   if (!server.players.length) return false          // 아무도 없는데 떠들면 대사만 낭비된다
   const e = VC_LINES[id]
   if (!e) { console.log('[LS-VOICE] unknown line id: ' + id); return false }
 
-  if (e.once && vcGetB(server, 'vc_once_' + id)) return false
+  if (e.once && vcOnce(server, id)) return false
   const now = vcTicks(server)
   if (e.cd) {
     // ※ 여기서 이름이 겹치면 감시자가 통째로 죽는다. Rhino 는 블록 안의 const 를
     //    상위 스코프로 흘려서 `redeclaration of var last` 로 터진다 (실제로 겪음).
     //    블록 안 선언은 반드시 var + 고유 접두사.
-    var vcLastCd = vcGetI(server, 'vc_cd_' + id)
+    var vcLastCd = vcCd(server, id)
     if (vcLastCd > 0 && now - vcLastCd < e.cd) return false
   }
   if (e.ambient && !vcTakeBudget(server)) return false
@@ -274,15 +306,17 @@ function vSpeak(server, id) {
   else if (e.ch === 'world') vWorld(server, text)
   else vGuide(server, text)
 
-  if (e.once) vcSetB(server, 'vc_once_' + id, true)
-  if (e.cd) vcSetI(server, 'vc_cd_' + id, now)
+  try {
+    if (e.once) LS.setVoiceOnce(server, id, true)
+    if (e.cd) LS.setVoiceCd(server, id, now)
+  } catch (err) { lsWarn('ls_voice:mark', err) }
   if (e.after) { try { e.after(server) } catch (err) { console.log('[LS-VOICE] after() fail: ' + err) } }
   console.log(`[LS-VOICE] spoke ${id} (budget ${vcBudget(server)})`)
   return true
 }
 
 // ════════════════════════════════════════════════════════════
-//  상태 감시 — persistentData 전이를 잡아 트리거로 바꾼다
+//  상태 감시 — 모드 장부의 값 전이를 잡아 트리거로 바꾼다
 // ════════════════════════════════════════════════════════════
 // 다른 스크립트에 훅을 심지 않기 위한 장치. 1초에 한 번만 훑으므로 부하는 없다시피 하다.
 const VC_WATCH_INTERVAL = 20
@@ -293,13 +327,13 @@ function vcWatch(server) {
   vcRefill(server)
 
   // ① 관문 진행도 — 오르는 순간을 잡는다.
-  // 진행도 자체는 모드(LSData)가 소유하고(ls_rift.js 주석 참고), `vc_seen_rf` 는
-  // "어디까지 대사를 읽어줬나" 하는 **이 파일의 기억**이라 persistentData 에 남는다.
-  // 둘은 성격이 다르다 — 사본이 아니라 진도표다.
+  // 진행도 자체는 모드가 소유하고(`LS.progress`), 스냅샷(`voiceSeenRf`)은 "어디까지 대사를
+  // 읽어줬나" 하는 **이 파일의 기억**이다. 이제 둘 다 LSData 에 있지만 섹션이 다르다 —
+  // 사본이 아니라 진도표라서, 같은 곳에 있어도 서로 덮지 않는다.
   const rf = LS.progress(server)
-  const rfPrev = vcGetI(server, 'vc_seen_rf')
+  const rfPrev = LS.voiceSeenRf(server)
   if (rf > rfPrev) {
-    vcSetI(server, 'vc_seen_rf', rf)
+    LS.setVoiceSeenRf(server, rf)
     var vcGateId = 'gate_' + rf
     if (VC_LINES[vcGateId]) {
       // ls_rift 의 "봉인 해방" 타이틀이 먼저 지나가도록 한 박자 늦춘다.
@@ -312,24 +346,34 @@ function vcWatch(server) {
       server.scheduleInTicks(160, () => { try { vSpeak(server, vcGateId) } catch (e) { lsWarn('ls_voice:309', e) } })
     }
   } else if (rf < rfPrev) {
-    vcSetI(server, 'vc_seen_rf', rf) // /rift reset 등으로 되돌아간 경우 스냅샷만 맞춘다
+    LS.setVoiceSeenRf(server, rf) // /rift reset 등으로 되돌아간 경우 스냅샷만 맞춘다
   }
 
   // ② 첫 공세 격퇴 — ls_siege 의 ls_first_siege_done
   // 예약 표식을 먼저 세운다. 감시는 1초마다 도는데 발화는 80틱 뒤라, 표식이 없으면
   // 그 사이 네 번 더 예약되어 같은 대사가 겹쳐 나간다.
-  if (vcGetB(server, 'ls_first_siege_done') && !vcGetB(server, 'vc_once_first_siege') && !vcGetB(server, 'vc_pend_first_siege')) {
-    vcSetB(server, 'vc_pend_first_siege', true)
+  // ※ 공성 상태 넷(첫격퇴·위협·성벽·진행)은 모드가 소유한다 (이관 4단계, 2026-07-31).
+  //   여기가 옛 키를 계속 읽으면 전부 «없음/0» 이 되어 **호데고스가 영원히 침묵한다.**
+  //   이 파일은 다른 시스템의 상태 전이를 감시하는 구조라, 감시 대상이 옮겨가면 같이 따라가야 한다.
+  if (LS.firstSiegeDone(server) && !vcOnce(server, 'first_siege') && !vcPend(server, 'first_siege')) {
+    LS.setVoicePend(server, 'first_siege', true)
     server.scheduleInTicks(80, () => {
-      try { if (!vSpeak(server, 'first_siege')) vcSetB(server, 'vc_pend_first_siege', false) } catch (e) { lsWarn('ls_voice:321', e) }
+      try { if (!vSpeak(server, 'first_siege')) LS.setVoicePend(server, 'first_siege', false) } catch (e) { lsWarn('ls_voice:321', e) }
     })
   }
 
   // ③ 위협도 — 밴드가 올라갈 때만 (내려갈 땐 조용히)
-  const band = vcThreatBand(vcGetI(server, 'ls_threat'))
-  const bandPrev = vcGetI(server, 'vc_seen_band')
-  if (band !== bandPrev) {
-    vcSetI(server, 'vc_seen_band', band)
+  const band = vcThreatBand(LS.threat(server))
+  const bandPrev = LS.voiceSeenBand(server)
+  // ── 아무도 없으면 «봤다»로 넘기지 않는다 (2026-08-08) ──
+  // `vSpeak` 은 접속자가 0 명이면 false 를 돌려준다(287행). 그런데 여기는 표식을 말하기
+  // **전**에 세우고 롤백도 안 해서, 무인 밤에 밴드가 올라가면 그 대사는 그냥 사라졌다.
+  // 위협도는 `onNewDay` 가 접속자와 무관하게 매일 올리므로 실제로 자주 일어난다.
+  // 바로 위 ②(first_siege)는 실패하면 예약을 되감는데, 여기와 아래 ④ 만 그게 빠져 있었다.
+  // ※ 쿨다운 때문에 못 뱉는 것은 «정상»이라 그때는 그대로 기록한다 — 그것까지 막으면
+  //   밴드가 영영 안 넘어가고 매 초 재시도만 남는다. 막아야 하는 건 «들을 사람이 없는» 경우뿐이다.
+  if (band !== bandPrev && server.players.length > 0) {
+    LS.setVoiceSeenBand(server, band)
     if (band > bandPrev) {
       if (band >= 3) vSpeak(server, 'threat_crit')
       else if (band >= 1) vSpeak(server, 'threat_high')
@@ -337,22 +381,24 @@ function vcWatch(server) {
   }
 
   // ④ 성벽 — 멀쩡(1) → 붕괴(2) 전이에서만. 0 = 아직 본 적 없음
-  if (vcGetB(server, 'wall_init')) {
-    var vcWallSt = vcGetI(server, 'wall_hp') <= 0 ? 2 : 1
-    var vcWallPrev = vcGetI(server, 'vc_seen_wall')
-    if (vcWallSt !== vcWallPrev) {
-      vcSetI(server, 'vc_seen_wall', vcWallSt)
+  if (LS.wallInit(server)) {
+    var vcWallSt = LS.wallHpRaw(server) <= 0 ? 2 : 1
+    var vcWallPrev = LS.voiceSeenWall(server)
+    if (vcWallSt !== vcWallPrev && server.players.length > 0) {   // ③ 과 같은 이유 — 무인 밤에 전이를 소비하지 않는다
+      LS.setVoiceSeenWall(server, vcWallSt)
       if (vcWallSt === 2 && vcWallPrev === 1) vSpeak(server, 'wall_break')
     }
   }
 
   // ⑤ 밤의 시작 — 공성 중에는 말하지 않는다 (그때는 공성 스크립트가 화면을 다 쓴다)
+  // ※ 하늘 정지(`ls_time_locked`)도 이관 6단계로 모드가 소유한다 — 공성이 쓰고 여기와
+  //   `ls_daynight.js` 가 읽던, 마지막까지 남아 있던 파일 경계를 넘는 키였다.
   const t = vcDayTime(server)
   const isNight = t >= 13000 && t <= 23000
-  const wasNight = vcGetB(server, 'vc_seen_night')
+  const wasNight = LS.voiceSeenNight(server)
   if (isNight !== wasNight) {
-    vcSetB(server, 'vc_seen_night', isNight)
-    if (isNight && !vcGetB(server, 'ls_siege_active') && !vcGetB(server, 'ls_time_locked')) {
+    LS.setVoiceSeenNight(server, isNight)
+    if (isNight && !LS.siegeActive(server) && !LS.timeLocked(server)) {
       vSpeak(server, 'night')
     }
   }
@@ -383,6 +429,7 @@ EntityEvents.death(event => {
       list.forEach(p => { if (Number(p.health) > 0) alive++ })
       if (alive === 0) {
         vWorld(server, '별빛이 모두 꺼졌다.')
+        lsAdv(server, '@a', 'wipe')   // 도전과제 (ls_util.js) — 전멸도 기록이다(Hades 식)
         server.scheduleInTicks(40, () => { try { vSpeak(server, 'wipe') } catch (err) { lsWarn('ls_voice:383', err) } })
       }
     } catch (err) { console.log('[LS-VOICE] wipe check fail: ' + err) }
@@ -393,8 +440,6 @@ EntityEvents.death(event => {
 //  접속 — 첫 접속 인사 / 재접속 요약
 // ════════════════════════════════════════════════════════════
 const VC_ABSENT_DAYS = 3   // 이 일수 이상 비웠을 때만 요약해준다 (매번 하면 잔소리가 된다)
-
-function vcSeenKey(uname, k) { return 'vc_p_' + k + '_' + uname }
 
 PlayerEvents.loggedIn(event => {
   const p = event.player
@@ -407,35 +452,36 @@ PlayerEvents.loggedIn(event => {
   server.scheduleInTicks(60, () => {
     // ※ try 안에서는 const/let 금지 (Rhino 가 'redeclaration of var' 로 터진다).
     //   같은 이름을 다른 try 블록에서 또 쓰면 특히 확실하게 터진다 — 아래 tick 핸들러와 겹쳤었다.
-    var nowDay = 0, rf = 0, st = null, first = false
+    var nowDay = 0, rf = 0, first = false, lastDay = 0, lastRf = 0
     try {
       nowDay = vcDay(server)
       rf = LS.progress(server)
-      st = vcStore(server)
-      first = !st.getBoolean(vcSeenKey(uname, 'known'))
+      // 요약에 쓸 값을 **표시하기 전에** 읽는다 — markVoiceKnown 이 사람 항목을 만들기 때문에
+      // 순서가 뒤집혀도 지금 구현에선 문제없지만, 「읽고 나서 쓴다」가 읽는 사람에게 분명하다.
+      lastDay = LS.voiceLastDay(server, uname)
+      lastRf = LS.voiceLastRf(server, uname)
+      // 처음 보는 사람이면 true 를 주면서 **동시에** 표시한다. 확인과 표시가 두 줄이면
+      // 그 사이에 예외가 나서 첫 접속 인사가 접속할 때마다 반복될 수 있다.
+      first = !!LS.markVoiceKnown(server, uname)
 
       if (first) {
-        st.putBoolean(vcSeenKey(uname, 'known'), true)
         vSysTo(p, '별지기로 등록되었습니다.')
         server.scheduleInTicks(50, () => {
           try { vGuideTo(p, '"왔군. ……오래 기다렸네. 이름은 나중에 묻지."') } catch (e) { lsWarn('ls_voice:418', e) }
         })
       } else {
-        var lastDay = st.getInt(vcSeenKey(uname, 'day'))
-        var lastRf = st.getInt(vcSeenKey(uname, 'rf'))
         var gap = nowDay - lastDay
-        if (gap >= VC_ABSENT_DAYS && !vcGetB(server, 'vc_mute')) {
+        if (gap >= VC_ABSENT_DAYS && !vcMuted(server)) {
           var bits = []
           if (rf > lastRf) bits.push(`뿌리가 ${rf - lastRf}개 더 탔고`)
-          var threat = vcGetI(server, 'ls_threat')
+          var threat = LS.threat(server)
           if (threat >= 10) bits.push('밖이 꽤 짙어졌어')
           else if (threat >= 7) bits.push('어둠이 조금 쌓였고')
           else bits.push('큰일은 없었네')
           vGuideTo(p, `"자네가 없는 사이 — ${bits.join(', ')}. 따라잡을 시간은 충분해."`)
         }
       }
-      st.putInt(vcSeenKey(uname, 'day'), nowDay)
-      st.putInt(vcSeenKey(uname, 'rf'), rf)
+      LS.stampVoiceSeen(server, uname, nowDay, rf)
     } catch (e) { console.log('[LS-VOICE] login fail: ' + e) }
   })
 })
@@ -446,16 +492,13 @@ PlayerEvents.loggedIn(event => {
 ServerEvents.tick(event => {
   if (VC_TICK % 400 !== 0) return
   // 이름을 접속 핸들러와 일부러 다르게 둔다 (Rhino 의 try 블록 스코프 누출 회피)
-  var srv = null, tickStore = null, tickDay = 0, tickRf = 0
+  var srv = null, tickDay = 0, tickRf = 0
   try {
     srv = event.server
-    tickStore = vcStore(srv)
+    if (!srv.players.length) return   // 아무도 없으면 장부를 건드릴 이유가 없다
     tickDay = vcDay(srv)
     tickRf = LS.progress(srv)   // 진행도는 모드가 소유 (ls_rift.js 주석 참고)
-    srv.players.forEach(p => {
-      tickStore.putInt(vcSeenKey(p.username, 'day'), tickDay)
-      tickStore.putInt(vcSeenKey(p.username, 'rf'), tickRf)
-    })
+    srv.players.forEach(p => { LS.stampVoiceSeen(srv, p.username, tickDay, tickRf) })
   } catch (e) { lsWarn('ls_voice:456', e) }
 })
 
@@ -471,8 +514,8 @@ ServerEvents.commandRegistry(event => {
       const send = t => ctx.source.sendSystemMessage(Text.of(t))
       send('§6═══ ✧ 안내자의 목소리 ═══')
       send(`§7발화 예산: §e${vcBudget(s)}§7/${VC_BUDGET_MAX} §8(${VC_REFILL_DAYS}일마다 +1 · 앰비언트만 소모)`)
-      send(`§7음소거: ${vcGetB(s, 'vc_mute') ? '§c켜짐' : '§a꺼짐'}`)
-      const done = Object.keys(VC_LINES).filter(k => VC_LINES[k].once && vcGetB(s, 'vc_once_' + k))
+      send(`§7음소거: ${vcMuted(s) ? '§c켜짐' : '§a꺼짐'}`)
+      const done = Object.keys(VC_LINES).filter(k => VC_LINES[k].once && vcOnce(s, k))
       send(`§7소진된 1회성 대사: §f${done.length}§7/${Object.keys(VC_LINES).filter(k => VC_LINES[k].once).length}${done.length ? ' §8(' + done.join(', ') + ')' : ''}`)
       send('§8/voice test <id> · /voice list · /voice mute · /voice reset')
       return 1
@@ -484,7 +527,7 @@ ServerEvents.commandRegistry(event => {
         const e = VC_LINES[k]
         const flags = [e.once ? '1회' : null, e.ambient ? '예산' : null, e.cd ? `cd${Math.round(e.cd / 24000 * 10) / 10}일` : null]
           .filter(x => x).join('·')
-        const spent = e.once && vcGetB(s, 'vc_once_' + k)
+        const spent = e.once && vcOnce(s, k)
         ctx.source.sendSystemMessage(Text.of(`${spent ? '§8✔' : '§a·'} §f${k} §8[${e.ch}] §7${e.lines.length}줄 §8${flags}`))
       })
       return 1
@@ -506,31 +549,29 @@ ServerEvents.commandRegistry(event => {
         })))
     .then(Commands.literal('mute').requires(s => s.hasPermission(2)).executes(ctx => {
       const s = ctx.source.server
-      const v = !vcGetB(s, 'vc_mute')
-      vcSetB(s, 'vc_mute', v)
+      const v = !vcMuted(s)
+      LS.setVoiceMuted(s, v)
       ctx.source.sendSystemMessage(Text.of(v ? '§c안내자가 침묵한다.' : '§a안내자가 다시 말한다.'))
       return 1
     }))
     .then(Commands.literal('budget').requires(s => s.hasPermission(2))
       .then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
         const s = ctx.source.server
-        const n = Math.max(0, Math.min(VC_BUDGET_MAX, Arguments.INTEGER.getResult(ctx, 'n')))
-        vcBudget(s); vcSetI(s, 'vc_budget', n)
-        ctx.source.sendSystemMessage(Text.of(`§a발화 예산 → §e${n}§a/${VC_BUDGET_MAX}`))
+        // 자르기는 모드가 한다 — 상한만 넘겨준다.
+        LS.setVoiceBudget(s, Arguments.INTEGER.getResult(ctx, 'n'), VC_BUDGET_MAX)
+        ctx.source.sendSystemMessage(Text.of(`§a발화 예산 → §e${vcBudget(s)}§a/${VC_BUDGET_MAX}`))
         return 1
       })))
     // 1회성 대사만 되돌린다. 감시 스냅샷은 건드리지 않는다 —
-    // 스냅샷까지 지우면 다음 감시 때 rf_progress 가 통째로 "새로 오른 것"으로 잡혀 대사가 몰아친다.
+    // 스냅샷까지 지우면 다음 감시 때 관문 진행도가 통째로 "새로 오른 것"으로 잡혀 대사가 몰아친다.
+    // **회전 인덱스도 안 지운다** — 「어디까지 읽었나」라 초기화 대상이 아니다
+    // (지우면 리셋할 때마다 같은 첫 줄이 나온다). 둘 다 모드 쪽 resetLines 가 지킨다.
     .then(Commands.literal('reset').requires(s => s.hasPermission(2)).executes(ctx => {
       const s = ctx.source.server
-      let n = 0
-      Object.keys(VC_LINES).forEach(k => {
-        if (vcGetB(s, 'vc_once_' + k)) { vcSetB(s, 'vc_once_' + k, false); n++ }
-        vcSetI(s, 'vc_cd_' + k, 0)
-        vcSetB(s, 'vc_pend_' + k, false)
-      })
-      vcSetI(s, 'vc_budget', VC_BUDGET_MAX)
-      ctx.source.sendSystemMessage(Text.of(`§a1회성 대사 ${n}개 · 쿨다운 · 예산 초기화 §7(감시 스냅샷은 유지)`))
+      var n = 0
+      try { n = LS.resetVoiceLines(s) | 0 } catch (e) { lsWarn('ls_voice:reset', e) }
+      LS.setVoiceBudget(s, VC_BUDGET_MAX, VC_BUDGET_MAX)
+      ctx.source.sendSystemMessage(Text.of(`§a1회성 대사 ${n}개 · 쿨다운 · 예산 초기화 §7(감시 스냅샷·회전 인덱스는 유지)`))
       return 1
     })))
 })

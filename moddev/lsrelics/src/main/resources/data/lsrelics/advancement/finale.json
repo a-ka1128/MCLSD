@@ -1,0 +1,29 @@
+{
+  "parent": "lsrelics:gate4",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "display": {
+    "icon": {
+      "id": "minecraft:dragon_egg",
+      "count": 1
+    },
+    "title": {
+      "translate": "advancement.lsrelics.finale.title"
+    },
+    "description": {
+      "translate": "advancement.lsrelics.finale.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "sends_telemetry_event": false
+}

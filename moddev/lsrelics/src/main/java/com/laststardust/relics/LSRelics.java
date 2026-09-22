@@ -30,6 +30,17 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 // Last Stardust — 별의 유물 커스텀 모드. 진짜 하이브리드 무기(활/방패/도끼/지팡이).
 @Mod(LSRelics.MODID)
+// ── 유물은 «닳지 않는다» (2026-08-12, 유저 결정) ──
+// 예전엔 셋만 내구도가 있었다(시리우스 1500 · 솔라리스 1500 · 타이탄은 네더라이트 티어).
+// 나머지 아홉은 애초에 `durability()` 가 없어 안 닳았으므로, **셋만 닳는 게 오히려 어긋남**이었다.
+//
+// 인첸트를 안 열기로 한 것과 같은 결정이다 — **그 자리는 「별의 축복」이 갖는다.**
+// 무기 축복 10종이 정확히 인첸트의 자리고, 둘을 같이 두면 한 칸을 놓고 겹친다.
+// 그러면 내구성·수선 인첸트도 필요 없고, 내구도 자체가 아무 선택도 만들지 않는 숫자가 된다.
+//
+// ⚠️ 타이탄만 방식이 다르다. `TieredItem` 생성자가 `properties.durability(tier.getUses())` 를
+//    **강제로** 걸어서 `.durability()` 를 빼는 것으로는 못 막는다 —
+//    `UNBREAKABLE` 컴포넌트로 덮는다. `false` 는 「툴팁에 '파괴 불가'를 안 쓴다」는 뜻이다.
 public class LSRelics {
     public static final String MODID = "lsrelics";
 
@@ -75,6 +86,31 @@ public class LSRelics {
             .build();
     }
 
+    // 근접 무기 속성 + 패시브「강철의 각오」(네메시스)
+    //
+    // ── 이게 「못 해도 탱커」의 바닥이다 ──
+    // 네메시스는 패링을 맞춰야 값어치가 나오는 숙련형인데, 두 번째 탱커를 넣는 이유가
+    // 「아틀라스가 없을 때 대신 설 사람」이다. 그 대체재가 숙련을 요구하면 초보가 잡았을 때
+    // 전선이 그대로 무너진다. 그래서 **패링을 한 번도 못 해도 붙는** 방어를 상시로 준다.
+    //   방어력 +5 / 방어 강도 +3 — 이지스(+6/+4) 바로 아래. 앞에 서긴 서되 이지스보단 얇다.
+    // 둘 다 주손 한정이라 무기를 바꾸면 즉시 사라진다(이지스와 같은 규칙).
+    public static ItemAttributeModifiers nemesisAttrs(double dmg, double spd) {
+        return ItemAttributeModifiers.builder()
+            .add(Attributes.ATTACK_DAMAGE,
+                new AttributeModifier(ResourceLocation.withDefaultNamespace("base_attack_damage"), dmg, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ATTACK_SPEED,
+                new AttributeModifier(ResourceLocation.withDefaultNamespace("base_attack_speed"), spd, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ARMOR,
+                new AttributeModifier(ResourceLocation.fromNamespaceAndPath(MODID, "nemesis_armor"), 5.0, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .add(Attributes.ARMOR_TOUGHNESS,
+                new AttributeModifier(ResourceLocation.fromNamespaceAndPath(MODID, "nemesis_tough"), 3.0, AttributeModifier.Operation.ADD_VALUE),
+                EquipmentSlotGroup.MAINHAND)
+            .build();
+    }
+
     // 활 패시브(바람의 발걸음): 이동속도 +20%
     public static ItemAttributeModifiers hunterAttrs() {
         return ItemAttributeModifiers.builder()
@@ -87,7 +123,7 @@ public class LSRelics {
     // ── 유물 4종 ──
     // 겨우살이: 진짜 활 (화살 발사). 방벽: 방패(막기)+무기(공격). 도끼: 진짜 도끼(채굴+공격). 지팡이: 마법 무기.
     public static final DeferredItem<StarBow> HUNTER = ITEMS.register("hunter",
-        () -> new StarBow(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(1500).attributes(hunterAttrs())));
+        () -> new StarBow(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).attributes(hunterAttrs())));
 
     // ── 평타 DPS 예산 ──
     // 상용 RPG의 밸런스 관행을 그대로 계수화했다. 기준 = 원거리 순수 딜러 12.0.
@@ -97,13 +133,19 @@ public class LSRelics {
     // ※ 위 계수는 초기 설계용이고, 지금 쓰는 값은 전부 실측 기반이다(2026-07-30 갱신).
     //
     // ── 측정 기준 (이걸 안 맞추면 값이 통째로 어긋난다) ──
-    //   60초 · 5성 · 표적 방어도 0 · 더미 1기 · - 성소 축복 안 -
+    //   60초 · 5성 · 표적 방어도 0 · 더미 1기 · **성소 축복 «밖»**
     //
     //   축복(성소 Lv4「별빛 축복」, 성역 64칸 안)은 근접에 Strength I = 공격력 +3.0,
     //   원거리에 projectile_damage +25% 를 준다. 안팎이 섞이면 같은 유물이 x1.25 넘게
     //   벌어진다 — 실제로 시리우스에서 그렇게 어긋나 원인을 찾는 데 오래 걸렸다.
-    //   공성전이 성역에서 벌어지므로 축복 안이 실전 조건이고, 그래서 이쪽을 기준으로 잡았다.
-    //   ※ DummyManager 가 측정 결과에 [힘·투사체+25%] 를 찍어준다. 그게 없으면 축복 밖이다.
+    //   ※ DummyManager 가 측정 결과에 [힘·투사체+25%] 를 찍어준다. 그게 «없어야» 기준이다.
+    //
+    //   ⚠️ 2026-08-09 정정 — 이 자리에 「축복 안이 실전 조건이라 이쪽을 기준으로 잡았다」고
+    //   적혀 있었는데 **낡은 값이다.** 08-04 8종 실측은 축복 «밖»에서 했고
+    //   (`DECISIONS.md` 1절 머리말), 그때 「관문 제단은 성역에서 2000~5000m 밖이고 성소 축복은
+    //   64칸 안에서만 걸리므로 보스전 조건은 축복 밖이 맞다」로 기준이 뒤집혔다.
+    //   `DECISIONS.md` 아래쪽 「이미 결정된 것」에는 옛 기준(축복 안)이 아직 남아 있다 —
+    //   **위쪽 실측 기록이 최신이다.** 별의 축복(유물 부여)은 별개이고 `/bless clear` 로 뺀다.
     //
     //   목표와 최신 실측 — - 전부 GLOBAL_POWER 도입 전(×1.0) 값이다 - :
     //     셀레스티아 56 (56.8)  · 솔라리스 56 (평타 56.7 / 스코프 58.0)  · 시리우스 56
@@ -144,6 +186,8 @@ public class LSRelics {
     // 근접이라 타격 타이밍에 따라 4% 정도 흔들려서 한 판에 맞추면 다음 판에 어긋난다.
     public static final DeferredItem<RiftAxe> PIONEER = ITEMS.register("pioneer",
         () -> new RiftAxe(Tiers.NETHERITE, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
+            .component(net.minecraft.core.component.DataComponents.UNBREAKABLE,
+                new net.minecraft.world.item.component.Unbreakable(false))
             // 공속 -2.6(1.4회/초) → -3.0(1.0회/초). 바닐라 네더라이트 도끼와 같은 속도다.
             // 도끼가 검보다 빠를 이유가 없는데 1.4회/초였고, 실측 68.8 DPS 의 상당 부분이
             // 여기서 나왔다. 한 방이 무거운 무기라는 정체성에도 느린 쪽이 맞다.
@@ -160,7 +204,7 @@ public class LSRelics {
     // 솔라리스 — 마총. 좌클릭 = 태양탄(6발 탄창 + 2초 재장전), 우클릭 = 스코프.
     // 목표 56 / 실측 56.7. 수치와 그 근거는 전부 SolarMusket 주석에 있다.
     public static final DeferredItem<SolarMusket> GUNNER = ITEMS.register("gunner",
-        () -> new SolarMusket(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(1500)));
+        () -> new SolarMusket(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
     // 파나케이아 — 힐 지팡이. 좌클릭이 조준 대상에 따라 회복/공격으로 자동 전환된다.
     public static final DeferredItem<PanaceaStaff> HEALER = ITEMS.register("healer",
@@ -187,9 +231,30 @@ public class LSRelics {
     // 로 대역 안에 들어왔다. 크리 배수는 건드리지 않았다 — 바닥을 목표에 맞추면
     // 바닐라 크리(x1.5)를 다 받아도 천장이 알아서 70 아래로 떨어진다.
     // 스킬은 그대로 뒀다(평타 비중 66~68%, 상한 80% 안).
+    //
+    // ── 2026-07-31: 1.225 → 1.409 (×1.15) ──
+    // 5성 DPS 가 8유물 중 꼴찌였다(81.2 · 평균 93.6 대비 −13%). 그런데 진단이 「약하다」가
+    // 아니었다 — **1성에서는 1위(35.5)고 5성에서 꼴찌다.** 성급 곡선이 혼자 완만하다.
+    // 아이템 공격력이 작고(1.225) 공속이 빨라(2.4), 성급을 안 타는 덧셈 항(성역 축복 +3.0)이
+    // 저성급에서 비중을 크게 먹고 고성급에서 희석되기 때문이다.
+    //
+    // 그래서 **축복이 아니라 기본치**를 올렸다. 축복(+3.0 → +4.5)으로 맞추면 5성은 87.5 로
+    // 오르지만 1성이 35.5 → **41.7(평균 +24%)** 로 튄다 — 덧셈이라 저성급에 몇 배로 얹힌다.
+    // 기본치는 곱셈이라 성급을 타고, 1성은 36.8 로만 움직인다.
+    //   (`docs/DECISIONS.md` 1절에 네 안의 성급별 수치를 전부 남겼다.
+    //    그 절이 한때 「C안은 1성이 거의 그대로」라고 적고 있었는데 **그게 틀렸다.**)
+    //
+    // 목표는 「더미에선 평균에 못 미치고, 백어택을 쓰면 평균을 넘는다」였다 —
+    // 암살자는 등 뒤로 돌아야 나오는 직업이고, 그 난이도가 보상받아야 한다.
+    //   5성 더미 81.2 → 85.4 (평균 −8.8%) · 백어택 시 91.8 → 96.5 (평균 +3.1%)
+    //
+    // **대역은 요구 조건 안에 그대로 있다.** 위 실측(바닥 50.7 · 백어택 57.0 · 풀딜 64.65)에
+    // 배수 1.052 를 곱하면 바닥 53.3 · 백어택 59.9 · 풀딜 68.0 —
+    // 원래 요구였던 「바닥 50 · 천장 70」을 여전히 만족한다. 크리 배수는 이번에도 안 건드렸다.
+    // ⚠️ 위 수치는 보정상수 k 하나에 기댄 모델값이다. `/dummy` 로 실측해 덮어쓸 것.
     public static final DeferredItem<SoulDagger> ASSASSIN = ITEMS.register("assassin",
         () -> new SoulDagger(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
-            .attributes(weapon(1.225, -1.6))));
+            .attributes(weapon(1.409, -1.6))));
 
     // 게볼그 — 창(쿠훌린의 가호). 근접 하이브리드, 긴 사거리.
     // 공격력 7.4167 -> 5.666 (x0.764, 2026-07-27) × 공속 1.5.
@@ -206,6 +271,74 @@ public class LSRelics {
         () -> new GaeBolg(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
             .attributes(weapon(4.666, -2.5))));
 
+    // 헤스페로스 — 낫(헤카테의 가호). 중거리 약화·지원.
+    //
+    // ⚠️ **공격력을 일부러 낮게 잡았다.** 다른 유물의 «자기 화력» 목표는 96~100 인데 헤카테는
+    //    85~88 이다. 저주 중첩(중첩당 파티 전원의 피해 +3%)이 /dummy 단독 측정에 안 잡히기
+    //    때문이다 — 파나케이아를 더미 87.8 에서 그대로 둔 것과 같은 처리
+    //    (`DECISIONS.md` 「파나케이아를 유지한 이유」).
+    //
+    // 초기값은 게볼그(창, 4.666 / −2.5)를 기준으로 잡았다. 낫도 긴 자루 무기라 무브셋이 가깝고,
+    // 거기서 총량을 ~0.9 배 한 자리다. **`/dummy` 실측 전까지는 전부 가정이다.**
+    public static final DeferredItem<com.laststardust.relics.item.HecateScythe> HECATE =
+        ITEMS.register("hecate",
+            () -> new com.laststardust.relics.item.HecateScythe(
+                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)
+                    .attributes(weapon(4.2, -2.4))));
+
+    // 바르비톤 — 저음 리라(하르모니아의 가호). **원거리 지원 딜러.**
+    //
+    // ── 근접 공격력 속성이 없다 (2026-08-09, 유저 결정) ──
+    // 원래는 근접이었고 `weapon(2.5, -2.2)` — 유물 중 제일 낮은 값이었다. 「때리는 물건이
+    // 아니다」가 설계였는데, 실제로 굴려 보니 **버프를 거는 사람이 근접 사거리까지 걸어
+    // 들어가야 하는** 모양이 됐다. 서포터가 제일 서면 안 되는 자리다.
+    //   → 좌클릭을 음률(투사체)로 바꾸고 근접 속성을 뗐다. 셀레스티아·파나케이아·솔라리스와
+    //     같은 모양이다 — 그 셋도 근접 공격력이 없고 평타 수치는 각 아이템/스킬 쪽에 있다
+    //     (`RelicSkills.chordShot`).
+    //
+    // ※ 여기서 속성을 떼면 `RelicEventHandlers.onRelicAttributes` 의 각성 평타 보정이 자동으로
+    //   비껴간다(`base <= 0` 이면 즉시 return — 활·지팡이와 같은 경로). 따로 막을 게 없다.
+    public static final DeferredItem<com.laststardust.relics.item.HarmoniaSash> HARMONIA =
+        ITEMS.register("harmonia",
+            () -> new com.laststardust.relics.item.HarmoniaSash(
+                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    // 아드라스테이아 — 대검(네메시스의 가호). **패링 탱커.**
+    //
+    // 8.0 / −2.8 = 초당 1.2회. **유물 중 한 방이 제일 무겁고 제일 느리다.**
+    // 이지스(4.673 / −2.4, 1.6회)를 기준으로, 대검이니 한 방을 키우고 속도를 내렸다.
+    // Better Combat `claymore` 3타 콤보(×0.75 → ×1.0 → ×1.25)가 위에 얹힌다.
+    //
+    // ⚠️ **`/dummy` 실측 전까지 전부 가정이다.** 계산상 5성 총합 88 로 이지스와 같은 하위
+    //    대역인데, 그 88 중 «패링 몫 7» 이 「5초에 한 번 성공한다」는 순수 가정 위에 있다.
+    //    총합의 8% 다 — 이 값을 근거로 다른 걸 조정하면 안 된다(`docs/CLASSES.md 「네메시스」` §3).
+    public static final DeferredItem<com.laststardust.relics.item.NemesisBlade> NEMESIS =
+        ITEMS.register("nemesis",
+            () -> new com.laststardust.relics.item.NemesisBlade(
+                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(2000)
+                    // 공격력 8.0 → 9.5 (2026-08-11, 표시 48.60 → 57.30 @5성).
+                    // 「딜은 이지스보다 강하게」라는 설계를 평타에서도 받는다. 12종 중 표시
+                    // 공격력 1위가 되지만(다음이 타이탄 44.8) 1.2타/초로 제일 느린 무기다.
+                    .attributes(nemesisAttrs(9.5, -2.8))));
+
+    // 펠리온 — 봉(케이론의 가호). **봉술 몽크 · 근접 하이브리드 힐러.**
+    //
+    // 4.6 / −2.2 = 초당 1.8회. **근접 유물 중 제일 빠르다.**
+    // 「때려야 힐이 나오는 직업」이라 느리면 회복이 뚝뚝 끊긴다 — 기믹과 손맛이 어긋난다.
+    // Better Combat `battlestaff` 6타 콤보가 위에 얹히고, 그 평균 배율이 정확히 1.0 이라
+    // 계산이 깔끔하다: (1+4.6)×5.4 × 1.0 × 1.8 = **평타 DPS 약 54**.
+    //
+    // 방어 속성을 «일부러» 안 준다. 34칸 몸으로 앞에 서는 게 이 직업의 대가다
+    // (`docs/CLASSES.md 「케이론」` §4).
+    //
+    // ⚠️ **`/dummy` 실측 전까지 전부 가정이다.** 특히 파나케이아와 «같이 서는» 판을 돌려보기
+    //    전엔 회복량을 확정할 수 없다 — 10 + 4 = 14 HPS 면 수성전의 압박이 통째로 사라진다.
+    public static final DeferredItem<com.laststardust.relics.item.ChironStaff> CHIRON =
+        ITEMS.register("chiron",
+            () -> new com.laststardust.relics.item.ChironStaff(
+                new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).durability(1600)
+                    .attributes(weapon(4.6, -2.2))));
+
     // 크리에이티브 탭 (테스트/EMI 노출)
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("relics",
         () -> CreativeModeTab.builder()
@@ -221,12 +354,29 @@ public class LSRelics {
                 output.accept(HEALER.get());
                 output.accept(ASSASSIN.get());
                 output.accept(LANCER.get());
+                output.accept(HECATE.get());
+                output.accept(HARMONIA.get());
+                output.accept(NEMESIS.get());
+                output.accept(CHIRON.get());
                 output.accept(HEARTHSTONE.get());
             }).build());
+
+    // ── 전리품 수정자 (별먼지를 구조물 상자에) ──
+    // 상자 전리품표가 566개라 표를 덮어쓰는 방식은 못 쓴다. GLM 은 기존 표를 안 건드리고
+    // 결과에 얹는 유일한 방법이다. 등급 판정은 StardustLootModifier 안에서 한다.
+    public static final DeferredRegister<com.mojang.serialization.MapCodec<? extends net.neoforged.neoforge.common.loot.IGlobalLootModifier>>
+        LOOT_MODIFIERS = DeferredRegister.create(
+            net.neoforged.neoforge.registries.NeoForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, MODID);
+
+    static {
+        LOOT_MODIFIERS.register("chest_loot", () -> com.laststardust.relics.loot.ChestLootModifier.CODEC);
+    }
 
     public LSRelics(IEventBus modEventBus, ModContainer modContainer) {
         ITEMS.register(modEventBus);
         TABS.register(modEventBus);
         com.laststardust.relics.town.TownMenu.MENUS.register(modEventBus);
+        com.laststardust.relics.blessing.BlessMenu.MENUS.register(modEventBus);
+        LOOT_MODIFIERS.register(modEventBus);
     }
 }

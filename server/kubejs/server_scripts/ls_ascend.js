@@ -1,21 +1,20 @@
 // Last Stardust — 유물 각성 (Ascension)
-// 유물의 성장 계단. 관문(ls_rift.js) 클리어가 자격을 열고, 균열 정수가 값을 치른다.
+// 유물의 성장 계단. 관문(ls_rift.js) 클리어가 자격을 열고, 별의 파편이 값을 치른다.
 //
-//   1성  유물 획득 시 기본        패시브 + 기본 스킬 (우클릭)
+//   1성  유물 획득 시 기본        패시브 + 기본 스킬 (우클릭)   ※ 체력은 가호를 고를 때 이미 정해진다
 //   2성  T1 개척 클리어 후        피해 ×1.5 · 체력↑ · 이동기 해금 (웅크림 두 번)
 //   3성  T2 심층 클리어 후        피해 ×2.0 · 체력↑ · 추가 스킬 해금 (웅크림+우클릭)
 //   4성  T3 정점 클리어 후        피해 ×2.5 · 체력↑ · 궁극기 해금 (웅크림+좌클릭)
-//   5성  T4 균열핵 클리어 후      피해 ×3.0 · 체력↑ · (새 스킬 없음 — 모든 힘의 완성)
+//   5성  T4 균열핵 클리어 후      피해 ×3.0 · 체력↑ · 패시브 2단 (Passive2.java)
 // ※ 체력 증가폭은 직업(가호)마다 다르다 — AS_HEALTH_BY_FATE 참고.
 //
 // 실제 별을 아이템에 새기는 건 lsrelics 모드(/lsrelic star <n>)가 한다.
-// 진행도가 전부 여기 persistentData에 있어서 자격 판정은 이쪽이 맡는 게 자연스럽다.
+// 자격 판정(정수·관문 진행도·성급 상한)은 이쪽이 맡는다 — 조건이 여러 시스템에 걸쳐 있어서다.
 //
-// 저장(공유 persistentData): star_<user>(현재 성급) · relic_<user>
+// 저장: 모드가 소유한다 (이관 3단계) — LS.star / LS.setStar / LS.hasRelic.
 // ※ 관문 진행도와 금고는 모드(LSData)가 소유한다 — `LS.progress()` / `LS.treasury()` 로 읽는다.
 //   ※ 별은 아이템 NBT에도 새겨지지만, 유물을 잃고 다시 받는 경우를 위해 여기가 원본이다.
 
-function asStore(server) { return server.overworld().persistentData }
 function asCmd(server, s) { return server.runCommandSilent(s) }
 function asSay(server, text) { server.players.forEach(p => p.tell(Text.of(text))) }
 
@@ -25,39 +24,75 @@ const AS_MAX = 5
 // [필요 관문 클리어 수, 정수 비용, 설명]
 // ── 각성 단계별 해금 ──
 // 1성(가호 수령 시점) = 패시브 + 기본 스킬(우클릭). 그 뒤로 한 계단마다 손패가 하나씩 는다.
-// 매 단계에 새 버튼이 생기므로 "각성했는데 숫자만 올랐다"는 구간이 없다 — 4성까지는.
-// 5성은 새 스킬 없이 배율·체력이 최대가 되는 '완성' 단계다 (스킬 해금과 수치 성장을 분리).
+// 매 단계에 새 버튼이 생기므로 "각성했는데 숫자만 올랐다"는 구간이 없다.
+//
+// ── 5성은 버튼이 아니라 «패시브 2단»이다 (2026-08-11) ──
+// 원래 5성은 배율·체력만 최대가 되는 '완성' 단계였다. 그런데 **제일 오래 걸려 도착하는
+// 계단이 제일 심심했다** — 위 주석이 스스로 "4성까지는"이라고 자백하고 있었다.
+// 그래서 1성 패시브에 2단을 붙인다(`moddev/lsrelics/.../Passive2.java`).
+// 열둘 전부 **딜이 아니라 생존·유틸·난전** 축이다. 5성은 이미 피해 ×3.0 으로 숫자를 다
+// 주고 있어서, 여기서 딜을 또 올리면 12종 목표선(90~114)이 통째로 깨진다.
 const ASCEND = {
   2: { gate: 1, cost: 2, desc: '피해 ×1.5 · §e이동기 해금' },
   3: { gate: 2, cost: 3, desc: '피해 ×2.0 · §e추가 스킬 해금' },
   4: { gate: 3, cost: 4, desc: '피해 ×2.5 · §e궁극기 해금' },
-  5: { gate: 4, cost: 5, desc: '피해 ×3.0 · §e모든 힘의 완성' }
+  5: { gate: 4, cost: 5, desc: '피해 ×3.0 · §e패시브 2단 해금' }
 }
 const GATE_NAME = ['', '개척(T1)', '심층(T2)', '정점(T3)', '균열핵(T4)']
 
 // ── 성급별 최대 체력 보너스 (직업별 차등) ──
-// 각성이 피해를 3배로 올리는 만큼 보스 공격력도 같이 올릴 텐데(/bossdiff dmg),
-// 체력이 20 그대로면 후반 보스에게 한 대 맞고 죽는 그림이 나온다.
-// 앞라인일수록 두껍고 원거리/마법일수록 얇게 — 1성은 전원 10칸에서 출발해 각성할수록 역할이 벌어진다.
 // 값은 "추가 HP" = (목표 칸수 × 2) − 20. 주석의 숫자가 실제 도달 칸수.
-//   수호 42칸 · 개척 38 · 창병 34 · 힐러 30 · 암살 30 · 거너/사냥꾼/현자 26
-// ※ 힐러는 가호 패시브로 최대 체력 +4(2칸)를 따로 받으므로 각성치를 낮게 잡아 최종 32칸이 된다.
+//
+// ── 두 번 손봤다 (2026-08-11, 유저 결정) ──
+// ① **1성 바닥**: 예전엔 전원 10칸에서 출발했다. 유물을 막 받은 시점이 이 팩에서 제일
+//    얇은 구간인데 몹 스케일링과 공성은 그때도 돌고 있었다. 이제 역할별로 셋이다 —
+//    탱커 20칸 · 근접 18칸 · 그 밖 16칸.
+// ② **5성 천장**: 26~42칸 → **40~60칸.** 「보이는 맛」이 적었다. 다섯 계단을 다 오르고도
+//    원거리가 26칸이면 각성이 체력으로는 거의 안 보인다.
+//
+// ⚠️ **보스·몹이 그만큼 쉬워진다.** 대략 원거리 ×1.54 · 이지스 ×1.43 만큼 두꺼워졌으니,
+//    같은 위협을 유지하려면 `/bossdiff dmg` 를 **+45~55%** 쯤 올려야 계산이 맞는다.
+//    유저 결정으로 **체력을 먼저 올리고 보스는 실측 뒤에 맞추기로 했다** — 숫자 두 개를
+//    동시에 움직이면 어느 쪽이 원인인지 못 가린다(게볼그 앵커와 같은 이유, DECISIONS 1-F).
+//
+// ── 헤스페로스는 근접 딜러다 (2026-08-11 정정) ──
+// 「중거리 지원」으로 적혀 있었는데, 저주를 쌓으려면 평타 사거리 안까지 들어가야 하므로
+// 실제로 서는 자리는 근접이다. 1성 바닥도 근접(18칸), 5성도 펠리온과 같은 46칸.
 const AS_HEALTH_BY_FATE = {
-  guardian: { 1: 0, 2: 16, 3: 32, 4: 48, 5: 64 }, // 10/18/26/34/42칸 — 절대 탱커
-  pioneer:  { 1: 0, 2: 12, 3: 28, 4: 42, 5: 56 }, // 10/16/24/31/38칸 — 근접 탱커
-  lancer:   { 1: 0, 2: 12, 3: 24, 4: 36, 5: 48 }, // 10/16/22/28/34칸 — 근접 브루저
-  healer:   { 1: 0, 2: 8,  3: 16, 4: 28, 5: 40 }, // 10/14/18/24/30칸 — 서포터(+가호 2칸)
-  assassin: { 1: 0, 2: 8,  3: 20, 4: 28, 5: 40 }, // 10/14/20/24/30칸 — 근접 딜러
-  gunner:   { 1: 0, 2: 8,  3: 16, 4: 24, 5: 32 }, // 10/14/18/22/26칸 — 원거리 딜러
-  hunter:   { 1: 0, 2: 8,  3: 16, 4: 24, 5: 32 }, // 10/14/18/22/26칸 — 원거리 딜러
-  sage:     { 1: 0, 2: 8,  3: 16, 4: 24, 5: 32 }  // 10/14/18/22/26칸 — 마법 유리대포
+  // ── 탱커 셋 (1성 20칸) ──
+  guardian: { 1: 20, 2: 40, 3: 60, 4: 80, 5: 100 }, // 20/30/40/50/60칸 — 절대 탱커
+  // 네메시스는 두 번째 탱커다. 「막아서 안 맞는」 이지스보다는 얇아야
+  // 패링을 맞추는 값어치가 생긴다.
+  nemesis:  { 1: 20, 2: 38, 3: 56, 4: 74, 5:  92 }, // 20/29/38/47/56칸 — 패링 탱커
+  pioneer:  { 1: 20, 2: 34, 3: 50, 4: 64, 5:  80 }, // 20/27/35/42/50칸 — 근접 탱커
+
+  // ── 근접 셋 (1성 18칸) ──
+  lancer:   { 1: 16, 2: 30, 3: 46, 4: 60, 5:  76 }, // 18/25/33/40/48칸 — 근접 브루저
+  // 케이론은 «앞에 서는 힐러»다. 때려야 힐이 나오므로 뒤에 못 서고,
+  // 그렇다고 전선을 대신 맡을 수는 없어야 한다.
+  chiron:   { 1: 16, 2: 30, 3: 44, 4: 58, 5:  72 }, // 18/25/32/39/46칸 — 근접 하이브리드 힐러
+  // 헤카테는 저주를 «평타로» 쌓는다 — 사거리 안까지 들어가야 하므로 자리는 근접이다.
+  hecate:   { 1: 16, 2: 30, 3: 44, 4: 58, 5:  72 }, // 18/25/32/39/46칸 — 근접 딜러
+
+  // ── 그 밖 여섯 (1성 16칸) ──
+  assassin: { 1: 12, 2: 26, 3: 40, 4: 54, 5:  68 }, // 16/23/30/37/44칸 — 근접 딜러(회피형)
+  // ※ 힐러는 가호 패시브로 최대 체력 +4(2칸)를 따로 받으므로 최종 44칸이 된다.
+  healer:   { 1: 12, 2: 24, 3: 38, 4: 50, 5:  64 }, // 16/22/29/35/42칸 — 서포터(+가호 2칸)
+  // 하르모니아는 원거리로 서지만 결속의 매듭을 깔고 그 안을 지켜야 해서
+  // 딜러 셋처럼 완전히 빠질 수가 없다 — 그 차이가 2칸이다.
+  harmonia: { 1: 12, 2: 24, 3: 38, 4: 50, 5:  64 }, // 16/22/29/35/42칸 — 원거리 지원 딜러
+
+  gunner:   { 1: 12, 2: 24, 3: 36, 4: 48, 5:  60 }, // 16/22/28/34/40칸 — 원거리 딜러
+  hunter:   { 1: 12, 2: 24, 3: 36, 4: 48, 5:  60 }, // 16/22/28/34/40칸 — 원거리 딜러
+  sage:     { 1: 12, 2: 24, 3: 36, 4: 48, 5:  60 }  // 16/22/28/34/40칸 — 마법 유리대포
 }
-// 가호 미선택/미확인 시 기준선 (10/15/20/25/30칸)
-const AS_HEALTH_DEFAULT = { 1: 0, 2: 10, 3: 20, 4: 30, 5: 40 }
+// 알 수 없는 가호 키가 왔을 때의 기준선 (16/22/28/34/40칸 — 「그 밖」과 같다).
+// ※ 가호가 **없는** 사람은 여기로 안 온다 — asHealth 가 0 을 주고 끝낸다.
+const AS_HEALTH_DEFAULT = { 1: 12, 2: 24, 3: 36, 4: 48, 5: 60 }
 const AS_HP_MOD = 'last_stardust:ascend_health'
 
-// 가호(직업) 조회 — ls_fate.js가 같은 persistentData에 fate_<user>로 저장한다.
-function asFate(server, uname) { return String(asStore(server).getString('fate_' + uname) || '') }
+// 가호(직업) 조회 — 장부는 모드가 갖는다(ls_fate.js 도 같은 곳을 본다).
+function asFate(server, uname) { return String(LS.fate(server, uname) || '') }
 function asHealthTable(server, uname) { return AS_HEALTH_BY_FATE[asFate(server, uname)] || AS_HEALTH_DEFAULT }
 // 해당 성급의 총 하트 칸수 (표시용) — 기본 10칸 + 보너스÷2. 가호 패시브 체력은 미포함.
 function asHearts(server, uname, star) { return 10 + (asHealthTable(server, uname)[star] || 0) / 2 }
@@ -66,6 +101,17 @@ function asHearts(server, uname, star) { return 10 + (asHealthTable(server, unam
 // ※ 속성 모디파이어는 리스폰 시 복사되지 않는다(ServerPlayer.restoreFrom 은 base 값만 옮긴다).
 //   그래서 각성/접속/부활 시점마다 이 함수를 다시 불러야 한다.
 function asHealth(server, uname) {
+  // ── 기준은 «가호»다. 유물이 아니다 (2026-08-11, 유저 결정) ──
+  // 체력은 직업의 값이지 무기의 값이 아니다. 가호를 고르는 순간 정해지고,
+  // **유물이 없는 0성과 1성의 체력이 같다** — 그 사이는 「같은 직업인데 아직 무기가
+  // 없는」 구간이지 「더 약한 사람」인 구간이 아니다.
+  // (`asStar` 가 0 을 1 로 바닥 까는 게 여기서 그대로 뜻이 된다.)
+  //
+  // 가호가 아예 없으면 0 — 서버에 막 들어온 사람은 바닐라 10칸에서 시작한다.
+  if (!asFate(server, uname)) {
+    try { asCmd(server, `attribute ${uname} minecraft:generic.max_health modifier remove ${AS_HP_MOD}`) } catch (e) { lsWarn('ls_ascend:nofate', e) }
+    return 0
+  }
   const bonus = asHealthTable(server, uname)[asStar(server, uname)] || 0
   try { asCmd(server, `attribute ${uname} minecraft:generic.max_health modifier remove ${AS_HP_MOD}`) } catch (e) { lsWarn('ls_ascend:69', e) }
   if (bonus > 0) {
@@ -75,7 +121,7 @@ function asHealth(server, uname) {
 }
 
 function asStar(server, uname) {
-  const v = asStore(server).getInt('star_' + uname)
+  const v = LS.star(server, uname)
   return v < 1 ? 1 : Math.min(v, AS_MAX)
 }
 
@@ -87,7 +133,7 @@ function asStamp(server, uname) {
   return s
 }
 
-// 균열 정수 보유량.
+// 별의 파편 보유량.
 //
 // ── 여기가 오래 고장나 있었다 ──
 // 예전엔 `clear <이름> <아이템> 0` 의 반환값으로 개수를 셌는데, runCommandSilent 는
@@ -103,9 +149,8 @@ function asEssence(server, uname) {
 // ── 각성 실행 ──
 function asAscend(server, player) {
   const uname = player.username
-  const st = asStore(server)
 
-  if (!st.getBoolean('relic_' + uname)) {
+  if (!LS.hasRelic(server, uname)) {
     player.tell(Text.of('§c아직 유물을 손에 넣지 못했다. §7제단에서 §e/relic'))
     return 0
   }
@@ -128,7 +173,7 @@ function asAscend(server, player) {
   // ② 정수 비용
   const have = asEssence(server, uname)
   if (have < req.cost) {
-    player.tell(Text.of(`§c균열 정수가 부족하다: §e${have}/${req.cost}`))
+    player.tell(Text.of(`§c별의 파편이 부족하다: §e${have}/${req.cost}`))
     player.tell(Text.of('§7   공세 격퇴 · 현상금 · 구출 · 균열 시련에서 얻는다.'))
     return 0
   }
@@ -137,14 +182,16 @@ function asAscend(server, player) {
   const ap = lsPlayerByName(server, uname)
   const took = ap ? lsTakeItem(ap, AS_ESS, req.cost) : 0
   if (took < req.cost) {
-    player.tell(Text.of(`§c균열 정수 회수에 실패했다: §e${took}/${req.cost}`))
+    player.tell(Text.of(`§c별의 파편 회수에 실패했다: §e${took}/${req.cost}`))
     lsWarn('ls_ascend:essence-take', `took ${took} of ${req.cost} from ${uname}`)
     return 0
   }
 
   // ③ 각성
-  st.putInt('star_' + uname, next)
+  LS.setStar(server, uname, next)
   asStamp(server, uname)
+  // 도전과제 — 2~5성만 있다(1성은 유물 수령과 같은 순간이라 `relic` 이 대신한다).
+  if (next >= 2 && next <= 5) lsAdv(server, uname, 'star' + next)
 
   // 최대 체력이 늘면 새 하트가 빈 칸으로 남는다 — 각성 보상이 손해처럼 보이지 않게 가득 채운다.
   const hpTable = asHealthTable(server, uname)
@@ -185,7 +232,7 @@ function asAscend(server, player) {
 }
 
 // ── 접속 시 저장된 성급을 다시 새긴다 ──
-// 유물을 잃고 /relic 으로 재지급받으면 NBT의 별이 초기화되므로 원본(persistentData)에서 복원한다.
+// 유물을 잃고 /relic 으로 재지급받으면 NBT 의 별이 초기화되므로 장부(모드)에서 복원한다.
 PlayerEvents.loggedIn(event => {
   const p = event.player
   if (!p) return
@@ -251,7 +298,7 @@ ServerEvents.commandRegistry(event => {
         const s = ctx.source.server; const p = ctx.source.player
         if (!p) { ctx.source.sendSystemMessage(Text.of('§c플레이어만 §7(대상 지정: /ascend set <이름> <n>)')); return 0 }
         const n = Math.max(1, Math.min(AS_MAX, Arguments.INTEGER.getResult(ctx, 'n')))
-        asStore(s).putInt('star_' + p.username, n)
+        LS.setStar(s, p.username, n)
         asStamp(s, p.username)
         ctx.source.sendSystemMessage(Text.of(`§a각성 §e${n}성§a으로 설정했다.`))
         return 1
@@ -268,7 +315,7 @@ ServerEvents.commandRegistry(event => {
           const s = ctx.source.server
           const target = Arguments.STRING.getResult(ctx, 'target')
           const n = Math.max(1, Math.min(AS_MAX, Arguments.INTEGER.getResult(ctx, 'n')))
-          asStore(s).putInt('star_' + target, n)
+          LS.setStar(s, target, n)
           // 손에 든 유물 NBT 에 성급을 다시 새긴다 — 접속 중이어야 가능하다.
           var p = lsPlayerByName(s, target)
           if (p) asStamp(s, target)

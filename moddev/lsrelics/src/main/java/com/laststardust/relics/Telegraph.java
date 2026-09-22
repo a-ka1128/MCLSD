@@ -53,7 +53,11 @@ public final class Telegraph {
         // 위 셋은 «곧 온다»는 예고고, 이건 «지금 열려 있다»는 상태다. 그래서 cast() 가 아니라
         // band() 로 그린다 — 예고 시간도 판정도 없고, 열려 있는 동안 호출한 쪽이 매 틱 부른다.
         // 어휘를 한 파일에 모아 두는 게 목적이라 여기 둔다. 색 하나가 두 뜻을 가지면 안 된다.
-        OPENING(new Vector3f(0.25f, 1.00f, 0.35f), "지금 쳐라");
+        OPENING(new Vector3f(0.25f, 1.00f, 0.35f), "지금 쳐라"),
+        // 초록의 짝. 초록이 «지금 쳐라»면 파랑은 «치지 마라»다.
+        // 앞의 넷은 - 어디에 설 것인가 - 를 말하고, 이 둘만 - 언제 때릴 것인가 - 를 말한다.
+        // 그래서 바닥이 아니라 보스 몸을 감싸는 형태(aura)로 그린다 — 자리 이동으로 오독되면 안 된다.
+        HOLD   (new Vector3f(0.30f, 0.55f, 1.00f), "멈춰라");
 
         final Vector3f color;
         final String label;
@@ -97,6 +101,7 @@ public final class Telegraph {
             case DANGER:  return "§c";
             case STACK:   return "§e";
             case OPENING: return "§a";
+            case HOLD:    return "§9";
             default:      return "§d";
         }
     }
@@ -131,12 +136,32 @@ public final class Telegraph {
         }
     }
 
+    // ── 몸을 감싸는 표시 ──
+    // band() 가 «바닥의 어디»를 말한다면 이쪽은 «저 몸에 무슨 일이 있다»를 말한다.
+    // 링을 높이 방향으로 쌓아 기둥을 만든다 — 바닥에만 그리면 «저 자리를 피해라»로 오독된다.
+    public static void aura(ServerLevel level, Vec3 base, Kind kind, double radius, double height, int rings) {
+        ParticleOptions dust = new DustParticleOptions(kind.color, 1.2f);
+        int steps = 14;
+        for (int r = 0; r < rings; r++) {
+            double y = base.y + height * ((double) r / Math.max(1, rings - 1));
+            for (int i = 0; i < steps; i++) {
+                double a = Math.PI * 2 * i / steps + r * 0.22;   // 층마다 살짝 비틀어 나선처럼 보이게
+                level.sendParticles(dust, base.x + Math.cos(a) * radius, y, base.z + Math.sin(a) * radius,
+                    1, 0, 0, 0, 0);
+            }
+        }
+    }
+
     // 상태가 - 바뀐 순간 - 만 알린다. 매 틱 부르면 소리가 겹쳐 소음이 된다.
     // 열릴 때는 올라가는 음, 닫힐 때는 내려가는 음 — 화면을 안 보고 있어도 창을 안다.
     public static void announce(ServerLevel level, Vec3 center, double radius, Kind kind, boolean opening) {
-        level.playSound(null, center.x, center.y, center.z,
-            opening ? SoundEvents.NOTE_BLOCK_CHIME.value() : SoundEvents.NOTE_BLOCK_BASS.value(),
-            SoundSource.HOSTILE, 1.0f, opening ? 1.8f : 0.8f);
+        // 소리도 어휘의 일부다 — 색마다 다른 소리를 줘야 화면을 안 보고도 무엇이 켜졌는지 안다.
+        // 초록은 맑은 종(열렸다), 파랑은 쇳소리(막혔다). 닫힘은 둘 다 낮은 음.
+        var snd = !opening ? SoundEvents.NOTE_BLOCK_BASS.value()
+                : kind == Kind.HOLD ? SoundEvents.ANVIL_LAND
+                : SoundEvents.NOTE_BLOCK_CHIME.value();
+        level.playSound(null, center.x, center.y, center.z, snd, SoundSource.HOSTILE,
+            1.0f, !opening ? 0.8f : (kind == Kind.HOLD ? 1.4f : 1.8f));
         if (!opening) return;   // 닫힘은 소리로 충분하다. 글자까지 띄우면 «놓쳤다»만 강조된다.
         for (ServerPlayer p : level.players()) {
             if (p.position().distanceToSqr(center) <= radius * radius) {
@@ -166,15 +191,32 @@ public final class Telegraph {
 
     // 테두리를 그린다. 채우지 않는 이유: 바닥을 가득 칠하면 그 위에 선 몹·아이템이 안 보이고,
     // 셰이더에서 지면과 뭉개진다. 테두리는 어느 조명에서도 형태가 남는다.
+    //
+    // ── 2026-08-14: 바닥 한 줄 → 낮은 «울타리» ──
+    // 공성에서 「장판이 안 보인다」가 나왔다. 원인은 색이 아니라 **높이**다 —
+    // 바닥에 한 줄만 그리면 몹 스무 마리가 그 위에 서 있고, 셰이더가 지면을 어둡게 깔고,
+    // 밤이라 대비도 낮다. 그 셋이 겹치면 선이 사라진다.
+    // 위로 두 줄을 더 얹어 «울타리»로 만든다. 사람은 발밑보다 눈높이를 먼저 본다.
+    //
+    // ⚠️ 파티클 수가 곧 패킷 수다. 위 두 줄은 **절반 밀도로만** 찍는다 —
+    //    세 줄을 같은 밀도로 그리면 장판 하나에 초당 수백 패킷이 나가고, 공성처럼
+    //    장판이 여러 개 겹치는 밤에 그게 그대로 렉이 된다.
+    private static final double[] RING_HEIGHTS = { 0.9, 1.7 };
+
     private static void draw(Pending p) {
         // 남은 시간이 짧아질수록 촘촘해진다 — 초읽기가 눈에 보인다.
         int steps = 24 + (WARN_TICKS - p.left);
-        ParticleOptions dust = new DustParticleOptions(p.kind.color, 1.4f);
+        ParticleOptions dust = new DustParticleOptions(p.kind.color, 2.0f);
         for (int i = 0; i < steps; i++) {
             double a = Math.PI * 2 * i / steps;
             double x = p.center.x + Math.cos(a) * p.radius;
             double z = p.center.z + Math.sin(a) * p.radius;
             p.level.sendParticles(dust, x, p.center.y + 0.15, z, 1, 0, 0, 0, 0);
+            if (i % 2 == 0) {
+                for (double dy : RING_HEIGHTS) {
+                    p.level.sendParticles(dust, x, p.center.y + dy, z, 1, 0, 0, 0, 0);
+                }
+            }
         }
         // 뭉쳐라는 중심도 찍는다 — 어디로 모일지가 테두리만으로는 안 보인다.
         if (p.kind == Kind.STACK) {
@@ -197,6 +239,13 @@ public final class Telegraph {
             if (p.position().distanceToSqr(center) <= radius * radius) out.add(p);
         }
         return out;
+    }
+
+    // 기믹 피해를 넣기 전에 매번 확인해야 하는 것. 다섯 기믹이 각자 조금씩 다르게 쓰고 있었다
+    // (누구는 관전자만, 누구는 차원까지). 빠뜨리면 관전자가 맞거나, 차원을 옮긴 사람이
+    // 옛 차원의 판정에 맞는다 — 둘 다 «가끔 이상하다»로만 보여서 원인을 못 찾는 종류다.
+    public static boolean hittable(ServerPlayer p, ServerLevel level) {
+        return !p.isSpectator() && p.isAlive() && p.level() == level;
     }
 
     public static List<ServerPlayer> outside(ServerLevel level, Vec3 center, double radius) {

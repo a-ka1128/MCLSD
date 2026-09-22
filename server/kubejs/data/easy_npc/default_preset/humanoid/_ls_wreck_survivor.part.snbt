@@ -1,0 +1,93 @@
+{
+  PresetMetadata:{
+    author:"Last Stardust",
+    category:"Quest",
+    created:1786538762004L,
+    description:"난파한 비행선의 마지막 별지기. 이름을 묻고, 대화를 마치면 성역으로 보낸다(/lsonboard). 첫 세션 온보딩의 시작점.",
+    entityTypeId:"easy_npc:humanoid",
+    modified:1786538762004L,
+    name:"린케우스 — 마지막 별지기",
+    variantType:"STEVE",
+    version:"1.0.0"
+  },
+  id:"easy_npc:humanoid",
+  ActionData:{
+    ActionEventSet:{
+      ON_INTERACTION:[{
+        Type:"OPEN_DEFAULT_DIALOG"
+      }]
+    },
+    ActionPermissionLevel:3
+  },
+  CustomName:'{"color":"#FFFF00","text":"린케우스"}',
+  CustomNameVisible:1b,
+  DialogData:{
+    DialogDataSet:[{
+      Label:"start",
+      Name:"첫 만남",
+      Priority:100,
+      Texts:[{
+        Text:"이런 곳에 생존자가 있을 줄이야… 별의 가호를 받았나보구만.\\n이 비행선은 성역으로 향하는 비행선이야."
+      }],
+      Buttons:[{
+        Label:"b_isee",
+        Name:"그렇군요.",
+        Actions:[{ Cmd:"name",Type:"OPEN_NAMED_DIALOG" }]
+      }]
+    },{
+      Label:"name",
+      Name:"이름을 묻다",
+      Priority:1,
+      Texts:[{
+        Text:"너를 뭐라고 불러야 할지 모르겠군.\\n\\n\"/닉네임 원하는닉네임\" 으로 이름을 알려주게나."
+      }],
+      Buttons:[{
+        Label:"b_ok",
+        Name:"알겠습니다.",
+        Actions:[{ Cmd:"rest",Type:"OPEN_NAMED_DIALOG" }]
+      }]
+    },{
+      Label:"rest",
+      Name:"성역으로",
+      Priority:1,
+      Texts:[{
+        Text:"그럼 잠시 쉬고 있게. 곧 성역으로 이동될 거야."
+      }],
+      Buttons:[{
+        Label:"b_go",
+        Name:"§7[ 잠시 눈을 감는다 ]",
+        Actions:[{ Cmd:"/lsonboard @initiator",Type:"COMMAND" },{ Type:"CLOSE_DIALOG" }]
+      }]
+    }]
+  },
+  Invulnerable:1b,
+  NoAI:1b,
+  Silent:1b,
+  SkinData:{
+    Content:"",
+    DisableLayers:0b,
+    Name:"HRSSamuelTTV",
+    Type:"PLAYER_SKIN",
+    URL:"",
+    UUID:[I;-215787416,-1924641877,-1413010573,-1263525539],
+    Timestamp:1786512306354L
+  },
+  VariantType:"STEVE",
+  Profession:"NONE",
+  ArmorItems:[{},{},{},{}],
+  HandItems:[{},{}],
+  Attributes:[{
+    Base:0.0d,Name:"minecraft:generic.movement_speed"
+  },{
+    Base:20.0d,Name:"minecraft:generic.max_health"
+  }],
+  ModelData:{
+    DefaultPose:"STANDING",
+    Pose:"STANDING",
+    Position:{},
+    Rotation:{},
+    Scale:{},
+    Visible:{}
+  },
+  PersistenceRequired:1b
+}

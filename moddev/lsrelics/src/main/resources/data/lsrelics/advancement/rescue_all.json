@@ -1,0 +1,29 @@
+{
+  "parent": "lsrelics:rescue_first",
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "display": {
+    "icon": {
+      "id": "minecraft:cake",
+      "count": 1
+    },
+    "title": {
+      "translate": "advancement.lsrelics.rescue_all.title"
+    },
+    "description": {
+      "translate": "advancement.lsrelics.rescue_all.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "sends_telemetry_event": false
+}

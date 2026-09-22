@@ -19,10 +19,52 @@ import net.minecraft.network.codec.StreamCodec;
 public record TownView(int treasury, int threat, int wallHp, int wallMax,
                        List<TrackView> tracks, List<Contributor> board) {
 
+    /** 요구 자원 한 줄. 한 레벨이 여러 개를 가질 수 있다(2026-08-08). */
+    public record ReqView(String id, boolean isTag, int need, int have, boolean essence) {
+        public boolean ok() { return have >= need; }
+
+        // 클라 전용 — 번역은 여기서 한다.
+        //
+        // 태그는 아이템 이름을 쓰면 안 된다. `minecraft:logs` 의 첫 원소가 참나무 원목이라
+        // 「참나무 원목 128」로 보이는데 실제로는 아무 나무나 받는다 — 정반대로 읽힌다.
+        // 그래서 태그는 전용 번역 키(`lstown.req.tag.<path>`)를 쓴다.
+        public net.minecraft.network.chat.Component displayName() {
+            var rl = net.minecraft.resources.ResourceLocation.tryParse(id);
+            if (rl == null) return net.minecraft.network.chat.Component.literal(id);
+            if (isTag) {
+                return net.minecraft.network.chat.Component.translatable("lstown.req.tag." + rl.getPath());
+            }
+            if (net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(rl)) {
+                return net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl).getDescription();
+            }
+            // 없는 아이템이면 ID 를 그대로 보여준다(원인 추적용).
+            return net.minecraft.network.chat.Component.literal(id);
+        }
+
+        /** 빈 슬롯에 흐리게 그릴 대표 아이템. */
+        public net.minecraft.world.item.ItemStack icon() {
+            var rl = net.minecraft.resources.ResourceLocation.tryParse(id);
+            if (rl == null) return net.minecraft.world.item.ItemStack.EMPTY;
+            if (isTag) {
+                var key = net.minecraft.tags.TagKey.create(
+                    net.minecraft.core.registries.Registries.ITEM, rl);
+                var tag = net.minecraft.core.registries.BuiltInRegistries.ITEM.getTag(key);
+                if (tag.isPresent()) {
+                    for (var holder : tag.get()) return new net.minecraft.world.item.ItemStack(holder.value());
+                }
+                return net.minecraft.world.item.ItemStack.EMPTY;
+            }
+            if (net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(rl)) {
+                return new net.minecraft.world.item.ItemStack(
+                    net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl));
+            }
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        }
+    }
+
     public record TrackView(String key, int level, int max,
                             String nextNameKey, String nextFxKey,
-                            int ducat, String itemId, int need, int have,
-                            boolean essence, boolean canUpgrade) {
+                            int ducat, List<ReqView> reqs, boolean canUpgrade) {
         public boolean isMax() { return nextNameKey.isEmpty(); }
 
         // 클라 전용 — 번역은 여기서 한다.
@@ -32,17 +74,29 @@ public record TownView(int treasury, int threat, int wallHp, int wallMax,
         public net.minecraft.network.chat.Component nextFx() {
             return net.minecraft.network.chat.Component.translatable(nextFxKey);
         }
-        // 아이템 이름도 클라의 언어로. 없는 아이템이면 ID 를 그대로 보여준다(원인 추적용).
-        public net.minecraft.network.chat.Component itemName() {
-            var rl = net.minecraft.resources.ResourceLocation.tryParse(itemId);
-            if (rl != null && net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(rl)) {
-                return net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl).getDescription();
+
+        /** 허브·`/town info` 처럼 한 줄로 줄여야 하는 곳에서 쓴다 — "철괴 12/64 · 금괴 0/96". */
+        public String shortCost() {
+            StringBuilder sb = new StringBuilder();
+            for (ReqView r : reqs) {
+                if (sb.length() > 0) sb.append(" · ");
+                sb.append(r.displayName().getString()).append(' ').append(r.have()).append('/').append(r.need());
             }
-            return net.minecraft.network.chat.Component.literal(itemId);
+            return sb.toString();
         }
     }
 
     public record Contributor(String name, int points) {}
+
+    private static final StreamCodec<RegistryFriendlyByteBuf, ReqView> REQ_CODEC =
+        StreamCodec.of((buf, v) -> {
+            buf.writeUtf(v.id());
+            buf.writeBoolean(v.isTag());
+            buf.writeVarInt(v.need());
+            buf.writeVarInt(v.have());
+            buf.writeBoolean(v.essence());
+        }, buf -> new ReqView(buf.readUtf(), buf.readBoolean(),
+            buf.readVarInt(), buf.readVarInt(), buf.readBoolean()));
 
     private static final StreamCodec<RegistryFriendlyByteBuf, TrackView> TRACK_CODEC =
         StreamCodec.of((buf, v) -> {
@@ -52,14 +106,11 @@ public record TownView(int treasury, int threat, int wallHp, int wallMax,
             buf.writeUtf(v.nextNameKey());
             buf.writeUtf(v.nextFxKey());
             buf.writeVarInt(v.ducat());
-            buf.writeUtf(v.itemId());
-            buf.writeVarInt(v.need());
-            buf.writeVarInt(v.have());
-            buf.writeBoolean(v.essence());
+            REQ_CODEC.apply(ByteBufCodecs.list()).encode(buf, v.reqs());
             buf.writeBoolean(v.canUpgrade());
         }, buf -> new TrackView(buf.readUtf(), buf.readVarInt(), buf.readVarInt(),
-            buf.readUtf(), buf.readUtf(), buf.readVarInt(), buf.readUtf(),
-            buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean()));
+            buf.readUtf(), buf.readUtf(), buf.readVarInt(),
+            REQ_CODEC.apply(ByteBufCodecs.list()).decode(buf), buf.readBoolean()));
 
     private static final StreamCodec<RegistryFriendlyByteBuf, Contributor> CONTRIB_CODEC =
         StreamCodec.of((buf, v) -> { buf.writeUtf(v.name()); buf.writeVarInt(v.points()); },

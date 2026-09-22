@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "#wan_ancient_beasts:enchantable/ancient_club",
+    "lsrelics:guardian",
+    "lsrelics:lancer",
+    "lsrelics:hecate",
+    "lsrelics:nemesis",
+    "lsrelics:assassin",
+    "lsrelics:chiron",
+    "lsrelics:pioneer"
+  ]
+}

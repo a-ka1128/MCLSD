@@ -11,9 +11,17 @@ const KEY_GATES = {
 
 // ── 제작 레시피 (정수가 소모처를 얻는다 — 보스 킬 → 열쇠 → 던전 → 전리품 루프) ──
 ServerEvents.recipes(event => {
-  event.shapeless('kubejs:rift_key', ['kubejs:rift_essence', 'minecraft:gold_ingot', 'minecraft:gold_ingot', 'minecraft:amethyst_shard', 'minecraft:amethyst_shard'])
-  event.shapeless('kubejs:rift_key_elite', ['kubejs:rift_essence', 'kubejs:rift_essence', 'minecraft:diamond', 'minecraft:diamond', 'minecraft:amethyst_shard'])
-  event.shapeless('kubejs:rift_key_gold', ['kubejs:rift_essence', 'kubejs:rift_essence', 'kubejs:rift_essence', 'minecraft:gold_block', 'minecraft:emerald_block'])
+  // ── 일반만 «별먼지» 로 만든다 (2026-08-08) ──
+  // 일반 균열은 사냥 현상금을 도는 자리라 매일 돌게 된다. 파편으로 값을 매기면
+  // 정예·황금(파편 순 −1)과 같은 무게가 되어 「연습용이 제일 비싼」 모양이 된다.
+  // 별먼지는 탐험 재화라 축이 다르고, **1개**로 잡아 축복 리롤(3~8개)과 경쟁하지 않게 한다.
+  // 2개만 돼도 「열쇠 하나 = 리롤 반 번」이 되어 아무도 안 쓴다.
+  event.shapeless('kubejs:rift_key', ['kubejs:stardust', 'minecraft:gold_ingot', 'minecraft:gold_ingot', 'minecraft:amethyst_shard', 'minecraft:amethyst_shard'])
+  event.shapeless('kubejs:rift_key_elite', ['kubejs:rift_essence', 'minecraft:diamond', 'minecraft:diamond', 'minecraft:amethyst_shard'])
+  // 황금만 두 재화를 다 요구한다 — 전투(파편)와 탐험(별먼지)을 둘 다 한 사람만 여는 자리.
+  // 에메랄드블록은 뺐다: 보상에서 에메랄드를 없앤 마당에 원가로만 남기면
+  // 균열이 도박장 칩을 «빨아먹는» 반대 방향이 된다.
+  event.shapeless('kubejs:rift_key_gold', ['kubejs:rift_essence', 'kubejs:rift_essence', 'kubejs:stardust', 'minecraft:gold_block', 'minecraft:diamond_block'])
 })
 
 // ── 우클릭 → 관문 개방 ──
@@ -31,6 +39,7 @@ function ksTryUse(server, player) {
   server.runCommandSilent(`clear ${player.username} ${id} 1`)
   server.runCommandSilent(`execute at ${player.username} run open_gateway ~ ~1 ~ ${def.gate}`)
   server.players.forEach(p => p.tell(Text.of(`§5⌘ ${player.username}§7이(가) §d${def.name}§7을(를) 열었습니다!`)))
+  rkBegin(server, player)   // 균열 서약 — 걸어 둔 어픽스를 이 판에 복사한다
   server.runCommandSilent(`execute as ${player.username} at @s run playsound minecraft:block.end_portal.spawn master @a ~ ~ ~ 0.8 0.7`)
   console.log(`[LS-KEYS] ${player.username} opened ${def.gate}`)
 }
@@ -50,4 +59,4 @@ BlockEvents.rightClicked(event => {
   ksTryUse(player.server, player)
 })
 
-console.log('[Last Stardust] 균열 열쇠 로드됨 — 3종 (일반/정예/황금)')
+console.log('[Last Stardust] 균열 열쇠 로드됨 — 3종 (일반/정예/황금) + 서약 3종)')

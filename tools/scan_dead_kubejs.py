@@ -18,7 +18,10 @@
      · 읽기만 있고 쓰기가 없다      -> 항상 기본값. stTopContrib 이 이 경우다.
      · 쓰는 쪽이 .disabled 뿐이다   -> 이관 때 끊긴 것. 가장 위험한 형태.
      · 쓰기만 있고 읽기가 없다      -> 아무도 안 보는 값.
-  C. 정의됐지만 아무도 안 부르는 함수
+  C. 정의됐지만 아무도 안 쓰는 함수·상수
+     ※ 처음엔 함수만 봤다. 그래서 ls_beacon.js 의 PB_PURGE(9종 몹 목록)를 놓쳤다 —
+       쓰는 곳은 없는데 «문서용 원본»으로 남아 태그 파일과 - 두 벌 - 을 관리하고 있었다.
+       목록이 두 벌이면 언젠가 갈린다. 상수도 같이 본다.
 
 래퍼를 반드시 따라가야 한다:
     이 코드베이스는 키를 직접 넣지 않고 파일마다 래퍼를 둔다.
@@ -51,6 +54,8 @@ RE_PUT = re.compile(r'\.put(?:%s)\(\s*[\'"]([^\'"]*)' % NBT_TYPES)
 RE_GET = re.compile(r'\.get(?:%s)\(\s*[\'"]([^\'"]*)' % NBT_TYPES)
 RE_LS = re.compile(r'\bLS\.(\w+)\s*\(')
 RE_FUNC = re.compile(r'^\s*function\s+(\w+)\s*\(', re.M)
+# 최상위 const/let 만 (들여쓰기 없는 줄). 함수 안 지역변수는 대상이 아니다.
+RE_CONST = re.compile(r'^(?:const|let)\s+([A-Za-z_]\w*)\s*=', re.M)
 
 
 def read(path):
@@ -279,22 +284,29 @@ def check_keys(active, disabled):
 
 
 def check_funcs(active):
-    section('C. 정의됐지만 아무도 안 부르는 함수')
-    defined = {}
+    section('C. 정의됐지만 아무도 안 쓰는 함수·상수')
+    allsrc = '\n'.join(active.values())
+
+    funcs, consts = {}, {}
     for fn, src in active.items():
         for name in RE_FUNC.findall(src):
-            defined.setdefault(name, fn)
-    allsrc = '\n'.join(active.values())
+            funcs.setdefault(name, fn)
+        for name in RE_CONST.findall(src):
+            consts.setdefault(name, fn)
+
     dead = []
-    for name, fn in sorted(defined.items()):
-        calls = len(re.findall(r'\b%s\s*\(' % re.escape(name), allsrc))
+    for name, fn in sorted(funcs.items()):
         # 정의 자체가 1회로 잡힌다. 그 이상이 없으면 아무도 안 부른다.
-        if calls <= 1:
-            dead.append((name, fn))
+        if len(re.findall(r'\b%s\s*\(' % re.escape(name), allsrc)) <= 1:
+            dead.append(('함수', name, fn))
+    for name, fn in sorted(consts.items()):
+        if len(re.findall(r'\b%s\b' % re.escape(name), allsrc)) <= 1:
+            dead.append(('상수', name, fn))
+
     if dead:
-        for name, fn in dead:
-            print('  %-28s %s' % (name, fn))
-        print('\n  >>> %d 개. 다른 계열(startup/client)에서만 부르는 것일 수 있으니 확인 후 지운다.' % len(dead))
+        for kind, name, fn in dead:
+            print('  %-4s %-28s %s' % (kind, name, fn))
+        print('\n  >>> %d 개. 다른 계열(startup/client)에서만 쓰는 것일 수 있으니 확인 후 지운다.' % len(dead))
     else:
         print('  >>> 없음.')
 

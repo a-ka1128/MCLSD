@@ -4,8 +4,7 @@
 // 제단이 예고된다. 그 좌표로 원정 → 접근하면 제단이 출현 → 제물대 우클릭으로 보스 소환 → 처치.
 // 처치 시 월드티어 상승 + 금고 보상 + 다음 봉인 개방. 마지막(T4) 클리어 → 피날레 자동 무장.
 // ※ 자연 생성 구조물 보스(TF/Aether 등)는 그대로 탐험 보상으로 남는다 — 이건 "진행 게이트"만 담당.
-// 저장(오버월드 persistentData, ls_siege/ls_town과 공유): ls_finale_armed
-// ※ 성역 좌표와 금고는 모드(LSData)가 소유한다 — 브릿지 `LS` 로 읽고 쓴다. 여기에 사본은 없다.
+// ※ 성역 좌표·금고·최종장 무장은 모드(LSData)가 소유한다 — 브릿지 `LS` 로 읽고 쓴다. 사본은 없다.
 //   전용: rf_active/rf_pending/rf_engaged · rf_tier · rf_ax/rf_ay/rf_az
 //   ※ 클리어 수(진행도)는 모드(LSData)가 소유 — `LS.progress()` / `LS.setProgress()`
 
@@ -20,7 +19,7 @@ const APPROACH = 64          // 이 거리 이내로 다가오면 제단이 출�
 const NEAR_SANCTUARY = 96    // 봉인 해제는 성역 근처에서만(의식)
 
 // ── 진행 게이트 정의 (핵심 보스 4종, 전부 오버월드 소환 가능·정상 작동) ──
-// minR~maxR: 성역 기준 링 거리(m). cost: 개봉에 바칠 균열 정수. reward: 클리어 금고 보상.
+// minR~maxR: 성역 기준 링 거리(m). cost: 개봉에 바칠 별의 파편. reward: 클리어 금고 보상.
 // tier: 클리어 시 부여될 Apotheosis 월드티어. (haven → frontier → ascent → summit → pinnacle)
 const TIERS = [
   { key: 't1', name: '개척', boss: 'mowziesmobs:ferrous_wroughtnaut', bossName: '강철거인',
@@ -89,7 +88,7 @@ function openAltar(server, player) {
   let have = 0
   // 개수는 인벤토리를 직접 읽는다 (ls_util.js) — /clear 반환값으로 세는 건 애초에 불가능하다.
   have = lsCountItem(player, RF_ESS)
-  if (have < t.cost) { player.tell(Text.of(`§c균열 정수 부족: §e${have}/${t.cost} §7— 보스를 처치해 모으세요.`)); return 0 }
+  if (have < t.cost) { player.tell(Text.of(`§c별의 파편 부족: §e${have}/${t.cost} §7— 보스를 처치해 모으세요.`)); return 0 }
   if (lsTakeItem(player, RF_ESS, t.cost) < t.cost) { player.tell(Text.of('§c정수 회수에 실패했습니다.')); return 0 }
   // 링 좌표 롤
   const ang = Math.random() * Math.PI * 2
@@ -158,6 +157,79 @@ function revealIfNear(server) {
   console.log(`[LS-RIFT] altar revealed tier=${activeTierIdx(server)} at ${ax},${ay},${az}`)
 }
 
+// ════════════════════════════════════════════════════════════
+//  전멸 천장 — 「별의 유예」
+// ════════════════════════════════════════════════════════════
+// 같은 관문에서 세 번 전멸하면, 그 관문에 한해 저항 I 를 얹는다.
+//
+// ── 왜 필요한가 ──
+// 관문은 진행 게이트다. 막히면 유물 각성도, 세계 등급도, 최종장도 전부 멈춘다.
+// 여덟 명이 시간을 맞춰 모이는 서버에서 「이번 주도 못 깼다」가 세 번 겹치면
+// 그 다음 주에는 네 명만 온다. 실력 문제가 아니라 **일정 문제로 죽는 콘텐츠**가 된다.
+//
+// ── 왜 저항인가 (그리고 왜 공격력이 아닌가) ──
+// 보스 체력 목표는 「4명·60초」에서 역산한 값이다(`ls_config.js`). 주는 피해를 올리면
+// 그 계산이 통째로 무효가 되고, 다음에 측정할 때 무엇이 원인인지 못 가린다.
+// **받는 피해만 줄이면 체력 목표는 그대로 유효하다** — 싸움이 길어질 뿐 짧아지지 않는다.
+//
+// 그리고 속성 모디파이어가 아니라 바닐라 저항 효과를 쓴다. `attack_damage` 류의 속성은
+// **근접 평타만** 본다 — 원거리 4종과 8유물의 스킬은 피해를 직접 계산해서 전부 빠져나간다.
+// 이 함정으로 「별빛 쇠약」이 한 번 조용히 반쪽으로 돌았다(TODO A절 부활 규칙 항목).
+//
+// ── 왜 한 계단인가 ──
+// 3회부터 저항 I, 그 뒤로는 안 올린다. 전멸마다 세지면 「일부러 지는 게 이득」이 되고,
+// 그건 천장이 아니라 사다리다. 천장은 바닥을 깔아주는 것이지 길을 만들어주는 게 아니다.
+const RF_PITY_AT = 3          // 이만큼 전멸하면 발동
+const RF_PITY_MIN = 20 * 60 * 20   // 저항 지속 20분 — 한 판을 덮을 만큼
+
+function rfWipes(server, idx) { return rfGetI(server, 'rf_wipe_' + idx) }
+function rfSetWipes(server, idx, n) { rfSetI(server, 'rf_wipe_' + idx, n) }
+
+// 전멸 감지. `ls_voice.js` 에도 같은 판정이 있지만 부르지 않는다 —
+// 그 파일은 **다른 스크립트를 수정하지 않고 상태만 감시한다**는 설계라, 반대로
+// 여기서 그쪽 함수를 부르면 그 성질이 깨진다(그 파일을 지워도 게임은 돌아야 한다).
+// 조건도 다르다: 저쪽은 언제 죽든, 여기는 «관문 보스와 교전 중일 때»만 센다.
+EntityEvents.death(event => {
+  const e = event.entity
+  if (!e || String(e.type) !== 'minecraft:player') return
+  const server = e.server
+  if (!server) return
+  if (!isActive(server) || !rfGetB(server, 'rf_engaged')) return
+  // 죽은 사람은 리스폰 전까지 체력 0 으로 목록에 남는다. 사망 시점엔 아직 체력이
+  // 남아 보일 수 있어 10틱 뒤에 센다.
+  server.scheduleInTicks(10, () => {
+    try {
+      if (!isActive(server) || !rfGetB(server, 'rf_engaged')) return
+      var rwList = server.players
+      if (!rwList.length) return
+      var rwAlive = 0
+      rwList.forEach(p => { if (Number(p.health) > 0) rwAlive++ })
+      if (rwAlive > 0) return
+
+      var rwIdx = activeTierIdx(server)
+      var rwN = rfWipes(server, rwIdx) + 1
+      rfSetWipes(server, rwIdx, rwN)
+      console.log(`[LS-RIFT] wipe tier=${rwIdx} count=${rwN}`)
+      if (rwN < RF_PITY_AT) {
+        rsay(server, `§8   (${TIERS[rwIdx].name} — ${rwN}번째 밤)`)
+      } else if (rwN === RF_PITY_AT) {
+        // 발동은 다음 소환 때다. 여기서 걸면 시체 앞에 버프가 뜨는 꼴이 된다.
+        rsay(server, '§b✧ 별의 유예 §7— 남은 별빛이 너희를 조금 더 오래 붙든다.')
+        rsay(server, `§8   (다음 §7${TIERS[rwIdx].name}§8 도전부터 저항이 함께 간다)`)
+      }
+    } catch (err) { lsWarn('ls_rift:wipe', err) }
+  })
+})
+
+// 소환 시 적용. 관문을 깨면 `completeTier` 가 장부를 지우므로 다음 관문에는 안 따라간다.
+function rfApplyPity(server, idx) {
+  if (rfWipes(server, idx) < RF_PITY_AT) return
+  try {
+    server.runCommandSilent(`effect give @a minecraft:resistance ${Math.floor(RF_PITY_MIN / 20)} 0 true`)
+    rsay(server, `§b✧ 별의 유예가 함께한다 §7— 받는 피해 감소 (전멸 ${rfWipes(server, idx)}회)`)
+  } catch (err) { lsWarn('ls_rift:pity', err) }
+}
+
 // ── 보스 소환 (제물대 우클릭) ──
 function summonAltarBoss(server) {
   if (!isActive(server) || rfGetB(server, 'rf_pending') || rfGetB(server, 'rf_engaged')) return false
@@ -171,6 +243,7 @@ function summonAltarBoss(server) {
   rplay(server, 'minecraft:entity.wither.spawn', 1, 0.6)
   rplay(server, 'minecraft:entity.ender_dragon.growl', 0.6, 0.6)
   rsay(server, `§4⚔ ${t.bossName} 강림! §7${t.name} 봉인의 수호자를 쓰러뜨려라.`)
+  rfApplyPity(server, idx)
   console.log(`[LS-RIFT] boss summoned tier=${idx} ${t.boss}`)
   return true
 }
@@ -186,19 +259,40 @@ function completeTier(server) {
   rfSetB(server, 'rf_active', false)
   rfSetB(server, 'rf_engaged', false)
   rfSetB(server, 'rf_pending', false)
+  // 천장은 관문마다 따로다. 깬 관문의 장부를 지우고 저항도 걷는다 —
+  // 안 걷으면 유예가 그 다음 관문까지 따라가서, 세 번 막힌 대가로 네 번째가 쉬워진다.
+  rfSetWipes(server, idx, 0)
+  try { server.runCommandSilent('effect clear @a minecraft:resistance') } catch (e) { lsWarn('ls_rift:pityClear', e) }
   setProgress(server, idx + 1)
   // 보상: 월드티어 상승 + 공동 금고
   setWorldTier(server, t.tier)
   rfAddTreasury(server, t.reward)
+  // 부재자에게 「무슨 보스가 죽었는지」를 남긴다. 관문은 **한 번뿐인 사건**이라
+  // 횟수로 세면 뜻이 없다 — 이름이 남아야 「내가 없는 동안 세계가 어디까지 갔나」가 읽힌다.
+  // 월드 티어는 여기서 안 챙겨도 된다: 접속할 때 진행도에 맞춰 자동으로 맞춰진다(이 파일 아래 훅).
+  try {
+    awAll(server, (nm, online) => {
+      if (online) return
+      awBump(server, nm, 'boss', 1)
+      awLog(server, nm, `§d${t.bossName}§7 처치 — §f${t.name}§7 봉인 해방 (세계 등급 §e${t.tier}§7)`)
+    })
+  } catch (e) { lsWarn('ls_rift:away', e) }
   server.runCommandSilent(`title @a title {"text":"봉인 해방","color":"gold","bold":true}`)
   server.runCommandSilent(`title @a subtitle {"text":"${t.name}의 균열이 닫혔다 — 세계 등급 상승","color":"yellow"}`)
   rplay(server, 'minecraft:ui.toast.challenge_complete', 1, 1)
   rplay(server, 'minecraft:block.beacon.power_select', 1, 1.2)
   rsay(server, `§6★ ${t.name} 봉인 해방! §e세계 등급 → ${t.tier} §7· 공동 금고 +${t.reward}`)
   const done = idx + 1
+  // 도전과제 — **서버 전체가 이룬 것이라 `@a` 다.** 관문은 파티가 같이 깬 것이고,
+  // 그 자리에 없던 사람에게도 「이 서버는 여기까지 왔다」가 남아야 한다.
+  if (done >= 1 && done <= 4) lsAdv(server, '@a', 'gate' + done)
   if (done >= MAX_TIER) {
     // 마지막 게이트 → 피날레 무장 (남은 균열 노드를 파괴하면 '가장 긴 밤' 개막)
-    rfSetB(server, 'ls_finale_armed', true)
+    // 최종장 무장은 모드(LSData.siege)가 소유한다 (이관 4단계, 2026-07-31).
+    // 여기가 옛 키에 계속 쓰면 `ls_siege.js` 는 모드를 보므로 **무장이 조용히 무시되고**,
+    // 마지막 노드를 부숴도 「가장 긴 밤」이 영영 안 열린다. 오류도 로그도 안 난다.
+    // (`tools/scan_dead_kubejs.py` B절이 「쓰는데 읽는 곳이 없다」로 잡아줬다.)
+    LS.setFinaleArmed(server, true)
     server.players.forEach(p => { try { ttGrant(server, p.username, 'rift_conqueror') } catch (e) { lsWarn('ls_rift:200', e) } }) // 칭호 (ls_title.js)
     rsay(server, '§5✧ 모든 균열 봉인이 풀렸다. §7이제 남은 §d균열 노드§7를 파괴하면 — §c어둠의 심장§7이 강림한다.')
     rsay(server, '§8   (성역에 집결하라. 가장 긴 밤이 다가온다.)')
@@ -219,8 +313,12 @@ BlockEvents.rightClicked(event => {
   if (!server || !isActive(server) || rfGetB(server, 'rf_pending') || rfGetB(server, 'rf_engaged')) return
   const ax = rfGetI(server, 'rf_ax'), ay = rfGetI(server, 'rf_ay'), az = rfGetI(server, 'rf_az')
   if (b.x === ax && b.y === ay + 1 && b.z === az) {
-    event.cancel()
+    // ⚠️ 소환을 «먼저», 취소를 «나중에». KubeJS 는 event.cancel() 을 예외로 구현해서
+    //    뒤에 둔 코드가 한 줄도 안 돈다 — 순서가 반대였을 때 **제물대를 우클릭해도
+    //    보스가 안 나왔다.** 오류도 안 나서 「제단이 고장났나」로만 보인다.
+    //    (2026-08-13, ls_relic.js 의 제단에서 같은 것을 잡다가 여기까지 찾았다.)
     summonAltarBoss(server)
+    event.cancel()
   }
 })
 
@@ -271,7 +369,7 @@ ServerEvents.commandRegistry(event => {
       } else {
         var nt = TIERS[nextIdx(s)]
         ctx.source.sendSystemMessage(Text.of(`§7다음 봉인: §e${nt.name} §7→ §d${nt.bossName} §7(${nt.minR}~${nt.maxR}m)`))
-        ctx.source.sendSystemMessage(Text.of(`§8   개봉 비용 §5균열 정수 ${nt.cost}개§8 · 성역에서 §e/expedition open`))
+        ctx.source.sendSystemMessage(Text.of(`§8   개봉 비용 §5별의 파편 ${nt.cost}개§8 · 성역에서 §e/expedition open`))
       }
       return 1
     })
@@ -314,14 +412,68 @@ ServerEvents.commandRegistry(event => {
       const s = ctx.source.server
       setProgress(s, 0); rfSetB(s, 'rf_active', false); rfSetB(s, 'rf_pending', false); rfSetB(s, 'rf_engaged', false)
       rfSetI(s, 'rf_tier', 0)
-      ctx.source.sendSystemMessage(Text.of('§7균열 원정 진행도 초기화')); return 1
+      // 천장 장부도 같이 비운다. 안 그러면 초기화한 서버가 「이미 세 번 진 상태」로 시작한다.
+      for (var rrI = 0; rrI < MAX_TIER; rrI++) rfSetWipes(s, rrI, 0)
+      try { s.runCommandSilent('effect clear @a minecraft:resistance') } catch (e) { lsWarn('ls_rift:resetPity', e) }
+      ctx.source.sendSystemMessage(Text.of('§7균열 원정 진행도 초기화 §8(전멸 천장 포함)')); return 1
     }))
+    // ── 전멸 천장 보기/고치기 ──
+    // 「모든 플래그에 set/reset」(TODO D절 3번 교훈). 값을 못 보면 유예가 왜 걸렸는지,
+    // 왜 안 걸렸는지 물어볼 데가 없다.
+    .then(Commands.literal('pity').requires(s => s.hasPermission(2))
+      .executes(ctx => {
+        const s = ctx.source.server
+        ctx.source.sendSystemMessage(Text.of(`§6전멸 천장 §7— ${RF_PITY_AT}회부터 저항 I`))
+        for (var rpI = 0; rpI < MAX_TIER; rpI++) {
+          var rpN = rfWipes(s, rpI)
+          ctx.source.sendSystemMessage(Text.of(
+            `§8  ${TIERS[rpI].name} §7${rpN}회${rpN >= RF_PITY_AT ? ' §b← 유예 대기' : ''}`))
+        }
+        return 1
+      })
+      .then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
+        const s = ctx.source.server
+        if (!isActive(s)) { ctx.source.sendSystemMessage(Text.of('§c개봉된 제단이 없습니다 — 어느 관문인지 정할 수 없습니다.')); return 0 }
+        const rpIdx = activeTierIdx(s)
+        rfSetWipes(s, rpIdx, Math.max(0, Arguments.INTEGER.getResult(ctx, 'n')))
+        ctx.source.sendSystemMessage(Text.of(
+          `§a${TIERS[rpIdx].name} 전멸 §7${rfWipes(s, rpIdx)}회 §8(다음 소환부터 반영)`))
+        return 1
+      })))
     .then(Commands.literal('setprogress').requires(s => s.hasPermission(2)).then(Commands.argument('n', Arguments.INTEGER.create(event)).executes(ctx => {
       const s = ctx.source.server
       const n = Math.max(0, Math.min(MAX_TIER, Arguments.INTEGER.getResult(ctx, 'n')))
       setProgress(s, n); rfSetB(s, 'rf_active', false); rfSetB(s, 'rf_pending', false); rfSetB(s, 'rf_engaged', false)
       ctx.source.sendSystemMessage(Text.of(`§7진행도 = ${n}/${MAX_TIER}`)); return 1
     }))))
+})
+
+// ── 접속 시 월드 티어 따라잡기 ──
+//
+// ⚠️ `setWorldTier` 는 **그때 접속해 있던 사람에게만** `apoth set_world_tier` 를 돌린다.
+//    관문을 깰 때 자리에 없던 사람은 **영영 옛 티어에 머문다** — 월드 티어는 Apotheosis 의
+//    전리품·접두사 등급을 가르는 값이라, 같은 상자를 열어도 남들보다 계속 나쁜 게 나온다.
+//    그런데 그게 «아무 메시지도 없이» 벌어져서, 당사자는 운이 나쁘다고만 느낀다.
+//    친구끼리 시간을 맞춰 들어오는 서버에서 이건 언젠가 반드시 일어난다.
+//
+// 관문 진행도(`progress`)는 **공동 상태**다 — 서버가 이미 「지금 몇 티어여야 하는지」를 안다.
+// 그러니 접속할 때 한 번 맞춰 주면 끝난다. 여러 번 돌아도 안전하다(같은 값을 다시 넣을 뿐).
+//
+// 40틱 미루는 이유는 `ls_ascend.js` 의 로그인 훅과 같다 — 로그인 시점엔 클라가 아직
+// 월드에 들어오는 중이라, 그때 보낸 명령이 조용히 묻힌다.
+PlayerEvents.loggedIn(event => {
+  const p = event.player
+  if (!p) return
+  const server = p.server
+  if (!server) return
+  server.scheduleInTicks(40, () => {
+    try {
+      var rfDone = progress(server)
+      // 0 = 아직 아무 관문도 안 깼다 → Apotheosis 기본 티어.
+      var rfTier = rfDone > 0 ? TIERS[Math.min(rfDone, MAX_TIER) - 1].tier : 'haven'
+      server.runCommandSilent(`apoth set_world_tier ${p.username} ${rfTier}`)
+    } catch (e) { lsWarn('ls_rift:tier-login', e) }
+  })
 })
 
 console.log(`[Last Stardust] 균열 원정 로드됨 — 진행 게이트 ${MAX_TIER}종 (제단 랜덤 배치 2000~5000m)`)
